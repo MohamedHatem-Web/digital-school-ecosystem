@@ -100,8 +100,24 @@
 
           <!-- Daily Attendance Section -->
           <div class="panel">
-            <div class="panel-header">
-              <h3 class="panel-title">قوائم الطلاب ورصد الحصة الحالية</h3>
+            <div class="panel-header" style="flex-wrap: wrap; gap: var(--space-3);">
+              <div>
+                <h3 class="panel-title">قوائم الطلاب ورصد الحصة الحالية</h3>
+                <p style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">
+                  اختر الفصل المراد رصد حضور الحصة له:
+                </p>
+              </div>
+              <div style="display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap;">
+                <button type="button" class="btn btn-sm btn-primary teacher-class-filter active" data-class="all" style="font-weight: 700;">
+                  👥 كافة الفصول
+                </button>
+                <button type="button" class="btn btn-sm btn-outline teacher-class-filter" data-class="فصل 1/1" style="font-weight: 700;">
+                  🎓 فصل 1/1 (يوسف وزياد)
+                </button>
+                <button type="button" class="btn btn-sm btn-outline teacher-class-filter" data-class="فصل 1/2" style="font-weight: 700;">
+                  🎓 فصل 1/2 (مريم)
+                </button>
+              </div>
             </div>
             <div class="panel-body" style="padding: 0;">
               <div id="teacher-students-container">
@@ -181,9 +197,29 @@
     const container = document.getElementById('teacher-students-container');
     const gradesContainer = document.getElementById('grades-roster-container');
 
+    let selectedTeacherClass = 'all';
+    let allTeacherStudents = [];
+
+    // Wire Class Filter Buttons
+    document.querySelectorAll('.teacher-class-filter').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedTeacherClass = btn.getAttribute('data-class');
+        document.querySelectorAll('.teacher-class-filter').forEach(b => {
+          b.classList.remove('btn-primary', 'active');
+          b.classList.add('btn-outline');
+        });
+        btn.classList.add('btn-primary', 'active');
+        btn.classList.remove('btn-outline');
+        renderTeacherRoster();
+      });
+    });
+
     // 1. Roster and Daily Attendance
     async function renderTeacherRoster() {
-      const students = await getStudents(schoolId);
+      allTeacherStudents = await getStudents(schoolId);
+      const students = selectedTeacherClass === 'all'
+        ? allTeacherStudents
+        : allTeacherStudents.filter(s => (s.grade || '').includes(selectedTeacherClass));
 
       if (students.length === 0) {
         container.innerHTML = `

@@ -158,6 +158,30 @@
             </div>
           </div>
 
+          <!-- Devices KPI Overview Cards -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-3);">
+            <div class="stat-card">
+              <span class="stat-label">📱 إجمالي أجهزة التابلت</span>
+              <span class="stat-value" id="stat-total-devices">0</span>
+              <span class="stat-subtext">مسجلة برقم IMEI الفعلي</span>
+            </div>
+            <div class="stat-card stat-accent">
+              <span class="stat-label">🟢 تم التسليم رسميًا للطلاب</span>
+              <span class="stat-value" style="color: #15803d;" id="stat-delivered-devices">0</span>
+              <span class="stat-subtext">بمحاضر استلام وتأمين معتمدة</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">📦 بالمخزن (جاهز للتسليم)</span>
+              <span class="stat-value" style="color: #0284c7;" id="stat-inventory-devices">0</span>
+              <span class="stat-subtext">جاهز لتسليم الطلاب الجدد</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">🖨️ محاضر التسليم المعتمدة</span>
+              <span class="stat-value" id="stat-protocols-devices">0</span>
+              <span class="stat-subtext">موثقة ومؤمنة بالمنظومة</span>
+            </div>
+          </div>
+
           <!-- Inventory Table Panel -->
           <div class="panel">
             <div class="panel-header">
@@ -299,6 +323,20 @@
     async function refreshDevices(filter = '') {
       cachedDevices = await getTabletDevices(schoolId);
       totalBadge.textContent = `${cachedDevices.length} جهاز`;
+
+      // Update Top KPI Cards
+      const totalDev = cachedDevices.length;
+      const deliveredDev = cachedDevices.filter(d => d.status === 'delivered').length;
+      const inventoryDev = cachedDevices.filter(d => d.status !== 'delivered').length;
+
+      const statTotal = document.getElementById('stat-total-devices');
+      const statDelivered = document.getElementById('stat-delivered-devices');
+      const statInventory = document.getElementById('stat-inventory-devices');
+      const statProtocols = document.getElementById('stat-protocols-devices');
+      if (statTotal) statTotal.textContent = totalDev;
+      if (statDelivered) statDelivered.textContent = deliveredDev;
+      if (statInventory) statInventory.textContent = inventoryDev;
+      if (statProtocols) statProtocols.textContent = deliveredDev;
 
       const filtered = cachedDevices.filter((d) =>
         d.imei.includes(filter) ||
