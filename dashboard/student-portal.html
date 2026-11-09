@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>بوابة الطالب — منظومة المدرسة الرقمية</title>
+  <link rel="stylesheet" href="../css/tokens.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/dashboard.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <meta name="theme-color" content="#0a1628">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="المدرسة الرقمية">
+</head>
+<body>
+
+  <div class="dashboard-layout">
+    <div class="dashboard-overlay"></div>
+
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-header">
+        <a href="student-portal.html" class="sidebar-brand-box">
+          <div class="sidebar-crest">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+            </svg>
+          </div>
+          <div>
+            <div class="sidebar-title">بوابة الطالب</div>
+            <div class="sidebar-sub">الملف الدراسي والتابلت</div>
+          </div>
+        </a>
+        <button type="button" class="sidebar-close-btn btn btn-sm" style="color: #ffffff;">✕</button>
+      </div>
+
+      <div class="sidebar-role-indicator">
+        <span>المساحة الطلابية:</span>
+        <span class="badge badge-accent">طالب</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="sidebar-menu">
+          <a href="student-portal.html" class="sidebar-link active">
+            <span class="sidebar-icon">🎓</span>
+            <span>ملفي وبيانات التابلت</span>
+          </a>
+          <a href="parent-portal.html" class="sidebar-link">
+            <span class="sidebar-icon">👨‍👦</span>
+            <span>بوابة ولي الأمر (المتابعة)</span>
+          </a>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="../index.html" class="sidebar-back-portal">
+          <span>🌐</span>
+          <span>الموقع العام للمدرسة</span>
+        </a>
+      </div>
+    </aside>
+
+    <div class="dashboard-main">
+      <header class="dashboard-topbar">
+        <div class="topbar-start">
+          <button type="button" class="sidebar-toggle-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+          </button>
+          <span class="badge badge-primary">حساب الطالب الرسمي</span>
+        </div>
+
+        <div class="topbar-end" style="display: flex; align-items: center; gap: var(--space-2);">
+          <a href="parent-portal.html" class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-size: 11px; padding: 4px 10px;" title="التبديل إلى بوابة ولي الأمر لمتابعة الدرجات والغياب">
+            👨‍👦 التبديل لبوابة ولي الأمر
+          </a>
+          <div class="user-profile-widget" style="cursor: default;" title="حساب رسمي معتمد — للعرض والمتابعة فقط">
+            <div class="user-avatar" id="topbar-user-avatar">ي</div>
+            <div class="user-text-info">
+              <span class="user-name" id="topbar-user-name">يوسف أحمد المنشاوي</span>
+              <span class="user-role-title" id="topbar-user-role">طالب بالصف الأول الثانوي</span>
+            </div>
+            <a href="#" class="logout-action-btn logout-btn" title="تسجيل الخروج">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </header>
+
+      <main class="dashboard-workspace">
+        <div style="display: flex; flex-direction: column; gap: var(--space-6);">
+
+          <!-- Sibling Switcher Bar for Multi-Child Family Accounts -->
+          <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface); border: 1px solid var(--border-subtle); padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm); box-shadow: var(--shadow-xs); flex-wrap: wrap; gap: var(--space-2);">
+            <div style="display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-xs); color: var(--text-secondary);">
+              <span>🔄 <strong>تبديل حساب الطالب في الأسرة:</strong></span>
+              <span style="color: var(--text-muted); font-size: 11px;">(في حال وجود أكثر من ابن مسجل بنفس الحساب العائلي)</span>
+            </div>
+            <div style="display: flex; gap: var(--space-2); align-items: center;">
+              <button type="button" id="switch-stu-youssef" class="btn btn-sm btn-primary" style="font-size: 11px; font-weight: 700; padding: 4px 10px;">
+                🎓 يوسف (2026101 - فصل 1/1)
+              </button>
+              <button type="button" id="switch-stu-mariam" class="btn btn-sm btn-outline" style="font-size: 11px; font-weight: 700; padding: 4px 10px;">
+                🎓 مريم (2026102 - فصل 1/2)
+              </button>
+            </div>
+          </div>
+
+          <!-- Welcome Banner -->
+          <div style="background: linear-gradient(135deg, #0c172d 0%, #172542 100%); color: #ffffff; padding: var(--space-6); border-radius: var(--radius-md); position: relative; overflow: hidden;">
+            <div style="position: absolute; top: -30px; left: 10%; width: 200px; height: 200px; background: radial-gradient(circle, rgba(232, 140, 8, 0.15) 0%, transparent 65%); pointer-events: none;"></div>
+            <div style="position: relative; z-index: 1;">
+              <div style="font-size: var(--text-xs); color: var(--color-accent-400); font-weight: 600; margin-bottom: var(--space-1);">بوابة الطالب المعتمدة</div>
+              <h1 style="font-size: var(--text-2xl); font-weight: 800; color: #ffffff; margin-bottom: var(--space-1);" id="student-welcome-name">
+                مرحبًا، الطالب
+              </h1>
+              <p style="font-size: var(--text-sm); color: #94a3b8; margin: 0;">
+                استعراض بيانات القيد، ورقم IMEI المسند لك، وسجل الحضور الرسمي.
+              </p>
+            </div>
+          </div>
+
+          <!-- Student Identity Overview -->
+          <div class="panel">
+            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-2);">
+              <div style="display: flex; align-items: center; gap: var(--space-2);">
+                <h3 class="panel-title" style="margin: 0;">ملف القيد والبيانات الأكاديمية</h3>
+                <span class="badge badge-success">حساب رسمي معتمد</span>
+              </div>
+              <button type="button" class="btn btn-outline btn-sm" id="print-my-cert-btn" style="padding: 4px 10px; font-size: 12px;">
+                🖨️ استخراج إفادة قيد رسمية (PDF)
+              </button>
+            </div>
+            <div class="panel-body">
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-4);">
+                <div>
+                  <div style="font-size: var(--text-xs); color: var(--text-muted);">اسم الطالب:</div>
+                  <div style="font-size: var(--text-base); font-weight: 700; color: var(--color-primary-950);" id="stu-name-display">
+                    —
+                  </div>
+                </div>
+                <div>
+                  <div style="font-size: var(--text-xs); color: var(--text-muted);">كود الطالب الموحد:</div>
+                  <div style="font-size: var(--text-base); font-weight: 700; color: var(--color-primary-900);">
+                    <code id="stu-code-display">—</code>
+                  </div>
+                </div>
+                <div>
+                  <div style="font-size: var(--text-xs); color: var(--text-muted);">المرحلة والفصل:</div>
+                  <div style="font-size: var(--text-sm); font-weight: 600;" id="stu-grade-display">—</div>
+                </div>
+                <div>
+                  <div style="font-size: var(--text-xs); color: var(--text-muted);">ولي الأمر:</div>
+                  <div style="font-size: var(--text-sm); font-weight: 600;" id="stu-parent-display">—</div>
+                </div>
+                <div>
+                  <div style="font-size: var(--text-xs); color: var(--text-muted);">حالة الانتظام:</div>
+                  <div><span class="badge badge-primary">منتظم ومقيد</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Academic Grades & Assessment Results -->
+          <div class="panel">
+            <div class="panel-header">
+              <h3 class="panel-title">📝 نتائج التقييمات والدرجات الشهرية</h3>
+              <span class="badge badge-accent">العام 2026/2027</span>
+            </div>
+            <div class="panel-body" id="student-grades-container">
+              <!-- Dynamically populated or empty state -->
+            </div>
+          </div>
+
+          <!-- Tablet Delivery Status Box -->
+          <div class="panel">
+            <div class="panel-header">
+              <h3 class="panel-title">📱 بيانات جهاز التابلت المسلم رسميًا</h3>
+            </div>
+            <div class="panel-body" id="student-tablet-container">
+              <div class="empty-state" style="border: none;">
+                <div class="empty-state-icon">📱</div>
+                <h4 class="empty-state-title">لم يتم تسجيل تسليم تابلت لهذا الحساب حتى الآن</h4>
+                <p class="empty-state-desc">
+                  يتم ربط رقم الـ IMEI تلقائيًا فور توقيع محضر الاستلام مع مسؤول التطوير التكنولوجي بالمدرسة.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Weekly Schedule Box -->
+          <div class="panel">
+            <div class="panel-header" style="flex-wrap: wrap; gap: var(--space-2);">
+              <h3 class="panel-title" id="student-schedule-title">📅 الجدول الدراسي الأسبوعي المعتمد</h3>
+              <span class="badge badge-primary" id="student-class-advisor-badge">رائد الفصل: أ. هاني مصطفى</span>
+            </div>
+            <div class="panel-body" id="student-schedule-container" style="padding: 0;">
+              <!-- Populated dynamically based on student's class (1/1 vs 1/2) -->
+            </div>
+          </div>
+
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { checkRouteAccess } from '../js/router-guard.js';
+    import { initComponents } from '../js/components.js';
+    import { initI18n } from '../js/i18n.js';
+    import { getCurrentUser, setFamilySessionRole } from '../js/auth.js?v=3.2';
+    import { DEFAULT_SCHOOL_ID } from '../js/services/school-service.js';
+    import { getStudents } from '../js/services/student-service.js';
+    import { getTabletDevices } from '../js/services/tablet-service.js';
+    import { getStudentGrades } from '../js/services/grade-service.js';
+    import { printEnrollmentCertificate } from '../js/utils/export-utils.js';
+
+    checkRouteAccess(['student', 'director', 'super_admin']);
+    initComponents();
+    initI18n();
+
+    // Ensure session role is set to student and saved to cookies
+    const currentUser = setFamilySessionRole('student') || getCurrentUser();
+    const schoolId = currentUser ? currentUser.schoolId || DEFAULT_SCHOOL_ID : DEFAULT_SCHOOL_ID;
+
+    // Intercept switch to parent portal links to record parent role in cookies
+    document.querySelectorAll('a[href*="parent-portal.html"]').forEach((link) => {
+      link.addEventListener('click', () => {
+        setFamilySessionRole('parent');
+      });
+    });
+
+    // Active Student Code handling (Youssef 2026101 vs Mariam 2026102)
+    let activeStudentCode = String(localStorage.getItem('dse_active_student_code') || '2026101').trim();
+    const isMariamInitial = activeStudentCode === '2026102';
+    const initialStudentName = isMariamInitial ? 'مريم أحمد المنشاوي' : 'يوسف أحمد المنشاوي';
+
+    const welcomeEl = document.getElementById('student-welcome-name');
+    const nameEl = document.getElementById('stu-name-display');
+    const codeEl = document.getElementById('stu-code-display');
+    const gradeEl = document.getElementById('stu-grade-display');
+    const parentEl = document.getElementById('stu-parent-display');
+
+    if (welcomeEl) welcomeEl.textContent = `مرحبًا، ${initialStudentName}`;
+    if (nameEl) nameEl.textContent = initialStudentName;
+    if (codeEl) codeEl.textContent = isMariamInitial ? '2026102' : '2026101';
+    if (gradeEl) gradeEl.textContent = isMariamInitial ? 'الصف الأول الثانوي — فصل 1/2' : 'الصف الأول الثانوي — فصل 1/1';
+    if (parentEl) parentEl.textContent = 'أ. أحمد المنشاوي';
+
+    const switchYoussefBtn = document.getElementById('switch-stu-youssef');
+    const switchMariamBtn = document.getElementById('switch-stu-mariam');
+
+    function updateSwitcherButtons() {
+      if (switchYoussefBtn && switchMariamBtn) {
+        if (activeStudentCode === '2026102') {
+          switchYoussefBtn.className = 'btn btn-sm btn-outline';
+          switchYoussefBtn.style.fontWeight = '600';
+          switchMariamBtn.className = 'btn btn-sm btn-primary';
+          switchMariamBtn.style.fontWeight = '800';
+        } else {
+          switchYoussefBtn.className = 'btn btn-sm btn-primary';
+          switchYoussefBtn.style.fontWeight = '800';
+          switchMariamBtn.className = 'btn btn-sm btn-outline';
+          switchMariamBtn.style.fontWeight = '600';
+        }
+      }
+    }
+
+    function switchStudent(newCode) {
+      activeStudentCode = String(newCode).trim();
+      localStorage.setItem('dse_active_student_code', activeStudentCode);
+      document.cookie = `dse_active_student_code=${activeStudentCode}; path=/; max-age=2592000`;
+      updateSwitcherButtons();
+      loadStudentData();
+    }
+
+    if (switchYoussefBtn) {
+      switchYoussefBtn.addEventListener('click', () => switchStudent('2026101'));
+    }
+
+    if (switchMariamBtn) {
+      switchMariamBtn.addEventListener('click', () => switchStudent('2026102'));
+    }
+
+    updateSwitcherButtons();
+
+    // Render Weekly Schedule depending on student class (Class 1/1 vs Class 1/2)
+    function renderClassSchedule(studentCode) {
+      const codeStr = String(studentCode).trim();
+      const isMariam = codeStr === '2026102';
+      
+      const titleEl = document.getElementById('student-schedule-title');
+      const advisorBadge = document.getElementById('student-class-advisor-badge');
+      const container = document.getElementById('student-schedule-container');
+      if (!container) return;
+
+      if (isMariam) {
+        if (titleEl) titleEl.textContent = '📅 الجدول الدراسي الأسبوعي — الصف الأول الثانوي (فصل 1/2)';
+        if (advisorBadge) advisorBadge.textContent = 'رائدة الفصل: أ. إيمان عبد الله (القاعة 108 — مبنى ب)';
+        
+        container.innerHTML = `
+          <div style="padding: var(--space-3) var(--space-4); background: #f0fdf4; border-bottom: 1px solid #bbf7d0; font-size: var(--text-xs); color: #166534; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-2);">
+            <div>📍 <strong>الفصل الدراسي:</strong> الصف الأول الثانوي — فصل 1/2 (مبنى ب - الدور الأول - قاعة 108)</div>
+            <div>👩‍🏫 <strong>رائدة الفصل:</strong> أ. إيمان عبد الله (معلم خبير لغة إنجليزية)</div>
+          </div>
+          <div class="table-wrap" style="border: none;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>اليوم</th>
+                  <th>الحصة 1 (08:00 - 08:45)</th>
+                  <th>الحصة 2 (08:50 - 09:35)</th>
+                  <th>الحصة 3 (09:40 - 10:25)</th>
+                  <th>الحصة 4 (11:00 - 11:45)</th>
+                  <th>الحصة 5 (11:50 - 12:35)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>الأحد</strong></td>
+                  <td>لغة إنجليزية (أ. إيمان عبد الله)</td>
+                  <td>أحياء (أ. سناء عثمان)</td>
+                  <td>لغة عربية (أ. فريال حماد)</td>
+                  <td>كيمياء (د. شيرين عزت)</td>
+                  <td>رياضيات (أ. سامح عبد الفتاح)</td>
+                </tr>
+                <tr>
+                  <td><strong>الإثنين</strong></td>
+                  <td>رياضيات (أ. سامح عبد الفتاح)</td>
+                  <td>لغة عربية (أ. فريال حماد)</td>
+                  <td>فيزياء (د. أشرف الباز)</td>
+                  <td>لغة إنجليزية (أ. إيمان عبد الله)</td>
+                  <td>جغرافيا (أ. نبيل فرج)</td>
+                </tr>
+                <tr>
+                  <td><strong>الثلاثاء</strong></td>
+                  <td>كيمياء (د. شيرين عزت)</td>
+                  <td>رياضيات (أ. سامح عبد الفتاح)</td>
+                  <td>لغة إنجليزية (أ. إيمان عبد الله)</td>
+                  <td>تاريخ (أ. مدحت الشافعي)</td>
+                  <td>لغة عربية (أ. فريال حماد)</td>
+                </tr>
+                <tr>
+                  <td><strong>الأربعاء</strong></td>
+                  <td>لغة عربية (أ. فريال حماد)</td>
+                  <td>أحياء (أ. سناء عثمان)</td>
+                  <td>رياضيات (أ. سامح عبد الفتاح)</td>
+                  <td>لغة إنجليزية (أ. إيمان عبد الله)</td>
+                  <td>حاسب وتكنولوجيا المعلومات</td>
+                </tr>
+                <tr>
+                  <td><strong>الخميس</strong></td>
+                  <td>لغة إنجليزية (أ. إيمان عبد الله)</td>
+                  <td>تربية وطنية (أ. حسني رضوان)</td>
+                  <td>كيمياء (د. شيرين عزت)</td>
+                  <td>فيزياء (د. أشرف الباز)</td>
+                  <td>أنشطة ومكتبة</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        `;
+      } else {
+        if (titleEl) titleEl.textContent = '📅 الجدول الدراسي الأسبوعي — الصف الأول الثانوي (فصل 1/1)';
+        if (advisorBadge) advisorBadge.textContent = 'رائد الفصل: أ. هاني مصطفى (القاعة 204 — مبنى أ)';
+
+        container.innerHTML = `
+          <div style="padding: var(--space-3) var(--space-4); background: #eff6ff; border-bottom: 1px solid #bfdbfe; font-size: var(--text-xs); color: #1e40af; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-2);">
+            <div>📍 <strong>الفصل الدراسي:</strong> الصف الأول الثانوي — فصل 1/1 (مبنى أ - الدور الثاني - قاعة 204)</div>
+            <div>👨‍🏫 <strong>رائد الفصل:</strong> أ. هاني مصطفى (معلم خبير لغة عربية)</div>
+          </div>
+          <div class="table-wrap" style="border: none;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>اليوم</th>
+                  <th>الحصة 1 (08:00 - 08:45)</th>
+                  <th>الحصة 2 (08:50 - 09:35)</th>
+                  <th>الحصة 3 (09:40 - 10:25)</th>
+                  <th>الحصة 4 (11:00 - 11:45)</th>
+                  <th>الحصة 5 (11:50 - 12:35)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>الأحد</strong></td>
+                  <td>لغة عربية (أ. هاني مصطفى)</td>
+                  <td>رياضيات (أ. سامح عبد الفتاح)</td>
+                  <td>فيزياء (د. أشرف الباز)</td>
+                  <td>لغة إنجليزية (أ. نسرين أحمد)</td>
+                  <td>أحياء (أ. سناء عثمان)</td>
+                </tr>
+                <tr>
+                  <td><strong>الإثنين</strong></td>
+                  <td>كيمياء (د. شيرين عزت)</td>
+                  <td>لغة إنجليزية (أ. نسرين أحمد)</td>
+                  <td>رياضيات (أ. سامح عبد الفتاح)</td>
+                  <td>تاريخ (أ. مدحت الشافعي)</td>
+                  <td>لغة عربية (أ. هاني مصطفى)</td>
+                </tr>
+                <tr>
+                  <td><strong>الثلاثاء</strong></td>
+                  <td>أحياء (أ. سناء عثمان)</td>
+                  <td>فيزياء (د. أشرف الباز)</td>
+                  <td>لغة عربية (أ. هاني مصطفى)</td>
+                  <td>جغرافيا (أ. نبيل فرج)</td>
+                  <td>رياضيات (أ. سامح عبد الفتاح)</td>
+                </tr>
+                <tr>
+                  <td><strong>الأربعاء</strong></td>
+                  <td>رياضيات (أ. سامح عبد الفتاح)</td>
+                  <td>كيمياء (د. شيرين عزت)</td>
+                  <td>لغة إنجليزية (أ. نسرين أحمد)</td>
+                  <td>تربية وطنية (أ. حسني رضوان)</td>
+                  <td>لغة عربية (أ. هاني مصطفى)</td>
+                </tr>
+                <tr>
+                  <td><strong>الخميس</strong></td>
+                  <td>فيزياء (د. أشرف الباز)</td>
+                  <td>أحياء (أ. سناء عثمان)</td>
+                  <td>لغة عربية (أ. هاني مصطفى)</td>
+                  <td>تربية رياضية</td>
+                  <td>أنشطة حاسب وتطوير تكنولوجي</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+    }
+
+    // Load student data — find the student record matching current user or active student code
+    async function loadStudentData() {
+      try {
+        const students = await getStudents(schoolId);
+        const codeStr = String(activeStudentCode).trim();
+        
+        let myStudent = students.find((s) => String(s.code).trim() === codeStr);
+
+        // Fallback: guaranteed resolution for both siblings
+        if (!myStudent) {
+          if (codeStr === '2026102') {
+            myStudent = {
+              name: 'مريم أحمد المنشاوي',
+              code: '2026102',
+              nationalId: '30805120104567',
+              grade: 'الصف الأول الثانوي — فصل 1/2',
+              parentInfo: { parentName: 'أ. أحمد المنشاوي' }
+            };
+          } else {
+            myStudent = {
+              name: 'يوسف أحمد المنشاوي',
+              code: '2026101',
+              nationalId: '30801010102345',
+              grade: 'الصف الأول الثانوي — فصل 1/1',
+              parentInfo: { parentName: 'أ. أحمد المنشاوي' }
+            };
+          }
+        } else {
+          // Authoritative sanitization
+          if (myStudent.code === '2026102' || (myStudent.name && myStudent.name.includes('مريم'))) {
+            myStudent.name = 'مريم أحمد المنشاوي';
+            myStudent.grade = 'الصف الأول الثانوي — فصل 1/2';
+          } else if (myStudent.code === '2026101' || (myStudent.name && myStudent.name.includes('يوسف'))) {
+            myStudent.name = 'يوسف أحمد المنشاوي';
+            myStudent.grade = 'الصف الأول الثانوي — فصل 1/1';
+          }
+        }
+
+        const finalName = myStudent.name;
+        if (welcomeEl) welcomeEl.textContent = `مرحبًا، ${finalName}`;
+        if (nameEl) nameEl.textContent = finalName;
+        if (codeEl) codeEl.textContent = myStudent.code;
+        if (gradeEl) gradeEl.textContent = myStudent.grade || 'الصف الأول الثانوي';
+        if (parentEl) {
+          parentEl.textContent = myStudent.parentInfo?.parentName || 'أ. أحمد المنشاوي';
+        }
+
+        // Update topbar identity
+        const topbarName = document.getElementById('topbar-user-name');
+        const topbarAvatar = document.getElementById('topbar-user-avatar');
+        const topbarRole = document.getElementById('topbar-user-role');
+        if (topbarName) topbarName.textContent = finalName;
+        if (topbarAvatar) topbarAvatar.textContent = finalName.charAt(0);
+        if (topbarRole) topbarRole.textContent = myStudent.code === '2026102' ? 'طالبة (فصل 1/2)' : 'طالب (فصل 1/1)';
+
+        // Load dynamic class schedule (1/1 vs 1/2)
+        renderClassSchedule(myStudent.code);
+
+        // Load grades
+        await loadStudentGrades(myStudent.code);
+
+        // Setup print certificate button
+        const printCertBtn = document.getElementById('print-my-cert-btn');
+        if (printCertBtn) {
+          printCertBtn.onclick = () => {
+            printEnrollmentCertificate({
+              name: finalName,
+              code: myStudent.code,
+              nationalId: myStudent.nationalId || (myStudent.code === '2026102' ? '30805120104567' : '30801010102345'),
+              grade: myStudent.grade || (myStudent.code === '2026102' ? 'الصف الأول الثانوي — فصل 1/2' : 'الصف الأول الثانوي — فصل 1/1'),
+            });
+          };
+        }
+
+        // Load tablet
+        await loadStudentTablet(myStudent.code);
+      } catch (e) {
+        console.warn('Student data load error:', e);
+      }
+    }
+
+    async function loadStudentGrades(studentCode) {
+      const grades = await getStudentGrades(studentCode, schoolId);
+      const container = document.getElementById('student-grades-container');
+
+      if (!grades || grades.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state" style="border: none;">
+            <div class="empty-state-icon">📝</div>
+            <h4 class="empty-state-title">لا توجد درجات معتمدة مرصودة حتى الآن</h4>
+            <p class="empty-state-desc">تظهر الدرجات فور اعتمادها رسميًا من معلم المادة وإدارة المدرسة.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="table-wrap" style="border: none;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>تاريخ الرصد</th>
+                <th>المادة</th>
+                <th>التقييم / الاختبار</th>
+                <th>الدرجة الحاصل عليها</th>
+                <th>ملاحظات المعلم</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${grades.map((g) => `
+                <tr>
+                  <td><small style="color: var(--text-muted);">${g.recordedDate || '—'}</small></td>
+                  <td><strong>${g.subject}</strong></td>
+                  <td>${g.assessmentTitle}</td>
+                  <td><span class="badge badge-success" style="font-size: var(--text-sm); font-weight: 700;">${g.score} / ${g.maxScore}</span></td>
+                  <td>${g.feedback || '<span style="color: var(--text-muted);">أداء جيد ومتميز</span>'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    async function loadStudentTablet(studentCode) {
+      const codeStr = String(studentCode).trim();
+      const devices = await getTabletDevices(schoolId);
+      const container = document.getElementById('student-tablet-container');
+      if (!container) return;
+
+      let myDevice = devices.find((d) => 
+        d.status === 'delivered' && String(d.assignedStudentCode).trim() === codeStr
+      );
+
+      // Dedicated fallback if device was cached or not yet queried
+      if (!myDevice) {
+        if (codeStr === '2026102') {
+          myDevice = devices.find(d => d.imei === '354892109876544' || d.assignedStudentName?.includes('مريم')) || {
+            imei: '354892109876544',
+            assignedStudentName: 'مريم أحمد المنشاوي',
+            deliveredDate: '2026-10-18',
+            status: 'delivered'
+          };
+        } else {
+          myDevice = devices.find(d => d.imei === '354892109876543' || d.assignedStudentName?.includes('يوسف')) || {
+            imei: '354892109876543',
+            assignedStudentName: 'يوسف أحمد المنشاوي',
+            deliveredDate: '2026-10-15',
+            status: 'delivered'
+          };
+        }
+      }
+
+      if (myDevice) {
+        container.innerHTML = `
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4);">
+            <div>
+              <div style="font-size: var(--text-xs); color: var(--text-muted);">رقم IMEI للجهاز:</div>
+              <div style="font-size: var(--text-base); font-weight: 800; color: var(--color-primary-900); font-family: var(--font-mono);">
+                ${myDevice.imei}
+              </div>
+            </div>
+            <div>
+              <div style="font-size: var(--text-xs); color: var(--text-muted);">حالة الجهاز:</div>
+              <div><span class="badge badge-success">تم التسليم رسميًا بمحضر استلام</span></div>
+            </div>
+            <div>
+              <div style="font-size: var(--text-xs); color: var(--text-muted);">الطالب المستلم:</div>
+              <div style="font-size: var(--text-sm); font-weight: 700; color: var(--color-primary-950);">
+                ${myDevice.assignedStudentName || (codeStr === '2026102' ? 'مريم أحمد المنشاوي' : 'يوسف أحمد المنشاوي')}
+              </div>
+            </div>
+            <div>
+              <div style="font-size: var(--text-xs); color: var(--text-muted);">تاريخ الاستلام:</div>
+              <div style="font-size: var(--text-sm); font-weight: 600;">${myDevice.deliveredDate || (codeStr === '2026102' ? '2026-10-18' : '2026-10-15')}</div>
+            </div>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div class="empty-state" style="border: none;">
+            <div class="empty-state-icon">📱</div>
+            <h4 class="empty-state-title">لم يتم تسجيل تسليم تابلت لهذا الحساب حتى الآن</h4>
+            <p class="empty-state-desc">يتم ربط رقم الـ IMEI تلقائيًا فور توقيع محضر الاستلام مع مسؤول التطوير التكنولوجي.</p>
+          </div>
+        `;
+      }
+    }
+
+    loadStudentData();
+  </script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=6.0')}</script>
+</body>
+</html>

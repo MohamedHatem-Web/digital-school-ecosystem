@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تسجيل الدخول — منظومة المدرسة الرقمية</title>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/public-site.css">
+  <style>
+    .login-canvas {
+      min-height: 100vh;
+      background: linear-gradient(135deg, var(--color-primary-950) 0%, var(--color-primary-900) 65%, var(--color-primary-850) 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-6);
+    }
+    .login-box {
+      max-width: 480px;
+      width: 100%;
+    }
+    .demo-role-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-2);
+      margin-top: var(--space-4);
+    }
+    .demo-role-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 0.55rem 0.75rem;
+      background-color: var(--bg-surface-subtle);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--color-primary-950);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      text-align: start;
+    }
+    .demo-role-item:hover {
+      background-color: var(--color-primary-50);
+      border-color: var(--color-primary-700);
+      transform: translateY(-1px);
+    }
+    .demo-role-item:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  </style>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0a1628">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="المدرسة الرقمية">
+</head>
+<body>
+
+  <div class="login-canvas">
+    <div class="login-box">
+      <div style="margin-bottom: var(--space-4); display: flex; justify-content: space-between; align-items: center;">
+        <a href="index.html" style="font-size: var(--text-xs); color: #cbd5e1; font-weight: 500;">
+          ← العودة للموقع العام للمدرسة
+        </a>
+        <span class="badge badge-accent" style="font-size: 11px;">إصدار الإنتاج 2.0</span>
+      </div>
+
+      <div class="panel" style="box-shadow: var(--shadow-lg);">
+        <div class="panel-header" style="flex-direction: column; text-align: center; padding-block: var(--space-6);">
+          <div class="brand-crest" style="margin-bottom: var(--space-2); width: 48px; height: 48px;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+              <path d="M6 6h10"></path>
+              <path d="M6 10h10"></path>
+            </svg>
+          </div>
+          <h1 style="font-size: var(--text-xl); font-weight: 800; color: var(--color-primary-950);">
+            بوابة الدخول الموحدة للمنظومة
+          </h1>
+          <p style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">
+            المصادقة الرسمية الآمنة عبر خدمات Firebase السحابية
+          </p>
+        </div>
+
+        <div class="panel-body">
+          <!-- Active Session Card -->
+          <div id="active-session-banner" class="alert alert-success" style="display: none; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-4); text-align: start;">
+            <div style="font-weight: 700; font-size: var(--text-sm);">
+              👤 أنت مسجل الدخول بالفعل كـ: <span id="active-session-user-name"></span>
+            </div>
+            <div style="font-size: var(--text-xs); color: var(--color-success-text);">
+              يمكنك المتابعة مباشرة للوحة التحكم أو تسجيل الخروج والتبديل لحساب آخر.
+            </div>
+            <div style="display: flex; gap: var(--space-2); margin-top: 4px; flex-wrap: wrap;">
+              <a href="#" id="go-active-dashboard-btn" class="btn btn-primary btn-sm">الانتقال للوحة التحكم ←</a>
+              <a href="dashboard/student-portal.html" id="go-student-portal-btn" class="btn btn-secondary btn-sm" style="display: none;">🎓 بوابة الطالب</a>
+              <a href="dashboard/parent-portal.html" id="go-parent-portal-btn" class="btn btn-secondary btn-sm" style="display: none;">👨‍👦 بوابة ولي الأمر</a>
+              <button type="button" id="switch-account-btn" class="btn btn-outline btn-sm">تسجيل الخروج والتبديل</button>
+            </div>
+          </div>
+
+          <!-- Auth Alert Messages -->
+          <div id="login-error-alert" class="alert alert-danger" style="display: none; margin-bottom: var(--space-4);">
+            <span id="login-error-text">حدث خطأ أثناء تسجيل الدخول.</span>
+          </div>
+
+          <div id="login-loading-indicator" class="alert alert-primary" style="display: none; margin-bottom: var(--space-4);">
+            جاري التحقق من الهوية والصلاحيات عبر الخادم السحابي...
+          </div>
+
+          <form id="login-form">
+            <div class="form-group">
+              <label class="form-label" for="user-email">كود الطالب الموحد أو البريد الإلكتروني <span class="required">*</span></label>
+              <input type="text" id="user-email" class="form-control" placeholder="أدخل كود الطالب (مثال: 2026101) أو البريد الرسمي" required autocomplete="username">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="user-password">كلمة المرور الرسمية <span class="required">*</span></label>
+              <div style="position: relative; display: flex; align-items: center;">
+                <input type="password" id="user-password" class="form-control" placeholder="••••••••" required autocomplete="current-password" style="padding-left: 42px;">
+                <button type="button" id="toggle-password-btn" aria-label="إظهار / إخفاء كلمة المرور" title="إظهار كلمة المرور" style="position: absolute; left: 10px; background: none; border: none; cursor: pointer; font-size: 1.15rem; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; user-select: none;">
+                  👁️
+                </button>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; margin-bottom: var(--space-4);">
+              <a href="reset-password.html" style="font-size: var(--text-xs); color: var(--color-accent-700); font-weight: 600;">
+                نسيت كلمة المرور؟
+              </a>
+            </div>
+
+            <button type="submit" id="submit-login-btn" class="btn btn-primary btn-lg btn-full">
+              تسجيل الدخول للمنظومة
+            </button>
+          </form>
+
+          <div style="margin-top: var(--space-6); text-align: center; font-size: var(--text-xs); color: var(--text-muted);">
+            <span>للدعم الفني والاستفسارات: تواصل مع إدارة التطوير التكنولوجي بالمدرسة</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Family Portal Selection Modal (Pops up AFTER authenticating student/family account) -->
+  <div id="portal-choice-modal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(10, 22, 40, 0.75); backdrop-filter: blur(4px); z-index: 10000; align-items: center; justify-content: center; padding: var(--space-4);">
+    <div class="panel" style="max-width: 520px; width: 100%; box-shadow: var(--shadow-xl); border: 1px solid var(--border-light); overflow: hidden; animation: fadeIn 0.25s ease-out;">
+      <div style="background: linear-gradient(135deg, #0c172d 0%, #172542 100%); color: #ffffff; padding: var(--space-5); text-align: center;">
+        <div style="font-size: 2.2rem; margin-bottom: var(--space-2);">🏫</div>
+        <h3 style="font-size: var(--text-lg); font-weight: 800; color: #ffffff; margin-bottom: 4px;">مرحبًا بك في المنظومة المدرسية الموحدة</h3>
+        <p style="font-size: var(--text-xs); color: #cbd5e1; margin: 0;">
+          تم التحقق بنجاح من بيانات الحساب: <strong style="color: var(--color-accent-400);" id="choice-student-name">يوسف أحمد المنشاوي</strong>
+        </p>
+      </div>
+      <div class="panel-body" style="padding: var(--space-5);">
+        <p style="font-size: var(--text-sm); font-weight: 700; color: var(--color-primary-950); margin-bottom: var(--space-4); text-align: center;">
+          يرجى تحديد صفة الدخول التي ترغب في المتابعة بها الآن:
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+          <!-- Choice 1: Student Youssef -->
+          <button type="button" id="choose-student-btn" style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--bg-surface-subtle); border: 2px solid var(--border-light); border-radius: var(--radius-md); cursor: pointer; text-align: start; transition: all 0.2s ease; width: 100%;">
+            <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--color-primary-900); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
+              🎓
+            </div>
+            <div style="flex: 1;">
+              <div style="font-size: var(--text-sm); font-weight: 800; color: var(--color-primary-950);">
+                أنا الطالب: يوسف أحمد المنشاوي
+              </div>
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">
+                كود: <code>2026101</code> — الصف الأول الثانوي (فصل 1/1)
+              </div>
+            </div>
+            <div style="font-size: 1.1rem; color: var(--color-primary-900);">←</div>
+          </button>
+
+          <!-- Choice 2: Student Mariam -->
+          <button type="button" id="choose-mariam-btn" style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--bg-surface-subtle); border: 2px solid var(--border-light); border-radius: var(--radius-md); cursor: pointer; text-align: start; transition: all 0.2s ease; width: 100%;">
+            <div style="width: 44px; height: 44px; border-radius: 50%; background: #0f766e; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
+              🎓
+            </div>
+            <div style="flex: 1;">
+              <div style="font-size: var(--text-sm); font-weight: 800; color: var(--color-primary-950);">
+                أنا الطالبة: مريم أحمد المنشاوي
+              </div>
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">
+                كود: <code>2026102</code> — الصف الأول الثانوي (فصل 1/2)
+              </div>
+            </div>
+            <div style="font-size: 1.1rem; color: #0f766e;">←</div>
+          </button>
+
+          <!-- Choice 3: Parent -->
+          <button type="button" id="choose-parent-btn" style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: #fffbeb; border: 2px solid #fde68a; border-radius: var(--radius-md); cursor: pointer; text-align: start; transition: all 0.2s ease; width: 100%;">
+            <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--color-accent-700); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
+              👨‍👧‍👦
+            </div>
+            <div style="flex: 1;">
+              <div style="font-size: var(--text-sm); font-weight: 800; color: var(--color-primary-950);">
+                أنا ولي الأمر: أ. أحمد المنشاوي
+              </div>
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">
+                متابعة الأبناء معاً (يوسف ومريم) والغياب والدرجات وإشعارات الانصراف
+              </div>
+            </div>
+            <div style="font-size: 1.1rem; color: var(--color-accent-700);">←</div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <script type="module">
+    import { loginWithEmailPassword, getRoleDashboardUrl, translateAuthError, getCurrentUser, logout, setFamilySessionRole } from './js/auth.js?v=6.0';
+
+    // Immediate stale cache sanitizer — purge any old student data with wrong names
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (!key) continue;
+        const val = localStorage.getItem(key);
+        if (val && (val.includes('طارق محمود') || val.includes('مريم طارق') || (key.startsWith('dse_students_') && !key.includes('v6')))) {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch(e) {}
+
+    // Check if session is already active
+    const activeSession = getCurrentUser();
+    if (activeSession) {
+      const banner = document.getElementById('active-session-banner');
+      const nameEl = document.getElementById('active-session-user-name');
+      const goBtn = document.getElementById('go-active-dashboard-btn');
+      const studentBtn = document.getElementById('go-student-portal-btn');
+      const parentBtn = document.getElementById('go-parent-portal-btn');
+      const switchBtn = document.getElementById('switch-account-btn');
+
+      if (banner && nameEl) {
+        nameEl.textContent = `${activeSession.displayName || 'المستخدم'} (${activeSession.email})`;
+        const isFamily = activeSession.role === 'student' || activeSession.role === 'parent' || activeSession.email === 'student@dse.edu.eg' || activeSession.email === 'parent@dse.edu.eg';
+        
+        if (isFamily) {
+          if (studentBtn) {
+            studentBtn.style.display = 'inline-flex';
+            studentBtn.onclick = (e) => {
+              e.preventDefault();
+              setFamilySessionRole('student');
+              window.location.href = 'dashboard/student-portal.html';
+            };
+          }
+          if (parentBtn) {
+            parentBtn.style.display = 'inline-flex';
+            parentBtn.onclick = (e) => {
+              e.preventDefault();
+              setFamilySessionRole('parent');
+              window.location.href = 'dashboard/parent-portal.html';
+            };
+          }
+          if (goBtn) goBtn.style.display = 'none';
+        } else if (goBtn) {
+          goBtn.href = getRoleDashboardUrl(activeSession.role);
+          goBtn.style.display = 'inline-flex';
+        }
+        banner.style.display = 'flex';
+      }
+      if (switchBtn) {
+        switchBtn.addEventListener('click', async () => {
+          await logout();
+        });
+      }
+    }
+
+    const loginForm = document.getElementById('login-form');
+    const submitBtn = document.getElementById('submit-login-btn');
+    const errorAlert = document.getElementById('login-error-alert');
+    const errorText = document.getElementById('login-error-text');
+    const loadingAlert = document.getElementById('login-loading-indicator');
+
+    function setLoading(isLoading) {
+      submitBtn.disabled = isLoading;
+      loadingAlert.style.display = isLoading ? 'flex' : 'none';
+      if (isLoading) errorAlert.style.display = 'none';
+    }
+
+    function showError(msg) {
+      errorText.textContent = msg;
+      errorAlert.style.display = 'flex';
+    }
+
+    // Toggle password visibility
+    const togglePasswordBtn = document.getElementById('toggle-password-btn');
+    const passwordInput = document.getElementById('user-password');
+    if (togglePasswordBtn && passwordInput) {
+      togglePasswordBtn.addEventListener('click', () => {
+        const isPassword = passwordInput.type === 'password';
+        passwordInput.type = isPassword ? 'text' : 'password';
+        togglePasswordBtn.textContent = isPassword ? '🙈' : '👁️';
+        togglePasswordBtn.title = isPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور';
+      });
+    }
+
+    // Standard Form Authentication with real Firebase credentials
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('user-email').value.trim();
+      const password = document.getElementById('user-password').value;
+
+      setLoading(true);
+      try {
+        const profile = await loginWithEmailPassword(email, password);
+        const isFamily = profile.role === 'student' || profile.role === 'parent' || profile.email === 'student@dse.edu.eg' || profile.email === 'parent@dse.edu.eg';
+
+        if (isFamily) {
+          setLoading(false);
+          const choiceModal = document.getElementById('portal-choice-modal');
+          const chooseStudentBtn = document.getElementById('choose-student-btn');
+          const chooseMariamBtn = document.getElementById('choose-mariam-btn');
+          const chooseParentBtn = document.getElementById('choose-parent-btn');
+
+          choiceModal.style.display = 'flex';
+
+          chooseStudentBtn.onclick = () => {
+            chooseStudentBtn.disabled = true;
+            setFamilySessionRole('student');
+            localStorage.setItem('dse_active_student_code', '2026101');
+            document.cookie = 'dse_active_student_code=2026101; path=/; max-age=2592000';
+            window.location.href = 'dashboard/student-portal.html';
+          };
+
+          if (chooseMariamBtn) {
+            chooseMariamBtn.onclick = () => {
+              chooseMariamBtn.disabled = true;
+              setFamilySessionRole('student');
+              localStorage.setItem('dse_active_student_code', '2026102');
+              document.cookie = 'dse_active_student_code=2026102; path=/; max-age=2592000';
+              window.location.href = 'dashboard/student-portal.html';
+            };
+          }
+
+          chooseParentBtn.onclick = () => {
+            chooseParentBtn.disabled = true;
+            setFamilySessionRole('parent');
+            window.location.href = 'dashboard/parent-portal.html';
+          };
+        } else {
+          window.location.href = getRoleDashboardUrl(profile.role);
+        }
+      } catch (err) {
+        console.error('Login error:', err);
+        setLoading(false);
+        showError(translateAuthError(err.code || err.message));
+      }
+    });
+  </script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=6.0')}</script>
+</body>
+</html>

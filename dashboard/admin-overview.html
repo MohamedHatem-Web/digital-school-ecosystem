@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مكتب مدير المدرسة — منظومة المدرسة الرقمية</title>
+  <link rel="stylesheet" href="../css/tokens.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/dashboard.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <meta name="theme-color" content="#0a1628">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="المدرسة الرقمية">
+</head>
+<body>
+
+  <div class="dashboard-layout">
+    <div class="dashboard-overlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-header">
+        <a href="admin-overview.html" class="sidebar-brand-box">
+          <div class="sidebar-crest">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+            </svg>
+          </div>
+          <div>
+            <div class="sidebar-title">منظومة المدرسة</div>
+            <div class="sidebar-sub">مكتب المدير العام</div>
+          </div>
+        </a>
+        <button type="button" class="sidebar-close-btn btn btn-sm" style="color: #ffffff;">✕</button>
+      </div>
+
+      <div class="sidebar-role-indicator">
+        <span>المساحة الإشرافية:</span>
+        <span class="badge badge-primary">مدير المدرسة</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="sidebar-menu">
+          <a href="admin-overview.html" class="sidebar-link active">
+            <span class="sidebar-icon">📊</span>
+            <span>نظرة عامة واللوحة الإشرافية</span>
+          </a>
+          <a href="media-gallery.html" class="sidebar-link">
+            <span class="sidebar-icon">📸</span>
+            <span>معرض الصور والوسائط (Cloudinary)</span>
+          </a>
+          <a href="tech-devices.html" class="sidebar-link">
+            <span class="sidebar-icon">📱</span>
+            <span>منظومة أجهزة التابلت</span>
+          </a>
+          <a href="student-affairs.html" class="sidebar-link">
+            <span class="sidebar-icon">🎓</span>
+            <span>شؤون الطلاب والقيد</span>
+          </a>
+          <a href="social-affairs.html" class="sidebar-link">
+            <span class="sidebar-icon">🤝</span>
+            <span>الأخصائي الاجتماعي والإنذارات</span>
+          </a>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="../index.html" class="sidebar-back-portal">
+          <span>🌐</span>
+          <span>الموقع العام للمدرسة</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <div class="dashboard-main">
+      <header class="dashboard-topbar">
+        <div class="topbar-start">
+          <button type="button" class="sidebar-toggle-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+          </button>
+          <span class="badge badge-accent">العام الدراسي 2026/2027</span>
+        </div>
+
+        <div class="topbar-end">
+          <div class="user-profile-widget">
+            <div class="user-avatar" id="topbar-user-avatar">م</div>
+            <div class="user-text-info">
+              <span class="user-name" id="topbar-user-name">مدير المدرسة</span>
+              <span class="user-role-title" id="topbar-user-role">Super Admin</span>
+            </div>
+            <a href="#" class="logout-action-btn logout-btn" title="تسجيل الخروج">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </header>
+
+      <main class="dashboard-workspace">
+        <div style="display: flex; flex-direction: column; gap: var(--space-6);">
+
+          <!-- Page Header & Action Bar -->
+          <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-4);">
+            <div style="display: flex; flex-direction: column; gap: var(--space-1);">
+              <h1 style="font-size: var(--text-2xl); font-weight: 800; color: var(--color-primary-950);">
+                لوحة الإشراف الإداري المركزية
+              </h1>
+              <p style="font-size: var(--text-sm); color: var(--text-muted);">
+                مؤشرات الأداء الأكاديمي، سجلات القيد الفعلي، حصر التابلت، وإدارة محتوى المنظومة.
+              </p>
+            </div>
+            <div style="display: flex; gap: var(--space-2); flex-wrap: wrap;">
+              <input type="file" id="avatar-input" accept="image/jpeg,image/png,image/webp" style="display: none;">
+              <button type="button" id="upload-avatar-btn" class="btn btn-outline btn-md">
+                📸 تحديث صورتي
+              </button>
+              <button type="button" id="trigger-dismissal-btn" class="btn btn-warning btn-md" style="font-weight: 700;">
+                🔔 إعلان انصراف اليوم الدراسي
+              </button>
+            </div>
+          </div>
+
+          <div id="dismissal-success-alert" class="alert alert-success" style="display: none;">
+            ✓ تم اعتماد وإشعار أولياء الأمور رسميًا بانتهاء اليوم الدراسي وتوثيقه في المنظومة.
+          </div>
+
+          <!-- Real Counters (Zero Fake Data) -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4);">
+            <div class="panel">
+              <div class="panel-body">
+                <div style="font-size: var(--text-xs); color: var(--text-muted); font-weight: 600; margin-bottom: var(--space-2);">
+                  أجهزة التابلت في المخزن
+                </div>
+                <div style="font-size: var(--text-3xl); font-weight: 800; color: var(--color-primary-950);" id="stat-tablets-count">
+                  0
+                </div>
+                <div style="font-size: var(--text-xs); color: var(--text-muted); margin-top: var(--space-1);">
+                  من واقع سجلات الـ IMEI الفعلية
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-body">
+                <div style="font-size: var(--text-xs); color: var(--text-muted); font-weight: 600; margin-bottom: var(--space-2);">
+                  دفعات الاستلام الوزارية
+                </div>
+                <div style="font-size: var(--text-3xl); font-weight: 800; color: var(--color-accent-700);" id="stat-batches-count">
+                  0
+                </div>
+                <div style="font-size: var(--text-xs); color: var(--text-muted); margin-top: var(--space-1);">
+                  دفعات استلام مسجلة
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-body">
+                <div style="font-size: var(--text-xs); color: var(--text-muted); font-weight: 600; margin-bottom: var(--space-2);">
+                  الأجهزة المسلمة رسميًا للطلاب
+                </div>
+                <div style="font-size: var(--text-3xl); font-weight: 800; color: var(--color-success-solid);" id="stat-delivered-count">
+                  0
+                </div>
+                <div style="font-size: var(--text-xs); color: var(--text-muted); margin-top: var(--space-1);">
+                  بمحاضر استلام موثقة
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-body">
+                <div style="font-size: var(--text-xs); color: var(--text-muted); font-weight: 600; margin-bottom: var(--space-2);">
+                  الطلاب المقيدين في المنظومة
+                </div>
+                <div style="font-size: var(--text-3xl); font-weight: 800; color: var(--color-primary-700);" id="stat-students-count">
+                  0
+                </div>
+                <div style="font-size: var(--text-xs); color: var(--text-muted); margin-top: var(--space-1);">
+                  ملفات قيد معتمدة
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Audit Trail Activity Log -->
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">سجل العمليات والرقابة الإدارية (Audit Trail)</h3>
+                <p style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">
+                  توثيق فوري لكافة إجراءات قيد التابلت، ومحاضر التسليم، وتحديثات البيانات الرسمية.
+                </p>
+              </div>
+              <span class="badge badge-accent">تتبع حي</span>
+            </div>
+            <div class="panel-body">
+              <div id="audit-empty-state" class="empty-state" style="border: none; display: none;">
+                <div class="empty-state-icon">📜</div>
+                <h4 class="empty-state-title">لا توجد سجلات تشغيلية حتى الآن</h4>
+                <p class="empty-state-desc">تظهر هنا تلقائيًا كافة العمليات الموثقة فور تنفيذها في المدرسة.</p>
+              </div>
+              <div class="table-wrap" id="audit-table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>وقت العملية</th>
+                      <th>نوع الإجراء</th>
+                      <th>الهدف / البيان</th>
+                      <th>تفاصيل السجل</th>
+                      <th>المسؤول</th>
+                    </tr>
+                  </thead>
+                  <tbody id="audit-logs-body">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Academic Classes & Sections Management -->
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">الهيكل الأكاديمي والفصول الدراسية</h3>
+                <p style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">
+                  إدارة المراحل التعليمية وتوزيع القاعات الدراسية.
+                </p>
+              </div>
+              <button type="button" id="toggle-class-form-btn" class="btn btn-outline btn-sm">+ إضافة فصل دراسي</button>
+            </div>
+            <div class="panel-body">
+              <div id="class-form-panel" style="display: none; padding: var(--space-4); background: var(--bg-surface-subtle); border: 1px solid var(--border-light); border-radius: var(--radius-sm); margin-bottom: var(--space-4);">
+                <form id="new-class-form">
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-3);">
+                    <div class="form-group">
+                      <label class="form-label" for="cls-name">مسمى الفصل <span class="required">*</span></label>
+                      <input type="text" id="cls-name" class="form-control" placeholder="مثال: فصل 1/3" required>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="cls-grade">المرحلة الدراسية <span class="required">*</span></label>
+                      <select id="cls-grade" class="form-control">
+                        <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                        <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                        <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="cls-room">القاعة الدراسية</label>
+                      <input type="text" id="cls-room" class="form-control" placeholder="مثال: قاعة 103">
+                    </div>
+                  </div>
+                  <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-3);">
+                    <button type="button" id="cancel-class-btn" class="btn btn-sm">إلغاء</button>
+                    <button type="submit" class="btn btn-primary btn-sm">حفظ الفصل الدراسي</button>
+                  </div>
+                </form>
+              </div>
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>مسمى الفصل</th>
+                      <th>المرحلة الأكاديمية</th>
+                      <th>المقر / القاعة</th>
+                      <th>الحالة</th>
+                    </tr>
+                  </thead>
+                  <tbody id="classes-table-body">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Public Website CMS Management -->
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">إدارة ونشر محتوى الموقع العام (CMS)</h3>
+                <p style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">
+                  نشر البيانات الرسمية، الأخبار والأنشطة لزوار الموقع العام للمدرسة فوراً.
+                </p>
+              </div>
+              <button type="button" id="toggle-cms-form-btn" class="btn btn-primary btn-sm">+ نشر بيان أو خبر رسمي</button>
+            </div>
+            <div class="panel-body">
+              <div id="cms-form-panel" style="display: none; padding: var(--space-4); background: var(--bg-surface-subtle); border: 1px solid var(--border-light); border-radius: var(--radius-sm); margin-bottom: var(--space-4);">
+                <form id="new-cms-form">
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-3);">
+                    <div class="form-group" style="grid-column: span 2;">
+                      <label class="form-label" for="cms-title">عنوان الخبر أو البيان الرسمي <span class="required">*</span></label>
+                      <input type="text" id="cms-title" class="form-control" placeholder="مثال: إعلان فتح باب استلام تابلت الصف الأول الثانوي" required>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="cms-category">تصنيف المحتوى <span class="required">*</span></label>
+                      <select id="cms-category" class="form-control">
+                        <option value="news">بيانات رسمية وأخبار</option>
+                        <option value="activities">أنشطة طلابية ومعارض</option>
+                        <option value="announcements">تنبيهات إدارية هامة</option>
+                        <option value="leadership">القيادة المدرسية</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="cms-status">حالة النشر</label>
+                      <select id="cms-status" class="form-control">
+                        <option value="published">نشر فوري بالموقع العام</option>
+                        <option value="draft">حفظ كمسودة للإدارة فقط</option>
+                      </select>
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                      <label class="form-label" for="cms-summary">الموجز أو نص البيان <span class="required">*</span></label>
+                      <textarea id="cms-summary" rows="3" class="form-control" placeholder="اكتب تفاصيل الإعلان الرسمي الموجه للطلاب وأولياء الأمور..." required></textarea>
+                    </div>
+                  </div>
+                  <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-3);">
+                    <button type="button" id="cancel-cms-btn" class="btn btn-sm">إلغاء</button>
+                    <button type="submit" class="btn btn-primary btn-sm">نشر على الموقع العام</button>
+                  </div>
+                </form>
+              </div>
+
+              <div id="cms-empty-state" class="empty-state" style="border: none; display: none;">
+                <div class="empty-state-icon">📢</div>
+                <h4 class="empty-state-title">لا توجد منشورات على الموقع العام حالياً</h4>
+                <p class="empty-state-desc">استخدم الزر أعلاه لإضافة أول بيان رسمي أو خبر للطلاب وأولياء الأمور.</p>
+              </div>
+
+              <div class="table-wrap" id="cms-table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>تاريخ النشر</th>
+                      <th>التصنيف</th>
+                      <th>عنوان المحتوى</th>
+                      <th>حالة العرض</th>
+                      <th>إجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cms-table-body">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- School Profile Setup Panel (Allows entering the real school identity!) -->
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">تكوين هوية وبيانات المدرسة الرسمية</h3>
+                <p style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">
+                  البيانات التي تُدخل هنا تظهر فوراً في ترويسة الموقع العام وكافة المحاضر الرسمية.
+                </p>
+              </div>
+              <span class="badge badge-primary">إعدادات الإدارة</span>
+            </div>
+            <div class="panel-body">
+              <div id="profile-saved-alert" class="alert alert-success" style="display: none;">
+                ✓ تم حفظ واعتماد بيانات المدرسة بنجاح وتحديث الموقع العام.
+              </div>
+
+              <form id="school-profile-form">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4);">
+                  <div class="form-group">
+                    <label class="form-label" for="prof-name-ar">اسم المدرسة الرسمي (بالعربية) <span class="required">*</span></label>
+                    <input type="text" id="prof-name-ar" class="form-control" placeholder="أدخل الاسم الرسمي المعتمد للمدرسة" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="prof-admin">الإدارة التعليمية التابعة لها <span class="required">*</span></label>
+                    <input type="text" id="prof-admin" class="form-control" placeholder="مثال: إدارة النزهة التعليمية" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="prof-address">العنوان والمقر</label>
+                    <input type="text" id="prof-address" class="form-control" placeholder="محافظة القاهرة — شارع...">
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="prof-phone">رقم الهاتف الرسمي</label>
+                    <input type="text" id="prof-phone" class="form-control" placeholder="+20 2 XXXXXXXX">
+                  </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; margin-top: var(--space-4);">
+                  <button type="submit" class="btn btn-primary btn-md">حفظ واعتماد هوية المدرسة</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { checkRouteAccess } from '../js/router-guard.js';
+    import { initComponents } from '../js/components.js';
+    import { initI18n } from '../js/i18n.js';
+    import { getCurrentUser } from '../js/auth.js';
+    import { getSchoolProfile, saveSchoolProfile, DEFAULT_SCHOOL_ID } from '../js/services/school-service.js';
+    import { getTabletBatches, getTabletDevices } from '../js/services/tablet-service.js';
+    import { getStudents } from '../js/services/student-service.js';
+    import { getAuditLogs, recordAuditEvent } from '../js/services/audit-service.js';
+    import { getSchoolClasses, createSchoolClass } from '../js/services/academic-service.js';
+    import { getCmsItems, createCmsItem, deleteCmsItem } from '../js/services/cms-service.js';
+    import { triggerSchoolDismissal } from '../js/services/notification-service.js';
+    import { uploadUserProfileAvatar } from '../js/services/storage-service.js';
+
+    // Verify access for Director and Super Admin roles
+    checkRouteAccess(['director', 'super_admin']);
+    initComponents();
+    initI18n();
+
+    const currentUser = getCurrentUser();
+    const schoolId = currentUser ? currentUser.schoolId || DEFAULT_SCHOOL_ID : DEFAULT_SCHOOL_ID;
+
+    // 1. Dismissal trigger handler
+    const dismissalBtn = document.getElementById('trigger-dismissal-btn');
+    const dismissalAlert = document.getElementById('dismissal-success-alert');
+    dismissalBtn.addEventListener('click', async () => {
+      const confirmDismissal = confirm('هل تؤكد اعتماد انتهاء اليوم الدراسي وإرسال إشعار فوري لأولياء الأمور؟');
+      if (!confirmDismissal) return;
+
+      dismissalBtn.disabled = true;
+      try {
+        const prof = await getSchoolProfile(schoolId);
+        const schoolName = prof?.nameAr || 'المؤسسة التعليمية';
+        const authorName = currentUser?.displayName || currentUser?.name || 'مدير المدرسة';
+
+        await triggerSchoolDismissal({
+          message: `تم انتهاء اليوم الدراسي رسميًا في ${schoolName} ومغادرة الطلاب بأمان.`,
+          authorizedBy: authorName,
+        }, schoolId);
+
+        dismissalAlert.style.display = 'flex';
+        setTimeout(() => dismissalAlert.style.display = 'none', 5000);
+        await loadDashboardData();
+      } catch (err) {
+        alert('حدث خطأ أثناء اعتماد الانصراف: ' + err.message);
+      } finally {
+        dismissalBtn.disabled = false;
+      }
+    });
+
+    // 2. Avatar uploader handler
+    const uploadAvatarBtn = document.getElementById('upload-avatar-btn');
+    const avatarInput = document.getElementById('avatar-input');
+    uploadAvatarBtn.addEventListener('click', () => avatarInput.click());
+    avatarInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file || !currentUser?.uid) return;
+      uploadAvatarBtn.disabled = true;
+      uploadAvatarBtn.textContent = 'جاري الرفع...';
+      try {
+        const url = await uploadUserProfileAvatar(file, currentUser.uid);
+        const avatarEl = document.getElementById('topbar-user-avatar');
+        if (avatarEl) {
+          avatarEl.textContent = '';
+          avatarEl.style.backgroundImage = `url(${url})`;
+          avatarEl.style.backgroundSize = 'cover';
+        }
+        alert('تم تحديث الصورة الشخصية بنجاح.');
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        uploadAvatarBtn.disabled = false;
+        uploadAvatarBtn.textContent = '📸 تحديث صورتي';
+      }
+    });
+
+    // 3. Classes Management Handlers
+    const classFormPanel = document.getElementById('class-form-panel');
+    const toggleClassBtn = document.getElementById('toggle-class-form-btn');
+    const cancelClassBtn = document.getElementById('cancel-class-btn');
+    const newClassForm = document.getElementById('new-class-form');
+    const classesTableBody = document.getElementById('classes-table-body');
+
+    toggleClassBtn.addEventListener('click', () => {
+      classFormPanel.style.display = classFormPanel.style.display === 'none' ? 'block' : 'none';
+    });
+    cancelClassBtn.addEventListener('click', () => classFormPanel.style.display = 'none');
+
+    newClassForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('cls-name').value;
+      const grade = document.getElementById('cls-grade').value;
+      const room = document.getElementById('cls-room').value;
+
+      try {
+        await createSchoolClass({ name, grade, room }, schoolId);
+        newClassForm.reset();
+        classFormPanel.style.display = 'none';
+        await loadClasses();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    async function loadClasses() {
+      const classes = await getSchoolClasses(schoolId);
+      classesTableBody.innerHTML = classes.map((c) => `
+        <tr>
+          <td><strong>${c.name}</strong></td>
+          <td>${c.grade}</td>
+          <td><code>${c.room || '—'}</code></td>
+          <td><span class="badge badge-success">نشط ومنتظم</span></td>
+        </tr>
+      `).join('');
+    }
+
+    // 4. CMS Management Handlers
+    const cmsFormPanel = document.getElementById('cms-form-panel');
+    const toggleCmsBtn = document.getElementById('toggle-cms-form-btn');
+    const cancelCmsBtn = document.getElementById('cancel-cms-btn');
+    const newCmsForm = document.getElementById('new-cms-form');
+    const cmsTableBody = document.getElementById('cms-table-body');
+    const cmsEmptyState = document.getElementById('cms-empty-state');
+    const cmsTableWrap = document.getElementById('cms-table-wrap');
+
+    toggleCmsBtn.addEventListener('click', () => {
+      cmsFormPanel.style.display = cmsFormPanel.style.display === 'none' ? 'block' : 'none';
+    });
+    cancelCmsBtn.addEventListener('click', () => cmsFormPanel.style.display = 'none');
+
+    newCmsForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('cms-title').value;
+      const category = document.getElementById('cms-category').value;
+      const status = document.getElementById('cms-status').value;
+      const summary = document.getElementById('cms-summary').value;
+
+      try {
+        await createCmsItem({
+          title,
+          category,
+          status,
+          summary,
+          authorName: currentUser?.displayName || 'مدير المدرسة',
+        }, schoolId);
+
+        newCmsForm.reset();
+        cmsFormPanel.style.display = 'none';
+        alert('تم حفظ ونشر المحتوى بنجاح في الموقع العام.');
+        await loadCmsContent();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    async function loadCmsContent() {
+      const items = await getCmsItems('all', 'all', schoolId);
+      if (items.length === 0) {
+        cmsTableWrap.style.display = 'none';
+        cmsEmptyState.style.display = 'flex';
+        return;
+      }
+      cmsTableWrap.style.display = 'block';
+      cmsEmptyState.style.display = 'none';
+
+      const catLabels = {
+        news: 'أخبار وبيانات',
+        activities: 'أنشطة ومعارض',
+        announcements: 'تنبيهات إدارية',
+        leadership: 'قيادة المدرسة',
+      };
+
+      cmsTableBody.innerHTML = items.map((i) => `
+        <tr>
+          <td><small style="color: var(--text-muted);">${i.date || i.createdAt?.substring(0, 10)}</small></td>
+          <td><span class="badge badge-primary">${catLabels[i.category] || i.category}</span></td>
+          <td><strong>${i.title}</strong></td>
+          <td>
+            <span class="badge ${i.status === 'published' ? 'badge-success' : 'badge-warning'}">
+              ${i.status === 'published' ? 'منشور للعامة' : 'مسودة'}
+            </span>
+          </td>
+          <td>
+            <button type="button" class="btn btn-outline btn-sm delete-cms-btn" data-id="${i.id}" style="color: var(--color-danger-solid);">حذف</button>
+          </td>
+        </tr>
+      `).join('');
+
+      document.querySelectorAll('.delete-cms-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-id');
+          if (confirm('هل تؤكد حذف هذا المنشور؟')) {
+            await deleteCmsItem(id, schoolId);
+            await loadCmsContent();
+          }
+        });
+      });
+    }
+
+    async function loadDashboardData() {
+      // 1. Metrics
+      const [devices, batches, students, auditLogs] = await Promise.all([
+        getTabletDevices(schoolId),
+        getTabletBatches(schoolId),
+        getStudents(schoolId),
+        getAuditLogs(schoolId),
+      ]);
+
+      const delivered = devices.filter((d) => d.status === 'delivered');
+
+      document.getElementById('stat-tablets-count').textContent = devices.length;
+      document.getElementById('stat-batches-count').textContent = batches.length;
+      document.getElementById('stat-delivered-count').textContent = delivered.length;
+      document.getElementById('stat-students-count').textContent = students.length;
+
+      // 2. Audit logs rendering
+      const tbody = document.getElementById('audit-logs-body');
+      const emptyState = document.getElementById('audit-empty-state');
+      const tableWrap = document.getElementById('audit-table-wrap');
+
+      if (auditLogs.length === 0) {
+        tableWrap.style.display = 'none';
+        emptyState.style.display = 'flex';
+      } else {
+        tableWrap.style.display = 'block';
+        emptyState.style.display = 'none';
+        tbody.innerHTML = auditLogs.slice(0, 15).map((log) => `
+          <tr>
+            <td><small style="color: var(--text-muted);">${log.formattedDate || log.timestamp?.substring(0, 16)}</small></td>
+            <td><strong style="color: var(--color-primary-950);">${log.action}</strong></td>
+            <td><code>${log.target || '—'}</code></td>
+            <td>${log.details || '—'}</td>
+            <td><span class="badge badge-primary">${log.operatorRole || 'مسؤول'}</span></td>
+          </tr>
+        `).join('');
+      }
+
+      // 3. School profile form population
+      const profile = await getSchoolProfile(schoolId);
+      if (profile) {
+        if (profile.nameAr) document.getElementById('prof-name-ar').value = profile.nameAr;
+        if (profile.administration) document.getElementById('prof-admin').value = profile.administration;
+        if (profile.address) document.getElementById('prof-address').value = profile.address;
+        if (profile.phone) document.getElementById('prof-phone').value = profile.phone;
+      }
+
+      await Promise.all([loadClasses(), loadCmsContent()]);
+    }
+
+    loadDashboardData();
+
+    document.getElementById('school-profile-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nameAr = document.getElementById('prof-name-ar').value;
+      const administration = document.getElementById('prof-admin').value;
+      const address = document.getElementById('prof-address').value;
+      const phone = document.getElementById('prof-phone').value;
+
+      await saveSchoolProfile({
+        nameAr,
+        administration,
+        address,
+        phone,
+      }, schoolId);
+
+      await recordAuditEvent({
+        action: 'تحديث هوية وبيانات المدرسة الرسمية',
+        target: nameAr,
+        details: `الإدارة: ${administration}`,
+        operatorRole: 'director',
+        schoolId,
+      });
+
+      const alertEl = document.getElementById('profile-saved-alert');
+      alertEl.style.display = 'flex';
+      setTimeout(() => {
+        alertEl.style.display = 'none';
+      }, 3000);
+
+      loadDashboardData();
+    });
+  </script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=6.0')}</script>
+</body>
+</html>
+

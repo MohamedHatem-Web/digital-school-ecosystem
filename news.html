@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الأخبار والبيانات الرسمية — منظومة المدرسة الرقمية</title>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/public-site.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0a1628">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="المدرسة الرقمية">
+</head>
+<body>
+
+  <header class="top-gov-bar">
+    <div class="container top-gov-content">
+      <div class="gov-flag-text">
+        <span>جمهورية مصر العربية — وزارة التربية والتعليم والتعليم الفني</span>
+      </div>
+      <div>
+        <span class="badge badge-accent" style="font-size: 11px;">البوابة الرسمية المعتمدة</span>
+      </div>
+    </div>
+  </header>
+
+  <header class="site-header">
+    <div class="container site-nav-container">
+      <a href="index.html" class="site-brand">
+        <div class="brand-crest">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="school-name-title" id="brand-school-name">منظومة المدرسة الرقمية</span>
+          <span class="school-dept-sub">بوابة الإدارة المدرسية الموحدة</span>
+        </div>
+      </a>
+
+      <nav class="desktop-menu">
+        <a href="index.html" class="nav-item-link">الرئيسية</a>
+        <a href="about.html" class="nav-item-link">عن المدرسة</a>
+        <a href="leadership.html" class="nav-item-link">القيادة المدرسية</a>
+        <a href="gallery.html" class="nav-item-link">معرض الصور</a>
+        <a href="news.html" class="nav-item-link active">الأخبار والبيانات</a>
+        <a href="activities.html" class="nav-item-link">الأنشطة</a>
+        <a href="calendar.html" class="nav-item-link">التقويم الدراسي</a>
+        <a href="contact.html" class="nav-item-link">اتصل بنا</a>
+      </nav>
+
+      <div class="header-cta-group">
+        <a href="login.html" class="btn btn-primary btn-md">بوابة الخدمات</a>
+        <button type="button" class="mobile-menu-btn">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <section class="page-banner">
+    <div class="container">
+      <div class="banner-kicker">المركز الإعلامي</div>
+      <h1 class="banner-title">الأخبار والبيانات والقرارات الرسمية</h1>
+      <p class="banner-subtitle">
+        السجل الرسمي للإعلانات الصادرة من الإدارة المدرسية، مواعيد الجداول، وتعليمات تسليم التابلت.
+      </p>
+    </div>
+  </section>
+
+  <main style="padding-block: var(--space-16);">
+    <div class="container">
+      <div id="news-grid-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-6);">
+        <!-- Dynamically populated or empty state -->
+      </div>
+      <div class="empty-state" id="news-empty-state" style="display: none;">
+        <div class="empty-state-icon">📢</div>
+        <h3 class="empty-state-title">لا توجد إعلانات أو بيانات رسمية منشورة حاليًا</h3>
+        <p class="empty-state-desc">
+          عند قيام إدارة المدرسة بنشر أي قرارات أو تعليمات أو جداول عبر لوحة التحكم، ستظهر هنا فور اعتمادها.
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container footer-main-grid">
+      <div>
+        <h4 class="footer-col-title">منظومة المدرسة الرقمية</h4>
+        <p style="font-size: var(--text-xs); line-height: var(--leading-relaxed); max-width: 340px; color: #94a3b8;">
+          البنية التحتية الرقمية الموحدة للمؤسسات التعليمية — جمهورية مصر العربية، وزارة التربية والتعليم والتعليم الفني.
+        </p>
+      </div>
+
+      <div>
+        <h4 class="footer-col-title">روابط سريعة</h4>
+        <ul class="footer-links-list">
+          <li><a href="about.html">عن المنظومة</a></li>
+          <li><a href="leadership.html">القيادة المدرسية</a></li>
+          <li><a href="gallery.html">معرض الصور والألبومات</a></li>
+          <li><a href="calendar.html">التقويم الدراسي</a></li>
+          <li><a href="contact.html">اتصل بنا</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="footer-col-title">البوابات الإدارية</h4>
+        <ul class="footer-links-list">
+          <li><a href="login.html">مكتب المدير</a></li>
+          <li><a href="login.html">التطوير التكنولوجي والتابلت</a></li>
+          <li><a href="login.html">شؤون الطلاب والقيد</a></li>
+          <li><a href="login.html">بوابة المعلم وولي الأمر</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="footer-col-title">بيانات التواصل المعتمدة</h4>
+        <p style="font-size: var(--text-xs); color: #94a3b8; line-height: var(--leading-relaxed);">
+          لم تُسجل بيانات تواصل رسمية بعد، يمكن لإدارة المدرسة تسجيل المقر والهواتف من لوحة التحكم.
+        </p>
+      </div>
+    </div>
+
+    <div class="footer-bottom-bar">
+      <div class="container footer-bottom-content">
+        <span>جميع الحقوق محفوظة © 2026 — منظومة المدرسة الرقمية</span>
+        <span class="badge badge-default">الإصدار المؤسسي 2.0 (Vanilla Web)</span>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { initComponents } from './js/components.js';
+    import { initI18n } from './js/i18n.js';
+    import { getSchoolProfile } from './js/services/school-service.js';
+    import { getCmsItems } from './js/services/cms-service.js';
+
+    initComponents();
+    initI18n();
+
+    async function loadNewsPage() {
+      const profile = await getSchoolProfile();
+      if (profile && profile.isConfigured && profile.nameAr) {
+        document.getElementById('brand-school-name').textContent = profile.nameAr;
+      }
+
+      const newsItems = await getCmsItems('news', 'published');
+      const container = document.getElementById('news-grid-container');
+      const emptyState = document.getElementById('news-empty-state');
+
+      if (newsItems.length === 0) {
+        container.style.display = 'none';
+        emptyState.style.display = 'flex';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+      container.style.display = 'grid';
+      container.innerHTML = newsItems.map((item) => `
+        <article class="panel" style="box-shadow: var(--shadow-sm); overflow: hidden; display: flex; flex-direction: column;">
+          <div class="panel-header" style="flex-direction: column; align-items: flex-start; gap: var(--space-2); background: var(--bg-surface-subtle);">
+            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+              <span class="badge badge-accent">بيان رسمي</span>
+              <time style="font-size: var(--text-xs); color: var(--text-muted);">${item.formattedDate || item.date}</time>
+            </div>
+            <h2 style="font-size: var(--text-lg); font-weight: 800; color: var(--color-primary-950); margin: 0; line-height: var(--leading-snug);">
+              ${item.title}
+            </h2>
+          </div>
+          <div class="panel-body" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+            <p style="font-size: var(--text-sm); color: var(--text-secondary); line-height: var(--leading-relaxed); margin-bottom: var(--space-4);">
+              ${item.summary}
+            </p>
+            <div style="font-size: var(--text-xs); color: var(--text-muted); border-top: 1px solid var(--border-light); padding-top: var(--space-3);">
+              جهة النشر: <strong>${item.authorName}</strong>
+            </div>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    loadNewsPage();
+  </script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=6.0')}</script>
+</body>
+</html>
+

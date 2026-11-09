@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>اتصل بنا — منظومة المدرسة الرقمية</title>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/public-site.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0a1628">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="المدرسة الرقمية">
+</head>
+<body>
+
+  <header class="top-gov-bar">
+    <div class="container top-gov-content">
+      <div class="gov-flag-text">
+        <span>جمهورية مصر العربية — وزارة التربية والتعليم والتعليم الفني</span>
+      </div>
+      <div>
+        <span class="badge badge-accent" style="font-size: 11px;">البوابة الرسمية المعتمدة</span>
+      </div>
+    </div>
+  </header>
+
+  <header class="site-header">
+    <div class="container site-nav-container">
+      <a href="index.html" class="site-brand">
+        <div class="brand-crest">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="school-name-title" id="brand-school-name">منظومة المدرسة الرقمية</span>
+          <span class="school-dept-sub">بوابة الإدارة المدرسية الموحدة</span>
+        </div>
+      </a>
+
+      <nav class="desktop-menu">
+        <a href="index.html" class="nav-item-link">الرئيسية</a>
+        <a href="about.html" class="nav-item-link">عن المدرسة</a>
+        <a href="leadership.html" class="nav-item-link">القيادة المدرسية</a>
+        <a href="gallery.html" class="nav-item-link">معرض الصور</a>
+        <a href="news.html" class="nav-item-link">الأخبار والبيانات</a>
+        <a href="activities.html" class="nav-item-link">الأنشطة</a>
+        <a href="calendar.html" class="nav-item-link">التقويم الدراسي</a>
+        <a href="contact.html" class="nav-item-link active">اتصل بنا</a>
+      </nav>
+
+      <div class="header-cta-group">
+        <a href="login.html" class="btn btn-primary btn-md">بوابة الخدمات</a>
+        <button type="button" class="mobile-menu-btn">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <section class="page-banner">
+    <div class="container">
+      <div class="banner-kicker">قنوات التواصل</div>
+      <h1 class="banner-title">التواصل مع إدارة المدرسة والمكتب الفني</h1>
+      <p class="banner-subtitle">
+        قنوات الاتصال المعتمدة لخدمة الطلاب وأولياء الأمور واستفسارات منظومة التابلت المدرسي.
+      </p>
+    </div>
+  </section>
+
+  <main style="padding-block: var(--space-16);">
+    <div class="container">
+      <div style="display: grid; grid-template-columns: 1fr; gap: var(--space-8);">
+        
+        <div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: var(--space-8);">
+          <!-- Contact Info Column -->
+          <div>
+            <div class="panel">
+              <div class="panel-header">
+                <h3 class="panel-title">بيانات المقر والتواصل</h3>
+              </div>
+              <div class="panel-body" id="contact-info-body">
+                <!-- If not set in school profile, displays honest empty state -->
+                <div class="empty-state" style="padding: var(--space-6);">
+                  <div class="empty-state-icon" style="font-size: 1.75rem;">📍</div>
+                  <h4 class="empty-state-title" style="font-size: var(--text-sm);">لم تُسجل بيانات تواصل رسمية بعد</h4>
+                  <p class="empty-state-desc" style="font-size: var(--text-xs);">
+                    يستطيع مسؤول المدرسة إضافة العنوان وأرقام الهواتف الرسمية عبر لوحة التحكم.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Contact Inquiry Form -->
+          <div>
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h3 class="panel-title">إرسال استفسار أو طلب دعم فني</h3>
+                  <p style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">
+                    يصل الطلب مباشرة إلى شؤون الطلاب أو مسؤول التطوير التكنولوجي.
+                  </p>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div id="inquiry-success-msg" class="alert alert-success" style="display: none;">
+                  ✓ تم تسجيل استفسارك بنجاح في سجل المتابعة الإدارية.
+                </div>
+
+                <form id="inquiry-form">
+                  <div class="form-group">
+                    <label class="form-label" for="inq-name">الاسم الرباعي <span class="required">*</span></label>
+                    <input type="text" id="inq-name" class="form-control" placeholder="أدخل اسمك كاملاً" required>
+                  </div>
+
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+                    <div class="form-group">
+                      <label class="form-label" for="inq-phone">رقم الهاتف <span class="required">*</span></label>
+                      <input type="text" id="inq-phone" class="form-control" placeholder="010XXXXXXXX" required>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="inq-code">كود الطالب (إن وجد)</label>
+                      <input type="text" id="inq-code" class="form-control" placeholder="كود الطالب المدرسي">
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="inq-topic">موضوع الاستفسار <span class="required">*</span></label>
+                    <select id="inq-topic" class="form-control" required>
+                      <option value="tablet">استلام أو فحص تابلت الثانوية العامة</option>
+                      <option value="student-affairs">شؤون الطلاب والقيد</option>
+                      <option value="attendance">الغياب والحضور</option>
+                      <option value="other">استفسار عام</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="inq-msg">تفاصيل الرسالة <span class="required">*</span></label>
+                    <textarea id="inq-msg" rows="4" class="form-control" placeholder="اكتب استفسارك بوضوح..." required></textarea>
+                  </div>
+
+                  <button type="submit" class="btn btn-primary btn-lg btn-full">إرسال الاستفسار</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container footer-main-grid">
+      <div>
+        <h4 class="footer-col-title">منظومة المدرسة الرقمية</h4>
+        <p style="font-size: var(--text-xs); line-height: var(--leading-relaxed); max-width: 340px; color: #94a3b8;">
+          البنية التحتية الرقمية الموحدة للمؤسسات التعليمية — جمهورية مصر العربية، وزارة التربية والتعليم والتعليم الفني.
+        </p>
+      </div>
+
+      <div>
+        <h4 class="footer-col-title">روابط سريعة</h4>
+        <ul class="footer-links-list">
+          <li><a href="about.html">عن المنظومة</a></li>
+          <li><a href="leadership.html">القيادة المدرسية</a></li>
+          <li><a href="gallery.html">معرض الصور والألبومات</a></li>
+          <li><a href="calendar.html">التقويم الدراسي</a></li>
+          <li><a href="contact.html">اتصل بنا</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="footer-col-title">البوابات الإدارية</h4>
+        <ul class="footer-links-list">
+          <li><a href="login.html">مكتب المدير</a></li>
+          <li><a href="login.html">التطوير التكنولوجي والتابلت</a></li>
+          <li><a href="login.html">شؤون الطلاب والقيد</a></li>
+          <li><a href="login.html">بوابة المعلم وولي الأمر</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="footer-col-title">بيانات التواصل المعتمدة</h4>
+        <p style="font-size: var(--text-xs); color: #94a3b8; line-height: var(--leading-relaxed);">
+          لم تُسجل بيانات تواصل رسمية بعد، يمكن لإدارة المدرسة تسجيل المقر والهواتف من لوحة التحكم.
+        </p>
+      </div>
+    </div>
+
+    <div class="footer-bottom-bar">
+      <div class="container footer-bottom-content">
+        <span>جميع الحقوق محفوظة © 2026 — منظومة المدرسة الرقمية</span>
+        <span class="badge badge-default">الإصدار المؤسسي 2.0 (Vanilla Web)</span>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { initComponents } from './js/components.js';
+    import { initI18n } from './js/i18n.js';
+    import { getSchoolProfile } from './js/services/school-service.js';
+
+    initComponents();
+    initI18n();
+
+    const profile = getSchoolProfile();
+    if (profile && profile.isConfigured) {
+      if (profile.nameAr) document.getElementById('brand-school-name').textContent = profile.nameAr;
+      if (profile.address || profile.phone) {
+        document.getElementById('contact-info-body').innerHTML = `
+          <div style="display: flex; flex-direction: column; gap: var(--space-3); font-size: var(--text-sm);">
+            ${profile.address ? `<div><strong>العنوان:</strong> ${profile.address}</div>` : ''}
+            ${profile.phone ? `<div><strong>الهاتف:</strong> <span dir="ltr">${profile.phone}</span></div>` : ''}
+            ${profile.email ? `<div><strong>البريد:</strong> <span dir="ltr">${profile.email}</span></div>` : ''}
+          </div>
+        `;
+      }
+    }
+
+    // Form submit simulation
+    document.getElementById('inquiry-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      document.getElementById('inquiry-success-msg').style.display = 'flex';
+      e.target.reset();
+    });
+  </script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=6.0')}</script>
+</body>
+</html>
+

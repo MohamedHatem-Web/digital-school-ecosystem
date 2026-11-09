@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>منظومة المدرسة الرقمية — البوابة الرسمية</title>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/public-site.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0a1628">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="المدرسة الرقمية">
+</head>
+<body>
+
+  <!-- Top Ministry of Education Banner -->
+  <header class="top-gov-bar">
+    <div class="container top-gov-content">
+      <div class="gov-flag-text">
+        <span class="gov-flag-icon">🇪🇬</span>
+        <span>جمهورية مصر العربية — وزارة التربية والتعليم والتعليم الفني</span>
+      </div>
+      <div>
+        <span class="badge badge-accent" style="font-size: 11px;">البوابة الرسمية المعتمدة</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Site Primary Header -->
+  <header class="site-header">
+    <div class="container site-nav-container">
+      <a href="index.html" class="site-brand">
+        <div class="brand-crest">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+            <path d="M6 6h10"></path>
+            <path d="M6 10h10"></path>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="school-name-title" id="brand-school-name">منظومة المدرسة الرقمية</span>
+          <span class="school-dept-sub" id="brand-admin-name">بوابة الإدارة المدرسية الموحدة</span>
+        </div>
+      </a>
+
+      <!-- Desktop Nav (Hidden on Mobile) -->
+      <nav class="desktop-menu" aria-label="القائمة الرئيسية">
+        <a href="index.html" class="nav-item-link active">الرئيسية</a>
+        <a href="about.html" class="nav-item-link">عن المدرسة</a>
+        <a href="leadership.html" class="nav-item-link">القيادة المدرسية</a>
+        <a href="gallery.html" class="nav-item-link">معرض الصور</a>
+        <a href="news.html" class="nav-item-link">الأخبار والبيانات</a>
+        <a href="activities.html" class="nav-item-link">الأنشطة</a>
+        <a href="calendar.html" class="nav-item-link">التقويم الدراسي</a>
+        <a href="contact.html" class="nav-item-link">اتصل بنا</a>
+      </nav>
+
+      <div class="header-cta-group">
+        <a href="login.html" class="btn btn-primary btn-md">بوابة الخدمات المدرسية</a>
+        <button type="button" class="mobile-menu-btn" aria-label="فتح القائمة">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Drawer (Only visible on mobile when toggled) -->
+  <div class="mobile-drawer-overlay"></div>
+  <aside class="mobile-drawer">
+    <div class="drawer-header">
+      <span class="school-name-title">القائمة المدرسية</span>
+      <button type="button" class="drawer-close-btn btn btn-sm">✕</button>
+    </div>
+    <nav class="drawer-nav-list">
+      <a href="index.html" class="drawer-nav-link active">الرئيسية</a>
+      <a href="about.html" class="drawer-nav-link">عن المدرسة</a>
+      <a href="leadership.html" class="drawer-nav-link">القيادة المدرسية</a>
+      <a href="gallery.html" class="drawer-nav-link">معرض الصور</a>
+      <a href="news.html" class="drawer-nav-link">الأخبار والبيانات</a>
+      <a href="activities.html" class="drawer-nav-link">الأنشطة</a>
+      <a href="calendar.html" class="drawer-nav-link">التقويم الدراسي</a>
+      <a href="contact.html" class="drawer-nav-link">اتصل بنا</a>
+    </nav>
+    <div style="padding-top: var(--space-4); border-top: 1px solid var(--border-light);">
+      <a href="login.html" class="btn btn-primary btn-full">تسجيل الدخول للمنظومة</a>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main>
+    <!-- Hero Section -->
+    <section class="editorial-hero">
+      <div class="container hero-editorial-grid">
+        <div>
+          <div class="hero-editorial-kicker">
+            <span>العام الدراسي 2026/2027</span>
+            <span>•</span>
+            <span>بنية تحتية رقمية مؤسسية</span>
+          </div>
+          <h1 class="hero-main-title">المنظومة الرقمية الموحدة للمؤسسة التعليمية</h1>
+          <p class="hero-main-lead">
+            بيئة إلكترونية رسمية لحوكمة العمليات المدرسية، وحصر وتسليم أجهزة التابلت الوزاري، ومتابعة الحضور والغياب، وتوثيق سجلات الطلاب وأولياء الأمور بدقة تامة.
+          </p>
+          <div class="hero-actions-bar">
+            <a href="login.html" class="btn btn-accent btn-lg">دخول بوابة الخدمات الرقمية</a>
+            <a href="about.html" class="btn btn-hero-outline btn-lg">التعريف بالمنظومة</a>
+          </div>
+        </div>
+
+        <div>
+          <div class="hero-accreditation-box">
+            <h2 class="accreditation-title">حوكمة وتكامل العمليات المدرسية</h2>
+            <p class="accreditation-desc">
+              تربط المنظومة مكتب المدير، أخصائي التطوير التكنولوجي، شؤون الطلاب، المعلمين، وأولياء الأمور في بيئة واحدة موحدة.
+            </p>
+            <div class="accreditation-specs">
+              <div class="accreditation-spec-row">
+                <span class="badge badge-accent">تابلت</span>
+                <span>فحص وتسجيل أرقام IMEI ومنع الازدواجية</span>
+              </div>
+              <div class="accreditation-spec-row">
+                <span class="badge badge-primary">حضور</span>
+                <span>رصد الغياب اليومي مع سجلات التعديل المحمية</span>
+              </div>
+              <div class="accreditation-spec-row">
+                <span class="badge badge-success">خصوصية</span>
+                <span>عزل صارم للبيانات وصلاحيات محددة لكل دور</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Operational Status Ribbon -->
+    <section class="operational-ribbon">
+      <div class="container operational-grid">
+        <div class="operational-item">
+          <div class="operational-icon-box">📅</div>
+          <div>
+            <div class="operational-label">العام الأكاديمي</div>
+            <div class="operational-value">2026 / 2027</div>
+          </div>
+        </div>
+
+        <div class="operational-item">
+          <div class="operational-icon-box">📱</div>
+          <div>
+            <div class="operational-label">منظومة التابلت المدرسي</div>
+            <div class="operational-value">جاهزة لحصر الدفعات وتسجيل الـ IMEI</div>
+          </div>
+        </div>
+
+        <div class="operational-item">
+          <div class="operational-icon-box">🛡️</div>
+          <div>
+            <div class="operational-label">حالة البنية المعلوماتية</div>
+            <div class="operational-value" style="color: var(--color-success-solid);">قاعدة البيانات نشطة ومؤمنة</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Institutional Service Pillars -->
+    <section class="pillars-section">
+      <div class="container">
+        <div class="pillars-header">
+          <span class="badge badge-primary">الخدمات الأساسية</span>
+          <h2>محاور المنظومة الإدارية والتعليمية</h2>
+          <p>
+            حلول متكاملة تضمن دقة السجلات المدرسية وتيسر مهام فريق العمل وفق المعايير الوزارية.
+          </p>
+        </div>
+
+        <div class="pillars-grid">
+          <div class="pillar-card">
+            <div class="pillar-icon-box">📱</div>
+            <h3 class="pillar-title">إدارة وحصر التابلت المدرسي</h3>
+            <p class="pillar-desc">
+              حصر دقيق لأرقام IMEI والتأكد من عدم تكرار قيد الأجهزة، وتوثيق محاضر الاستلام والتسليم للطلاب مع إمكانية التصدير والطباعة الرسمية.
+            </p>
+            <div>
+              <a href="login.html" class="btn btn-outline btn-sm">بوابة التطوير التكنولوجي ←</a>
+            </div>
+          </div>
+
+          <div class="pillar-card">
+            <div class="pillar-icon-box">👥</div>
+            <h3 class="pillar-title">شؤون الطلاب وسجلات القيد</h3>
+            <p class="pillar-desc">
+              أرشفة ملفات الطلاب الجدد، فحص الأرقام القومية، وإصدار إفادات القيد والمتابعة الأكاديمية مع حفظ كامل للخصوصية.
+            </p>
+            <div>
+              <a href="login.html" class="btn btn-outline btn-sm">بوابة شؤون الطلاب ←</a>
+            </div>
+          </div>
+
+          <div class="pillar-card">
+            <div class="pillar-icon-box">🏛️</div>
+            <h3 class="pillar-title">الإشراف الإداري ومكتب المدير</h3>
+            <p class="pillar-desc">
+              متابعة المؤشرات الإحصائية العامة، اعتماد هوية المدرسة، وإدارة الصلاحيات وسجلات الرقابة الإدارية في أي وقت.
+            </p>
+            <div>
+              <a href="login.html" class="btn btn-outline btn-sm">مكتب الإدارة المركزية ←</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quick Public Inquiry Widget (خدمة الاستعلام الفوري) -->
+    <section style="padding: var(--space-12) 0; background-color: #ffffff; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle);">
+      <div class="container">
+        <div style="max-width: 800px; margin: 0 auto; text-align: center;">
+          <span class="badge badge-accent" style="margin-bottom: var(--space-2); display: inline-block;">خدمة إلكترونية مباشرة</span>
+          <h2 style="font-size: var(--text-2xl); font-weight: 800; color: var(--color-primary-950); margin-bottom: var(--space-2);">
+            الاستعلام السريع عن حالة قيد الطالب وأجهزة التابلت
+          </h2>
+          <p style="font-size: var(--text-sm); color: var(--text-muted); margin-bottom: var(--space-6);">
+            تتيح هذه الخدمة لأولياء الأمور والطلاب الاستعلام الفوري عن بيانات القيد، والفصل الدراسي، ومحاضر تسليم أجهزة التابلت الوزاري.
+          </p>
+
+          <form id="public-inquiry-form" style="display: flex; gap: var(--space-2); max-width: 520px; margin: 0 auto var(--space-6); flex-wrap: wrap;">
+            <input type="text" id="inquiry-input" class="form-control" placeholder="أدخل كود الطالب أو الرقم القومي..." required style="flex: 1; min-width: 260px; height: 44px;">
+            <button type="submit" class="btn btn-primary btn-md" style="height: 44px; padding: 0 1.5rem;">
+              <span>🔍 استعلام فوري</span>
+            </button>
+          </form>
+
+          <!-- Inquiry Result Card -->
+          <div id="inquiry-result" style="display: none; text-align: right; background-color: var(--bg-surface-subtle); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: var(--space-5); margin-top: var(--space-4);">
+            <!-- Dynamic result populated here -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Official Documents & Forms Downloads Center -->
+    <section style="padding: var(--space-12) 0; background-color: var(--bg-page);">
+      <div class="container">
+        <div style="text-align: center; max-width: 600px; margin: 0 auto var(--space-8);">
+          <span class="badge badge-primary">الخدمات الإدارية المعتمدة</span>
+          <h2 style="font-size: var(--text-2xl); font-weight: 800; color: var(--color-primary-950); margin-top: var(--space-2); margin-bottom: var(--space-2);">
+            مركز تحميل النماذج والوثائق المدرسية الرسمية
+          </h2>
+          <p style="font-size: var(--text-sm); color: var(--text-muted);">
+            نماذج معتمدة ومطابقة لتعليمات وزارة التربية والتعليم والتعليم الفني للعام الدراسي 2026/2027.
+          </p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-4);">
+          <div class="card" style="padding: var(--space-5); display: flex; align-items: flex-start; gap: var(--space-3);">
+            <div style="width: 40px; height: 40px; border-radius: var(--radius-sm); background: rgba(232, 140, 8, 0.1); color: var(--color-accent-600); display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0;">
+              📄
+            </div>
+            <div style="flex: 1;">
+              <h4 style="font-size: var(--text-sm); font-weight: 700; color: var(--color-primary-950); margin-bottom: 4px;">نموذج إقرار استلام التابلت المدرسي</h4>
+              <p style="font-size: 11px; color: var(--text-muted); margin-bottom: var(--space-3);">نموذج التعهد المعتمد لولي الأمر والتأمين ضد الحوادث والكسر.</p>
+              <a href="javascript:void(0)" onclick="alert('تم تجهيز النموذج الرسمي للطباعة.')" class="btn btn-outline btn-sm" style="font-size: 11px;">تحميل النموذج (PDF) ↓</a>
+            </div>
+          </div>
+
+          <div class="card" style="padding: var(--space-5); display: flex; align-items: flex-start; gap: var(--space-3);">
+            <div style="width: 40px; height: 40px; border-radius: var(--radius-sm); background: rgba(37, 99, 235, 0.1); color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0;">
+              📋
+            </div>
+            <div style="flex: 1;">
+              <h4 style="font-size: var(--text-sm); font-weight: 700; color: var(--color-primary-950); margin-bottom: 4px;">طلب استخراج إفادة قيد رسمية</h4>
+              <p style="font-size: 11px; color: var(--text-muted); margin-bottom: var(--space-3);">نموذج التقدم لشؤون الطلاب لاستخراج إفادة قيد موثقة ومختومة.</p>
+              <a href="javascript:void(0)" onclick="alert('تم تجهيز النموذج الرسمي للطباعة.')" class="btn btn-outline btn-sm" style="font-size: 11px;">تحميل النموذج (PDF) ↓</a>
+            </div>
+          </div>
+
+          <div class="card" style="padding: var(--space-5); display: flex; align-items: flex-start; gap: var(--space-3);">
+            <div style="width: 40px; height: 40px; border-radius: var(--radius-sm); background: rgba(16, 185, 129, 0.1); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0;">
+              ⚖️
+            </div>
+            <div style="flex: 1;">
+              <h4 style="font-size: var(--text-sm); font-weight: 700; color: var(--color-primary-950); margin-bottom: 4px;">لائحة الانضباط المدرسي وقواعد السلوك</h4>
+              <p style="font-size: 11px; color: var(--text-muted); margin-bottom: var(--space-3);">الدليل الإرشادي لحقوق وواجبات الطلاب وضوابط الحضور والغياب.</p>
+              <a href="javascript:void(0)" onclick="alert('تم فتح لائحة الانضباط المعتمدة.')" class="btn btn-outline btn-sm" style="font-size: 11px;">تحميل الدليل (PDF) ↓</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Official Gazette Bulletin Board -->
+    <section class="gazette-section">
+      <div class="container">
+        <div class="gazette-frame">
+          <div class="gazette-header">
+            <div class="gazette-header-title">
+              <span>📢</span>
+              <span>المركز الإعلامي وإدارة الاتصال المدرسي</span>
+            </div>
+            <a href="news.html" class="btn btn-outline btn-sm">أرشيف البيانات الرسمية ←</a>
+          </div>
+
+          <!-- Gazette Content Container -->
+          <div id="home-gazette-list" style="display: none; padding: var(--space-6); flex-direction: column; gap: var(--space-4);">
+            <!-- Populated dynamically -->
+          </div>
+
+          <!-- Strict Zero-Fake-Data Empty State -->
+          <div class="empty-state" id="home-gazette-empty" style="border: none; padding-block: var(--space-10);">
+            <div class="empty-state-icon">📋</div>
+            <h3 class="empty-state-title">لا توجد بيانات أو إعلانات منشورة حاليًا</h3>
+            <p class="empty-state-desc">
+              يتم نشر البيانات والقرارات والتعليمات الرسمية عبر إدارة المدرسة أو شؤون الطلاب فور اعتمادها رسميًا بموجب اللوائح المنظمة.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container footer-main-grid">
+      <div>
+        <h4 class="footer-col-title">منظومة المدرسة الرقمية</h4>
+        <p style="font-size: var(--text-sm); line-height: var(--leading-relaxed); max-width: 340px;">
+          البنية التحتية الرقمية الموحدة للمؤسسات التعليمية — جمهورية مصر العربية، وزارة التربية والتعليم والتعليم الفني.
+        </p>
+      </div>
+
+      <div>
+        <h4 class="footer-col-title">روابط سريعة</h4>
+        <ul class="footer-links-list">
+          <li><a href="about.html">عن المنظومة</a></li>
+          <li><a href="leadership.html">القيادة المدرسية</a></li>
+          <li><a href="calendar.html">التقويم الدراسي</a></li>
+          <li><a href="contact.html">اتصل بنا</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="footer-col-title">البوابات الإدارية</h4>
+        <ul class="footer-links-list">
+          <li><a href="login.html">مكتب المدير</a></li>
+          <li><a href="login.html">التطوير التكنولوجي والتابلت</a></li>
+          <li><a href="login.html">شؤون الطلاب والقيد</a></li>
+          <li><a href="login.html">بوابة المعلم وولي الأمر</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="footer-col-title">بيانات التواصل المعتمدة</h4>
+        <p style="font-size: var(--text-xs); color: #94a3b8; line-height: var(--leading-relaxed);" id="footer-contact-text">
+          لم تُسجل بيانات تواصل رسمية بعد، يمكن لإدارة المدرسة تسجيل المقر والهواتف من لوحة التحكم.
+        </p>
+      </div>
+    </div>
+
+    <div class="footer-bottom-bar">
+      <div class="container footer-bottom-content">
+        <span>جميع الحقوق محفوظة © 2026 — منظومة المدرسة الرقمية</span>
+        <span class="badge badge-default">الإصدار المؤسسي 2.0 (Vanilla Web)</span>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { initComponents } from './js/components.js';
+    import { getSchoolProfile } from './js/services/school-service.js';
+    import { getCmsItems } from './js/services/cms-service.js';
+
+    initComponents();
+
+    async function loadHomePage() {
+      const profile = await getSchoolProfile();
+      if (profile && profile.isConfigured && profile.nameAr) {
+        const nameEl = document.getElementById('brand-school-name');
+        const adminEl = document.getElementById('brand-admin-name');
+        const footerEl = document.getElementById('footer-contact-text');
+        if (nameEl) nameEl.textContent = profile.nameAr;
+        if (adminEl && profile.administration) adminEl.textContent = profile.administration;
+        if (footerEl && (profile.address || profile.phone)) {
+          footerEl.textContent = `${profile.address || ''} ${profile.phone ? `— هاتف: ${profile.phone}` : ''}`;
+        }
+      }
+
+      // Load Gazette news
+      const newsItems = await getCmsItems('news', 'published');
+      const gazetteList = document.getElementById('home-gazette-list');
+      const gazetteEmpty = document.getElementById('home-gazette-empty');
+
+      if (newsItems.length > 0) {
+        gazetteEmpty.style.display = 'none';
+        gazetteList.style.display = 'flex';
+        gazetteList.innerHTML = newsItems.slice(0, 3).map((item) => `
+          <div style="padding: var(--space-4); background: #ffffff; border-radius: var(--radius-sm); border-inline-start: 4px solid var(--color-accent-600); box-shadow: var(--shadow-sm); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-2);">
+            <div>
+              <div style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: 2px;">
+                ${item.formattedDate || item.date} — بيان رسمي
+              </div>
+              <h4 style="font-size: var(--text-base); font-weight: 800; color: var(--color-primary-950); margin: 0;">
+                ${item.title}
+              </h4>
+              <p style="font-size: var(--text-xs); color: var(--text-secondary); margin-top: 4px; line-height: var(--leading-relaxed);">
+                ${item.summary}
+              </p>
+            </div>
+            <a href="news.html" class="btn btn-outline btn-sm">قراءة التفاصيل ←</a>
+          </div>
+        `).join('');
+      }
+    }
+
+    loadHomePage();
+  </script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=6.0')}</script>
+</body>
+</html>

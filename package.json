@@ -1,0 +1,10 @@
+{
+  "name": "digital-school-ecosystem",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node serve.js"
+  }
+}
+

@@ -1,0 +1,141 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Authorization Helpers
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserDoc().role == 'super_admin';
+    }
+
+    function belongsToSchool(schoolId) {
+      return isAuthenticated() && (
+        isSuperAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         getUserDoc().schoolId == schoolId)
+      );
+    }
+
+    function hasRole(schoolId, allowedRoles) {
+      return belongsToSchool(schoolId) && (
+        isSuperAdmin() ||
+        getUserDoc().role in allowedRoles
+      );
+    }
+
+    // 1. User Profiles Collection
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin());
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'schoolId']))
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // 2. School Profile & Multi-Tenant Isolated Datasets
+    match /schools/{schoolId} {
+      // Public school identity (name, logo, colors) can be read publicly for the website
+      allow read: if true;
+      allow write: if hasRole(schoolId, ['director', 'super_admin']);
+
+      // A. Academic Structure (Stages, Classes, Subjects)
+      match /classes/{classId} {
+        allow read: if belongsToSchool(schoolId);
+        allow write: if hasRole(schoolId, ['director', 'super_admin']);
+      }
+
+      match /subjects/{subjectId} {
+        allow read: if belongsToSchool(schoolId);
+        allow write: if hasRole(schoolId, ['director', 'super_admin']);
+      }
+
+      // B. Students Registry & Digital Records
+      match /students/{studentId} {
+        allow read: if belongsToSchool(schoolId);
+        allow write: if hasRole(schoolId, ['student_affairs', 'director', 'super_admin']);
+      }
+
+      // C. Devices & Inventory (Tablets & IMEI)
+      match /devices/{deviceId} {
+        allow read: if belongsToSchool(schoolId);
+        allow write: if hasRole(schoolId, ['tech_specialist', 'director', 'super_admin']);
+      }
+
+      match /batches/{batchId} {
+        allow read: if belongsToSchool(schoolId);
+        allow write: if hasRole(schoolId, ['tech_specialist', 'director', 'super_admin']);
+      }
+
+      // D. Attendance & Absence
+      match /attendance/{attendanceId} {
+        allow read: if belongsToSchool(schoolId);
+        allow write: if hasRole(schoolId, ['teacher', 'director', 'super_admin']);
+      }
+
+      // E. Assessments, Exams & Grades
+      match /assessments/{assessmentId} {
+        allow read: if belongsToSchool(schoolId);
+        allow write: if hasRole(schoolId, ['teacher', 'director', 'super_admin']);
+      }
+
+      match /grades/{gradeId} {
+        allow read: if belongsToSchool(schoolId);
+        allow write: if hasRole(schoolId, ['teacher', 'director', 'super_admin']);
+      }
+
+      // F. Social Affairs & Sensitive Student Cases (Strictly Confidential)
+      match /cases/{caseId} {
+        allow read: if hasRole(schoolId, ['social_affairs', 'director', 'super_admin']);
+        allow write: if hasRole(schoolId, ['social_affairs', 'director', 'super_admin']);
+      }
+
+      // G. Notifications & School Dismissal Events
+      match /notifications/{notificationId} {
+        allow read: if belongsToSchool(schoolId);
+        allow write: if hasRole(schoolId, ['director', 'teacher', 'social_affairs', 'super_admin']);
+      }
+
+      match /dismissals/{dismissalId} {
+        allow read: if belongsToSchool(schoolId);
+        allow write: if hasRole(schoolId, ['director', 'super_admin']);
+      }
+
+      // H. Public CMS Content (News, Activities, Leadership, Announcements)
+      match /cmsContent/{contentId} {
+        // Public can read published items; draft items restricted to staff
+        allow read: if true;
+        allow write: if hasRole(schoolId, ['tech_specialist', 'director', 'super_admin']);
+      }
+
+      // I. Operational Audit Trail (Immutable)
+      match /auditLogs/{logId} {
+        allow read: if hasRole(schoolId, ['director', 'super_admin']);
+        allow create: if belongsToSchool(schoolId);
+        allow update, delete: if false; // strictly immutable audit trail
+      }
+
+      // J. Media Albums & Photo Gallery (Cloudinary Metadata)
+      match /albums/{albumId} {
+        // Public can read published albums; drafts only authorized
+        allow read: if resource.data.status == 'published' || hasRole(schoolId, ['tech_specialist', 'director', 'super_admin']);
+        allow write: if hasRole(schoolId, ['tech_specialist', 'director', 'super_admin']);
+
+        match /images/{imageId} {
+          allow read: if true;
+          allow write: if hasRole(schoolId, ['tech_specialist', 'director', 'super_admin']);
+        }
+      }
+    }
+  }
+}
