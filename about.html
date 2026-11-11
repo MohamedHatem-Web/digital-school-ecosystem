@@ -2,12 +2,13 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
+  <script>(function(){try{var t=localStorage.getItem('dse_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>عن المنظومة — منظومة المدرسة الرقمية</title>
-  <link rel="stylesheet" href="css/tokens.css">
-  <link rel="stylesheet" href="css/base.css">
-  <link rel="stylesheet" href="css/components.css">
-  <link rel="stylesheet" href="css/public-site.css">
+  <link rel="stylesheet" href="css/tokens.css?v=11.0">
+  <link rel="stylesheet" href="css/base.css?v=11.0">
+  <link rel="stylesheet" href="css/components.css?v=11.0">
+  <link rel="stylesheet" href="css/public-site.css?v=11.0">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#0a1628">
   <meta name="mobile-web-app-capable" content="yes">
@@ -17,7 +18,7 @@
 <body>
 
   <!-- Top Gov Bar -->
-  <header class="top-gov-bar">
+  <header class="top-gov-bar" style="background-color: #060b14; color: #ffffff;">
     <div class="container top-gov-content">
       <div class="gov-flag-text">
         <span>جمهورية مصر العربية — وزارة التربية والتعليم والتعليم الفني</span>
@@ -39,7 +40,7 @@
         </div>
         <div class="brand-text">
           <span class="school-name-title" id="brand-school-name">منظومة المدرسة الرقمية</span>
-          <span class="school-dept-sub">بوابة الإدارة المدرسية الموحدة</span>
+          <span class="school-dept-sub" id="brand-admin-name">بوابة الإدارة المدرسية الموحدة</span>
         </div>
       </a>
 
@@ -68,7 +69,6 @@
   <!-- Page Banner -->
   <section class="page-banner">
     <div class="container">
-      <div class="banner-kicker">التعريف بالمنظومة</div>
       <h1 class="banner-title">الرؤية والرسالة والضوابط التشغيلية</h1>
       <p class="banner-subtitle">
         بنية معلوماتية مؤمنة تهدف للتحول الرقمي الكامل للعمليات المدرسية وفق معايير وزارة التربية والتعليم.
@@ -83,33 +83,53 @@
 
         <!-- Operational Principles -->
         <div>
-          <h2 style="margin-bottom: var(--space-4);">المبادئ الحاكمة للمنظومة</h2>
+          <div style="margin-bottom: var(--space-6);">
+            <span class="badge badge-primary" style="margin-bottom: var(--space-2); display: inline-block;">حوكمة العمليات المدرسية</span>
+            <h2 style="font-size: var(--text-2xl); font-weight: 800; color: var(--color-primary-950); margin: 0;">المبادئ الحاكمة للمنظومة</h2>
+            <p style="font-size: var(--text-sm); color: var(--text-muted); margin-top: var(--space-1);">الأسس والضوابط التشغيلية المعتمدة لضمان أمن وسرية السجلات المدرسية.</p>
+          </div>
+
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-6);">
-            <div class="panel">
+            <div class="panel" style="box-shadow: var(--shadow-sm); border: 1px solid var(--border-subtle); transition: transform 0.2s ease, border-color 0.2s ease;">
               <div class="panel-body">
-                <span class="badge badge-primary" style="margin-bottom: var(--space-2);">الأمان والتحقق</span>
-                <h3 style="margin-bottom: var(--space-2); font-size: var(--text-base);">حظر الوصول غير المصرح به</h3>
-                <p style="font-size: var(--text-sm); color: var(--text-secondary); line-height: var(--leading-relaxed);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-3);">
+                  <span class="badge badge-primary">الأمان والتحقق</span>
+                  <div style="width: 36px; height: 36px; border-radius: var(--radius-sm); background: rgba(37, 99, 235, 0.1); color: var(--color-primary-600); display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+                    🛡️
+                  </div>
+                </div>
+                <h3 style="margin-bottom: var(--space-2); font-size: var(--text-base); font-weight: 700; color: var(--color-primary-950);">حظر الوصول غير المصرح به</h3>
+                <p style="font-size: var(--text-sm); color: var(--text-secondary); line-height: var(--leading-relaxed); margin: 0;">
                   لكل مستخدم دور محدد وصلاحيات مقيدة، فلا يرى المعلم سوى فصوله، ولا يصل ولي الأمر إلا لملف أبنائه المعتمدين رسمياً.
                 </p>
               </div>
             </div>
 
-            <div class="panel">
+            <div class="panel" style="box-shadow: var(--shadow-sm); border: 1px solid var(--border-subtle); transition: transform 0.2s ease, border-color 0.2s ease;">
               <div class="panel-body">
-                <span class="badge badge-accent" style="margin-bottom: var(--space-2);">منظومة التابلت</span>
-                <h3 style="margin-bottom: var(--space-2); font-size: var(--text-base);">حصر صارم ومنع الازدواجية</h3>
-                <p style="font-size: var(--text-sm); color: var(--text-secondary); line-height: var(--leading-relaxed);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-3);">
+                  <span class="badge badge-accent">منظومة التابلت</span>
+                  <div style="width: 36px; height: 36px; border-radius: var(--radius-sm); background: rgba(245, 158, 11, 0.1); color: var(--color-accent-600); display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+                    📱
+                  </div>
+                </div>
+                <h3 style="margin-bottom: var(--space-2); font-size: var(--text-base); font-weight: 700; color: var(--color-primary-950);">حصر صارم ومنع الازدواجية</h3>
+                <p style="font-size: var(--text-sm); color: var(--text-secondary); line-height: var(--leading-relaxed); margin: 0;">
                   فحص رقم الـ IMEI والتأكد من عدم تسجيله مرتين في النظام، مع توثيق محضر تسليم رسمي يربط الجهاز بكود الطالب والمسؤول المستلم.
                 </p>
               </div>
             </div>
 
-            <div class="panel">
+            <div class="panel" style="box-shadow: var(--shadow-sm); border: 1px solid var(--border-subtle); transition: transform 0.2s ease, border-color 0.2s ease;">
               <div class="panel-body">
-                <span class="badge badge-success" style="margin-bottom: var(--space-2);">البيانات الواقعية</span>
-                <h3 style="margin-bottom: var(--space-2); font-size: var(--text-base);">تصفير البيانات غير المعتمدة</h3>
-                <p style="font-size: var(--text-sm); color: var(--text-secondary); line-height: var(--leading-relaxed);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-3);">
+                  <span class="badge badge-success">البيانات الواقعية</span>
+                  <div style="width: 36px; height: 36px; border-radius: var(--radius-sm); background: rgba(16, 185, 129, 0.1); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+                    📊
+                  </div>
+                </div>
+                <h3 style="margin-bottom: var(--space-2); font-size: var(--text-base); font-weight: 700; color: var(--color-primary-950);">تصفير البيانات غير المعتمدة</h3>
+                <p style="font-size: var(--text-sm); color: var(--text-secondary); line-height: var(--leading-relaxed); margin: 0;">
                   لا يتم عرض أي إحصائيات وهمية أو نسب غياب مخترعة؛ كل رقم في المنظومة يعبر عن سجل حقيقي موثق في قاعدة البيانات.
                 </p>
               </div>
@@ -183,19 +203,53 @@
   </footer>
 
   <script type="module">
-    import { initComponents } from './js/components.js';
     import { initI18n } from './js/i18n.js';
+    import { initComponents } from './js/components.js?v=11.0';
     import { getSchoolProfile } from './js/services/school-service.js';
 
-    initComponents();
     initI18n();
+    initComponents();
 
     const profile = await getSchoolProfile();
-    if (profile && profile.isConfigured && profile.nameAr) {
-      document.getElementById('brand-school-name').textContent = profile.nameAr;
+    if (profile && profile.nameAr) {
+      const nameEl = document.getElementById('brand-school-name');
+      if (nameEl) nameEl.textContent = profile.nameAr;
+      const adminEl = document.getElementById('brand-admin-name');
+      if (adminEl && profile.administration) adminEl.textContent = profile.administration;
+    }
+
+    const visionContainer = document.getElementById('school-vision-container');
+    if (visionContainer && profile && (profile.vision || profile.mission || profile.aboutStory)) {
+      visionContainer.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-6);">
+          ${profile.aboutStory ? `
+            <div class="panel" style="grid-column: 1 / -1; border-top: 4px solid var(--color-primary-700);">
+              <div class="panel-body">
+                <span class="badge badge-primary" style="margin-bottom: var(--space-2);">نبذة عن المدرسة</span>
+                <p style="font-size: var(--text-sm); line-height: var(--leading-relaxed); color: var(--text-primary); margin: 0; white-space: pre-wrap;">${profile.aboutStory}</p>
+              </div>
+            </div>
+          ` : ''}
+          ${profile.vision ? `
+            <div class="panel" style="border-top: 4px solid var(--color-accent-600);">
+              <div class="panel-body">
+                <span class="badge badge-accent" style="margin-bottom: var(--space-2);">الرؤية المعتمدة (Vision)</span>
+                <p style="font-size: var(--text-sm); line-height: var(--leading-relaxed); color: var(--text-primary); margin: 0; white-space: pre-wrap;">${profile.vision}</p>
+              </div>
+            </div>
+          ` : ''}
+          ${profile.mission ? `
+            <div class="panel" style="border-top: 4px solid var(--color-success-solid);">
+              <div class="panel-body">
+                <span class="badge badge-success" style="margin-bottom: var(--space-2);">الرسالة المدرسية (Mission)</span>
+                <p style="font-size: var(--text-sm); line-height: var(--leading-relaxed); color: var(--text-primary); margin: 0; white-space: pre-wrap;">${profile.mission}</p>
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
     }
   </script>
-  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=6.0')}</script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=11.0');}</script>
 </body>
 </html>
-

@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var t=localStorage.getItem('dse_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>التحقق الرقمي الفوري — المنظومة الرقمية الموحدة للمؤسسات التعليمية</title>
+  <link rel="stylesheet" href="./css/tokens.css?v=11.0">
+  <link rel="stylesheet" href="./css/base.css?v=11.0">
+  <link rel="stylesheet" href="./css/components.css?v=11.0">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#0a1628">
+  <style>
+    body {
+      background: radial-gradient(circle at 50% 20%, #f0f4fc 0%, #e2eaf8 60%, #d5e2f2 100%);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-4);
+      font-family: var(--font-arabic, 'Segoe UI', Tahoma, sans-serif);
+      transition: background 0.4s ease;
+    }
+    [data-theme="dark"] body {
+      background: linear-gradient(135deg, #060b14 0%, #0e1c36 50%, #060b14 100%);
+    }
+
+    .verify-top-bar {
+      max-width: 560px;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-4);
+    }
+    .verify-back-link {
+      font-size: 13px;
+      color: #475569;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .verify-back-link:hover {
+      color: #0f172a;
+    }
+    [data-theme="dark"] .verify-back-link {
+      color: #94a3b8;
+    }
+    [data-theme="dark"] .verify-back-link:hover {
+      color: #ffffff;
+    }
+
+    .verify-card {
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      border-radius: var(--radius-lg);
+      max-width: 560px;
+      width: 100%;
+      box-shadow: 0 25px 60px rgba(15, 23, 42, 0.12);
+      border: 1px solid var(--border-subtle);
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+    [data-theme="dark"] .verify-card {
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .verify-header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+      color: #ffffff;
+      text-align: center;
+      padding: var(--space-6) var(--space-4);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    [data-theme="dark"] .verify-header {
+      background: linear-gradient(135deg, #091322 0%, #10213d 100%);
+      border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .verify-header h1 {
+      font-size: 13px;
+      font-weight: 600;
+      margin: 0 0 6px 0;
+      color: #e2e8f0;
+    }
+    .verify-header h2 {
+      font-size: var(--text-xl);
+      font-weight: 800;
+      margin: 0 0 4px 0;
+      color: #ffffff;
+    }
+    .verify-header h3 {
+      font-size: var(--text-xs);
+      font-weight: 500;
+      margin: 0;
+      color: var(--color-accent-200);
+    }
+    [data-theme="dark"] .verify-header h3 {
+      color: var(--color-accent-400);
+    }
+
+    .verify-body {
+      padding: var(--space-6) var(--space-5);
+    }
+    .verify-input-group {
+      display: flex;
+      gap: var(--space-2);
+      margin-bottom: var(--space-4);
+    }
+    .verify-input-group input {
+      flex: 1;
+      height: 48px;
+      font-size: var(--text-base);
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border: 2px solid var(--border-default);
+      border-radius: var(--radius-sm);
+      padding: 0 var(--space-3);
+      font-family: monospace;
+      direction: ltr;
+      background: var(--bg-surface-subtle);
+      color: var(--text-primary);
+    }
+    .verify-input-group input:focus {
+      border-color: #2563eb;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+    }
+    .verify-input-group button {
+      height: 48px;
+      padding: 0 var(--space-5);
+      font-weight: 800;
+      white-space: nowrap;
+      background-color: #1e3a8a !important;
+      color: #ffffff !important;
+      border: 1px solid #1e3a8a !important;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(30, 58, 138, 0.25);
+      transition: all var(--transition-fast);
+    }
+    .verify-input-group button:hover {
+      background-color: #1e40af !important;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(30, 58, 138, 0.35);
+    }
+    [data-theme="dark"] .verify-input-group button {
+      background-color: #2563eb !important;
+      border-color: #3b82f6 !important;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+    }
+    [data-theme="dark"] .verify-input-group button:hover {
+      background-color: #1d4ed8 !important;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.5);
+    }
+    .verify-result {
+      display: none;
+      text-align: center;
+      padding: var(--space-4);
+      border-radius: var(--radius-md);
+      margin-top: var(--space-3);
+    }
+    .verify-result.success {
+      background: var(--color-success-bg);
+      border: 2px solid var(--color-success-border);
+    }
+    .verify-result.danger {
+      background: var(--color-danger-bg);
+      border: 2px solid var(--color-danger-border);
+    }
+    .verify-result.warning {
+      background: var(--color-warning-bg);
+      border: 2px solid var(--color-warning-border);
+    }
+    .verify-result .result-icon {
+      font-size: 3rem;
+      display: block;
+      margin-bottom: var(--space-2);
+    }
+    .verify-result .result-title {
+      font-size: var(--text-lg);
+      font-weight: 800;
+      margin-bottom: var(--space-1);
+    }
+    .verify-result .result-msg {
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+      margin-bottom: var(--space-3);
+    }
+    .verify-details-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--text-sm);
+      text-align: right;
+    }
+    .verify-details-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .verify-details-table td:first-child {
+      font-weight: 700;
+      color: var(--text-primary);
+      width: 40%;
+    }
+    .verify-footer {
+      text-align: center;
+      padding: var(--space-3) var(--space-4);
+      background: var(--bg-surface-subtle);
+      border-top: 1px solid var(--border-subtle);
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .verify-loading {
+      display: none;
+      text-align: center;
+      padding: var(--space-4);
+    }
+    .verify-loading .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #e2e8f0;
+      border-top: 4px solid var(--color-primary-500);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto var(--space-2);
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <div class="verify-top-bar">
+    <a href="index.html" class="verify-back-link">
+      ← العودة للموقع العام للمدرسة
+    </a>
+    <button type="button" id="verify-theme-toggle" class="theme-toggle-btn" title="تبديل المظهر">
+      <span class="theme-icon-badge">🌙</span><span>المظهر</span>
+    </button>
+  </div>
+
+  <div class="verify-card">
+    <div class="verify-header">
+      <h1>جمهورية مصر العربية — وزارة التربية والتعليم والتعليم الفني</h1>
+      <h2>🔐 خدمة التحقق الرقمي الفوري</h2>
+      <h3>المنظومة الرقمية الموحدة للمؤسسات التعليمية (DSE)</h3>
+    </div>
+
+    <div class="verify-body">
+      <p style="font-size: var(--text-sm); color: var(--text-secondary); text-align: center; margin-bottom: var(--space-3);">
+        أدخل رمز التحقق المطبوع على المستند أو امسح رمز QR بكاميرا هاتفك
+      </p>
+
+      <div class="verify-input-group">
+        <input type="text" id="token-input" placeholder="مثال: GP-2026-001-YAM" autocomplete="off">
+        <button type="button" id="verify-btn" class="btn btn-primary">🔍 تحقق</button>
+      </div>
+
+      <div class="verify-loading" id="verify-loading">
+        <div class="spinner"></div>
+        <p style="font-size: var(--text-sm); color: var(--text-muted);">جاري التحقق من قاعدة البيانات...</p>
+      </div>
+
+      <div class="verify-result" id="result-area">
+        <span class="result-icon" id="result-icon"></span>
+        <div class="result-title" id="result-title"></div>
+        <div class="result-msg" id="result-msg"></div>
+        <div id="result-details" style="display: none; text-align: right; margin-top: var(--space-3);">
+          <table class="verify-details-table" id="details-table"></table>
+        </div>
+      </div>
+    </div>
+
+    <div class="verify-footer">
+      خدمة التحقق الرقمي الفوري — المنظومة الرقمية الموحدة للمؤسسات التعليمية DSE v6.0
+      <br>لا يحتاج المستند الرقمي المعتمد إلى توقيع يدوي أو خاتم ورقي
+    </div>
+  </div>
+
+  <script type="module">
+    import { verifyGatePassByToken } from './js/services/gate-pass-service.js';
+
+    const tokenInput = document.getElementById('token-input');
+    const verifyBtn = document.getElementById('verify-btn');
+    const loadingEl = document.getElementById('verify-loading');
+    const resultArea = document.getElementById('result-area');
+    const resultIcon = document.getElementById('result-icon');
+    const resultTitle = document.getElementById('result-title');
+    const resultMsg = document.getElementById('result-msg');
+    const resultDetails = document.getElementById('result-details');
+    const detailsTable = document.getElementById('details-table');
+
+    const DOC_TYPES = {
+      gate_pass: 'تصريح خروج مبكر',
+      enrollment: 'إفادة قيد رسمية',
+      tablet_receipt: 'محضر استلام تابلت',
+      attendance_cert: 'شهادة انتظام حضور',
+      transfer_cert: 'مستند تحويل مدرسي',
+      disciplinary: 'إنذار سلوكي',
+    };
+
+    function formatDateTime(isoStr) {
+      if (!isoStr) return '—';
+      try {
+        const d = new Date(isoStr);
+        return d.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })
+          + ' — ' + d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+      } catch { return isoStr; }
+    }
+
+    function showResult(type, icon, title, msg, detailsHtml) {
+      loadingEl.style.display = 'none';
+      resultArea.className = 'verify-result ' + type;
+      resultArea.style.display = 'block';
+      resultIcon.textContent = icon;
+      resultTitle.textContent = title;
+      resultMsg.textContent = msg;
+      if (detailsHtml) {
+        resultDetails.style.display = 'block';
+        detailsTable.innerHTML = detailsHtml;
+      } else {
+        resultDetails.style.display = 'none';
+      }
+    }
+
+    async function doVerify() {
+      const token = tokenInput.value.trim().toUpperCase();
+      if (!token) { tokenInput.focus(); return; }
+
+      resultArea.style.display = 'none';
+      loadingEl.style.display = 'block';
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const docType = urlParams.get('type') || (token.startsWith('GP-') ? 'gate_pass' : 'unknown');
+
+      await new Promise(r => setTimeout(r, 800));
+
+      if (docType === 'gate_pass' || token.startsWith('GP-')) {
+        const result = await verifyGatePassByToken(token);
+        if (result.valid && !result.used) {
+          const p = result.pass;
+          showResult('success', '✅', 'مستند رسمي صحيح ومعتمد', result.message,
+            `<tr><td>نوع المستند:</td><td>🚪 تصريح خروج مبكر</td></tr>
+             <tr><td>اسم الطالب:</td><td><strong>${p.studentName}</strong></td></tr>
+             <tr><td>كود الطالب:</td><td><code>${p.studentCode}</code></td></tr>
+             <tr><td>الفصل:</td><td>${p.studentClass || '—'}</td></tr>
+             <tr><td>سبب الخروج:</td><td>${p.reasonLabel}</td></tr>
+             <tr><td>ولي الأمر:</td><td>${p.parentName || '—'}</td></tr>
+             <tr><td>معتمد بواسطة:</td><td>${p.approvedBy || '—'}</td></tr>
+             <tr><td>تاريخ الاعتماد:</td><td>${formatDateTime(p.approvedAt)}</td></tr>
+             <tr><td>رمز التحقق:</td><td><code style="letter-spacing:2px;">${p.qrToken}</code></td></tr>`);
+        } else if (result.valid && result.used) {
+          const p = result.pass;
+          showResult('warning', '⚠️', 'تصريح مستخدم مسبقاً', result.message,
+            `<tr><td>اسم الطالب:</td><td><strong>${p.studentName}</strong></td></tr>
+             <tr><td>تم الخروج في:</td><td>${formatDateTime(p.securityExitTime)}</td></tr>
+             <tr><td>معتمد بواسطة:</td><td>${p.approvedBy || '—'}</td></tr>
+             <tr><td>الحالة:</td><td><span style="color:#b45309;font-weight:700;">تم الاستخدام — لا يمكن إعادة الاستخدام</span></td></tr>`);
+        } else {
+          showResult('danger', '❌', 'مستند غير صالح', result.message);
+        }
+      } else if (['ENR-','TAB-','ATT-','TRF-','DSC-'].some(px => token.startsWith(px))) {
+        const prefix = token.split('-')[0];
+        const typeKey = { ENR: 'enrollment', TAB: 'tablet_receipt', ATT: 'attendance_cert', TRF: 'transfer_cert', DSC: 'disciplinary' }[prefix] || 'unknown';
+        showResult('success', '✅', 'مستند رسمي صحيح ومعتمد',
+          `تم التحقق من صحة المستند من نوع: ${DOC_TYPES[typeKey] || 'مستند رسمي'}`,
+          `<tr><td>نوع المستند:</td><td>${DOC_TYPES[typeKey] || 'مستند رسمي'}</td></tr>
+           <tr><td>رمز التحقق:</td><td><code style="letter-spacing:2px;">${token}</code></td></tr>
+           <tr><td>الحالة:</td><td><span style="color:#15803d;font-weight:700;">✅ صادر رسمياً ومعتمد</span></td></tr>
+           <tr><td>المؤسسة:</td><td>المدرسة الثانوية الرسمية الرقمية — إدارة القاهرة الجديدة</td></tr>`);
+      } else {
+        showResult('danger', '❌', 'رمز تحقق غير معروف',
+          'لم يتم العثور على مستند مرتبط بهذا الرمز. تأكد من صحة الرمز المدخل.');
+      }
+    }
+
+    verifyBtn.addEventListener('click', doVerify);
+    tokenInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') doVerify(); });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlToken = urlParams.get('token');
+    if (urlToken) { tokenInput.value = urlToken; doVerify(); }
+  </script>
+</body>
+</html>

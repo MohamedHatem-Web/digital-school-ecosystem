@@ -2,11 +2,13 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
+  <script>(function(){try{var t=localStorage.getItem('dse_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>معرض الأنشطة والألبومات المدرسية — منظومة المدرسة الرقمية</title>
-  <link rel="stylesheet" href="css/base.css">
-  <link rel="stylesheet" href="css/components.css">
-  <link rel="stylesheet" href="css/public-site.css">
+  <link rel="stylesheet" href="css/tokens.css?v=11.0">
+  <link rel="stylesheet" href="css/base.css?v=11.0">
+  <link rel="stylesheet" href="css/components.css?v=11.0">
+  <link rel="stylesheet" href="css/public-site.css?v=11.0">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#0a1628">
   <meta name="mobile-web-app-capable" content="yes">
@@ -16,7 +18,7 @@
 <body>
 
   <!-- Top Government Bar -->
-  <div class="gov-topbar">
+  <div class="gov-topbar" style="background-color: #060b14; color: #ffffff;">
     <div class="container gov-topbar-content">
       <div class="gov-entity">
         <span class="gov-flag-icon">🇪🇬</span>
@@ -62,16 +64,11 @@
     </div>
   </header>
 
-  <!-- Hero Section -->
-  <section class="hero-section" style="padding: var(--space-12) 0 var(--space-8);">
-    <div class="container hero-container" style="text-align: center;">
-      <span class="badge badge-accent" style="margin-bottom: var(--space-3); display: inline-block;">
-        التوثيق الرقمي السحابي (Cloudinary CDN)
-      </span>
-      <h1 class="hero-title" style="font-size: var(--text-3xl); margin-bottom: var(--space-2);">
-        معرض الأنشطة والصور المدرسية
-      </h1>
-      <p class="hero-description" style="max-width: 600px; margin: 0 auto; color: var(--text-muted); font-size: var(--text-base);">
+  <!-- Page Banner -->
+  <section class="page-banner">
+    <div class="container">
+      <h1 class="banner-title">معرض الأنشطة والصور المدرسية</h1>
+      <p class="banner-subtitle">
         التوثيق البصري المعتمد لفعاليات وإنجازات ومسابقات ومشاريع الطلاب في بيئة آمنة تراعي ضوابط الخصوصية المدرسية.
       </p>
     </div>
@@ -167,14 +164,16 @@
   </footer>
 
   <script type="module">
-    import { initComponents } from './js/components.js';
+    import { initComponents } from './js/components.js?v=11.0';
+    import { initI18n } from './js/i18n.js';
     import { getSchoolProfile } from './js/services/school-service.js';
     import { getAlbums, getAlbumImages, MEDIA_CATEGORIES } from './js/services/media-service.js';
     import { getOptimizedImageUrl } from './js/services/cloudinary-service.js';
 
     initComponents();
+    initI18n();
 
-    const schoolProfile = getSchoolProfile();
+    const schoolProfile = await getSchoolProfile();
     const schoolId = schoolProfile ? schoolProfile.schoolId || 'sch_cairo_sec_01' : 'sch_cairo_sec_01';
 
     if (schoolProfile && schoolProfile.nameAr) {
@@ -320,7 +319,6 @@
     // Initial fetch
     loadPublicGallery();
   </script>
-  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=6.0')}</script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=11.0');}</script>
 </body>
 </html>
-

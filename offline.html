@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var t=localStorage.getItem('dse_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لا يوجد اتصال بالإنترنت — المنظومة الرقمية للمؤسسات التعليمية</title>
+  <link rel="stylesheet" href="./css/tokens.css?v=11.0">
+  <link rel="stylesheet" href="./css/base.css?v=11.0">
+  <link rel="stylesheet" href="./css/components.css?v=11.0">
+  <style>
+    body {
+      background: var(--bg-page);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-4);
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    }
+    .offline-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      max-width: 500px;
+      width: 100%;
+      padding: var(--space-6);
+      text-align: center;
+      box-shadow: var(--shadow-lg);
+    }
+    .offline-icon {
+      font-size: 64px;
+      margin-bottom: var(--space-4);
+      animation: pulse 2s infinite ease-in-out;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.08); opacity: 0.8; }
+    }
+    .offline-title {
+      font-size: var(--text-xl);
+      font-weight: 800;
+      color: var(--color-primary-950);
+      margin: 0 0 var(--space-2) 0;
+    }
+    .offline-desc {
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin: 0 0 var(--space-5) 0;
+    }
+    .offline-actions {
+      display: flex;
+      gap: var(--space-3);
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="offline-card">
+    <div class="offline-icon">📡</div>
+    <h1 class="offline-title">أنت في وضع عدم الاتصال (Offline)</h1>
+    <p class="offline-desc">
+      تعذر الاتصال بالشبكة حالياً. تحتفظ المنظومة بنسخة محلية مشفرة من بياناتك وسجلاتك المدرسية لتتمكن من تصفحها والعمل عليها دون انقطاع.
+    </p>
+    <div class="offline-actions">
+      <button type="button" class="btn btn-primary" onclick="window.location.reload()">
+        🔄 إعادة محاولة الاتصال
+      </button>
+      <a href="./login.html" class="btn btn-outline">
+        🏠 الانتقال لصفحة الدخول
+      </a>
+    </div>
+  </div>
+</body>
+</html>
+

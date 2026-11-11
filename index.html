@@ -2,12 +2,13 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
+  <script>(function(){try{var t=localStorage.getItem('dse_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>منظومة المدرسة الرقمية — البوابة الرسمية</title>
-  <link rel="stylesheet" href="css/tokens.css">
-  <link rel="stylesheet" href="css/base.css">
-  <link rel="stylesheet" href="css/components.css">
-  <link rel="stylesheet" href="css/public-site.css">
+  <link rel="stylesheet" href="css/tokens.css?v=11.0">
+  <link rel="stylesheet" href="css/base.css?v=11.0">
+  <link rel="stylesheet" href="css/components.css?v=11.0">
+  <link rel="stylesheet" href="css/public-site.css?v=11.0">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#0a1628">
   <meta name="mobile-web-app-capable" content="yes">
@@ -17,7 +18,7 @@
 <body>
 
   <!-- Top Ministry of Education Banner -->
-  <header class="top-gov-bar">
+  <header class="top-gov-bar" style="background-color: #060b14; color: #ffffff;">
     <div class="container top-gov-content">
       <div class="gov-flag-text">
         <span class="gov-flag-icon">🇪🇬</span>
@@ -86,8 +87,8 @@
       <a href="calendar.html" class="drawer-nav-link">التقويم الدراسي</a>
       <a href="contact.html" class="drawer-nav-link">اتصل بنا</a>
     </nav>
-    <div style="padding-top: var(--space-4); border-top: 1px solid var(--border-light);">
-      <a href="login.html" class="btn btn-primary btn-full">تسجيل الدخول للمنظومة</a>
+    <div class="drawer-footer" style="padding-top: var(--space-6); padding-bottom: var(--space-4); margin-top: auto; border-top: 1px solid var(--border-subtle);">
+      <a href="login.html" class="btn btn-primary btn-full" style="height: 48px; font-size: 15px; font-weight: 700; border-radius: var(--radius-md); box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35); display: flex; align-items: center; justify-content: center;">تسجيل الدخول للمنظومة</a>
     </div>
   </aside>
 
@@ -97,40 +98,59 @@
     <section class="editorial-hero">
       <div class="container hero-editorial-grid">
         <div>
-          <div class="hero-editorial-kicker">
-            <span>العام الدراسي 2026/2027</span>
-            <span>•</span>
-            <span>بنية تحتية رقمية مؤسسية</span>
-          </div>
-          <h1 class="hero-main-title">المنظومة الرقمية الموحدة للمؤسسة التعليمية</h1>
+          <div id="hero-school-logo" class="hero-logo-badge" style="display: none;"></div>
+          <h1 class="hero-main-title">
+            المنظومة الرقمية الشاملة
+            <span class="hero-gradient-text">لإدارة الحوكمة المدرسية</span>
+          </h1>
           <p class="hero-main-lead">
-            بيئة إلكترونية رسمية لحوكمة العمليات المدرسية، وحصر وتسليم أجهزة التابلت الوزاري، ومتابعة الحضور والغياب، وتوثيق سجلات الطلاب وأولياء الأمور بدقة تامة.
+            بيئة سحابية فائقة الأمان تجمع بين حصر أجهزة التابلت الوزاري، منظومة تصاريح البوابة الإلكترونية المشفرة بـ QR، رصد الحضور اللحظي، والبريد الداخلي المؤسسي الموثق.
           </p>
           <div class="hero-actions-bar">
-            <a href="login.html" class="btn btn-accent btn-lg">دخول بوابة الخدمات الرقمية</a>
-            <a href="about.html" class="btn btn-hero-outline btn-lg">التعريف بالمنظومة</a>
+            <a href="login.html" class="btn btn-accent btn-lg" style="box-shadow: 0 4px 20px rgba(232, 140, 8, 0.4); font-weight: 800;">
+              دخول بوابة الخدمات المعتمدة ↗
+            </a>
+            <a href="verify.html" class="btn btn-hero-outline btn-lg" style="font-weight: 700;">
+              التحقق من صحة المستندات (QR)
+            </a>
           </div>
         </div>
 
-        <div>
-          <div class="hero-accreditation-box">
-            <h2 class="accreditation-title">حوكمة وتكامل العمليات المدرسية</h2>
-            <p class="accreditation-desc">
-              تربط المنظومة مكتب المدير، أخصائي التطوير التكنولوجي، شؤون الطلاب، المعلمين، وأولياء الأمور في بيئة واحدة موحدة.
-            </p>
-            <div class="accreditation-specs">
-              <div class="accreditation-spec-row">
-                <span class="badge badge-accent">تابلت</span>
-                <span>فحص وتسجيل أرقام IMEI ومنع الازدواجية</span>
-              </div>
-              <div class="accreditation-spec-row">
-                <span class="badge badge-primary">حضور</span>
-                <span>رصد الغياب اليومي مع سجلات التعديل المحمية</span>
-              </div>
-              <div class="accreditation-spec-row">
-                <span class="badge badge-success">خصوصية</span>
-                <span>عزل صارم للبيانات وصلاحيات محددة لكل دور</span>
-              </div>
+        <div class="hero-features-column">
+          <div class="hero-feature-item">
+            <div class="hero-feature-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+            </div>
+            <div>
+              <strong>حصر أجهزة التابلت المدرسي</strong>
+              <span>تسجيل IMEI، محاضر التسليم، وتتبع العهدة</span>
+            </div>
+          </div>
+          <div class="hero-feature-item">
+            <div class="hero-feature-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            </div>
+            <div>
+              <strong>تصاريح البوابة الإلكترونية</strong>
+              <span>أذونات خروج مشفرة بـ QR مع تحقق فوري</span>
+            </div>
+          </div>
+          <div class="hero-feature-item">
+            <div class="hero-feature-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path></svg>
+            </div>
+            <div>
+              <strong>الحضور والانضباط اليومي</strong>
+              <span>رصد فوري لحضور وغياب الطلاب بالفصول</span>
+            </div>
+          </div>
+          <div class="hero-feature-item">
+            <div class="hero-feature-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+            </div>
+            <div>
+              <strong>البريد الداخلي المؤسسي</strong>
+              <span>مراسلات موثقة بين الإدارة والمعلمين وأولياء الأمور</span>
             </div>
           </div>
         </div>
@@ -166,56 +186,10 @@
       </div>
     </section>
 
-    <!-- Institutional Service Pillars -->
-    <section class="pillars-section">
-      <div class="container">
-        <div class="pillars-header">
-          <span class="badge badge-primary">الخدمات الأساسية</span>
-          <h2>محاور المنظومة الإدارية والتعليمية</h2>
-          <p>
-            حلول متكاملة تضمن دقة السجلات المدرسية وتيسر مهام فريق العمل وفق المعايير الوزارية.
-          </p>
-        </div>
 
-        <div class="pillars-grid">
-          <div class="pillar-card">
-            <div class="pillar-icon-box">📱</div>
-            <h3 class="pillar-title">إدارة وحصر التابلت المدرسي</h3>
-            <p class="pillar-desc">
-              حصر دقيق لأرقام IMEI والتأكد من عدم تكرار قيد الأجهزة، وتوثيق محاضر الاستلام والتسليم للطلاب مع إمكانية التصدير والطباعة الرسمية.
-            </p>
-            <div>
-              <a href="login.html" class="btn btn-outline btn-sm">بوابة التطوير التكنولوجي ←</a>
-            </div>
-          </div>
-
-          <div class="pillar-card">
-            <div class="pillar-icon-box">👥</div>
-            <h3 class="pillar-title">شؤون الطلاب وسجلات القيد</h3>
-            <p class="pillar-desc">
-              أرشفة ملفات الطلاب الجدد، فحص الأرقام القومية، وإصدار إفادات القيد والمتابعة الأكاديمية مع حفظ كامل للخصوصية.
-            </p>
-            <div>
-              <a href="login.html" class="btn btn-outline btn-sm">بوابة شؤون الطلاب ←</a>
-            </div>
-          </div>
-
-          <div class="pillar-card">
-            <div class="pillar-icon-box">🏛️</div>
-            <h3 class="pillar-title">الإشراف الإداري ومكتب المدير</h3>
-            <p class="pillar-desc">
-              متابعة المؤشرات الإحصائية العامة، اعتماد هوية المدرسة، وإدارة الصلاحيات وسجلات الرقابة الإدارية في أي وقت.
-            </p>
-            <div>
-              <a href="login.html" class="btn btn-outline btn-sm">مكتب الإدارة المركزية ←</a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
 
     <!-- Quick Public Inquiry Widget (خدمة الاستعلام الفوري) -->
-    <section style="padding: var(--space-12) 0; background-color: #ffffff; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle);">
+    <section style="padding: var(--space-12) 0; background-color: var(--bg-surface); border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle);">
       <div class="container">
         <div style="max-width: 800px; margin: 0 auto; text-align: center;">
           <span class="badge badge-accent" style="margin-bottom: var(--space-2); display: inline-block;">خدمة إلكترونية مباشرة</span>
@@ -325,7 +299,10 @@
   <footer class="site-footer">
     <div class="container footer-main-grid">
       <div>
-        <h4 class="footer-col-title">منظومة المدرسة الرقمية</h4>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: var(--space-3);">
+          <div class="brand-crest footer-brand-crest" style="width: 34px; height: 34px; flex-shrink: 0; display: none;"></div>
+          <h4 class="footer-col-title" style="margin: 0;">منظومة المدرسة الرقمية</h4>
+        </div>
         <p style="font-size: var(--text-sm); line-height: var(--leading-relaxed); max-width: 340px;">
           البنية التحتية الرقمية الموحدة للمؤسسات التعليمية — جمهورية مصر العربية، وزارة التربية والتعليم والتعليم الفني.
         </p>
@@ -348,6 +325,7 @@
           <li><a href="login.html">التطوير التكنولوجي والتابلت</a></li>
           <li><a href="login.html">شؤون الطلاب والقيد</a></li>
           <li><a href="login.html">بوابة المعلم وولي الأمر</a></li>
+          <li><a href="verify.html">🔐 التحقق الرقمي من المستندات</a></li>
         </ul>
       </div>
 
@@ -368,7 +346,7 @@
   </footer>
 
   <script type="module">
-    import { initComponents } from './js/components.js';
+    import { initComponents } from './js/components.js?v=11.0';
     import { getSchoolProfile } from './js/services/school-service.js';
     import { getCmsItems } from './js/services/cms-service.js';
 
@@ -376,27 +354,31 @@
 
     async function loadHomePage() {
       const profile = await getSchoolProfile();
-      if (profile && profile.isConfigured && profile.nameAr) {
-        const nameEl = document.getElementById('brand-school-name');
-        const adminEl = document.getElementById('brand-admin-name');
-        const footerEl = document.getElementById('footer-contact-text');
-        if (nameEl) nameEl.textContent = profile.nameAr;
-        if (adminEl && profile.administration) adminEl.textContent = profile.administration;
-        if (footerEl && (profile.address || profile.phone)) {
-          footerEl.textContent = `${profile.address || ''} ${profile.phone ? `— هاتف: ${profile.phone}` : ''}`;
+      if (profile) {
+        if (profile.nameAr) {
+          const title = document.getElementById('brand-school-name');
+          if (title) title.textContent = profile.nameAr;
+        }
+        const adminDept = profile.administration || profile.adminDeptAr;
+        if (adminDept) {
+          const dept = document.getElementById('brand-admin-name');
+          if (dept) dept.textContent = adminDept;
+        }
+        if (profile.address || profile.phone) {
+          const contact = document.getElementById('footer-contact-text');
+          if (contact) {
+            contact.textContent = [profile.address, profile.phone ? `هاتف: ${profile.phone}` : ''].filter(Boolean).join(' — ');
+          }
         }
       }
 
-      // Load Gazette news
+      // Load Recent Published Official News/Gazette
       const newsItems = await getCmsItems('news', 'published');
-      const gazetteList = document.getElementById('home-gazette-list');
-      const gazetteEmpty = document.getElementById('home-gazette-empty');
-
-      if (newsItems.length > 0) {
-        gazetteEmpty.style.display = 'none';
+      const gazetteList = document.getElementById('gazette-feed-list');
+      if (gazetteList && newsItems && newsItems.length > 0) {
         gazetteList.style.display = 'flex';
         gazetteList.innerHTML = newsItems.slice(0, 3).map((item) => `
-          <div style="padding: var(--space-4); background: #ffffff; border-radius: var(--radius-sm); border-inline-start: 4px solid var(--color-accent-600); box-shadow: var(--shadow-sm); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-2);">
+          <div style="padding: var(--space-4); background: var(--bg-surface); border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); border-inline-start: 4px solid var(--color-accent-600); box-shadow: var(--shadow-sm); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-2);">
             <div>
               <div style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: 2px;">
                 ${item.formattedDate || item.date} — بيان رسمي
@@ -416,6 +398,6 @@
 
     loadHomePage();
   </script>
-  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=6.0')}</script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=11.0');}</script>
 </body>
 </html>

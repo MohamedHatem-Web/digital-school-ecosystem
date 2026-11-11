@@ -2,12 +2,13 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
+  <script>(function(){try{var t=localStorage.getItem('dse_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>التقويم الدراسي — منظومة المدرسة الرقمية</title>
-  <link rel="stylesheet" href="css/tokens.css">
-  <link rel="stylesheet" href="css/base.css">
-  <link rel="stylesheet" href="css/components.css">
-  <link rel="stylesheet" href="css/public-site.css">
+  <link rel="stylesheet" href="css/tokens.css?v=11.0">
+  <link rel="stylesheet" href="css/base.css?v=11.0">
+  <link rel="stylesheet" href="css/components.css?v=11.0">
+  <link rel="stylesheet" href="css/public-site.css?v=11.0">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#0a1628">
   <meta name="mobile-web-app-capable" content="yes">
@@ -16,7 +17,7 @@
 </head>
 <body>
 
-  <header class="top-gov-bar">
+  <header class="top-gov-bar" style="background-color: #060b14; color: #ffffff;">
     <div class="container top-gov-content">
       <div class="gov-flag-text">
         <span>جمهورية مصر العربية — وزارة التربية والتعليم والتعليم الفني</span>
@@ -37,7 +38,7 @@
         </div>
         <div class="brand-text">
           <span class="school-name-title" id="brand-school-name">منظومة المدرسة الرقمية</span>
-          <span class="school-dept-sub">بوابة الإدارة المدرسية الموحدة</span>
+          <span class="school-dept-sub" id="brand-admin-name">بوابة الإدارة المدرسية الموحدة</span>
         </div>
       </a>
 
@@ -65,7 +66,6 @@
 
   <section class="page-banner">
     <div class="container">
-      <div class="banner-kicker">الخطة الزمنية</div>
       <h1 class="banner-title">التقويم الدراسي والمواعيد الرسمية</h1>
       <p class="banner-subtitle">
         مواعيد التقييمات الشهرية، امتحانات نصف ونهاية العام، وفترات تسليم التابلت الوزاري المعتمدة.
@@ -75,7 +75,10 @@
 
   <main style="padding-block: var(--space-16);">
     <div class="container">
-      <div class="empty-state">
+      <div id="calendar-grid-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-6);">
+        <!-- Dynamically populated -->
+      </div>
+      <div class="empty-state" id="calendar-empty-state">
         <div class="empty-state-icon">📅</div>
         <h3 class="empty-state-title">لم يتم اعتماد الخطة الزمنية الرسمية بعد</h3>
         <p class="empty-state-desc">
@@ -133,19 +136,50 @@
   </footer>
 
   <script type="module">
-    import { initComponents } from './js/components.js';
     import { initI18n } from './js/i18n.js';
+    import { initComponents } from './js/components.js?v=11.0';
     import { getSchoolProfile } from './js/services/school-service.js';
+    import { getCmsItems } from './js/services/cms-service.js';
 
-    initComponents();
     initI18n();
+    initComponents();
 
-    const profile = getSchoolProfile();
-    if (profile && profile.isConfigured && profile.nameAr) {
-      document.getElementById('brand-school-name').textContent = profile.nameAr;
+    const profile = await getSchoolProfile();
+    if (profile && profile.nameAr) {
+      const nameEl = document.getElementById('brand-school-name');
+      if (nameEl) nameEl.textContent = profile.nameAr;
+      const adminEl = document.getElementById('brand-admin-name');
+      if (adminEl && profile.administration) adminEl.textContent = profile.administration;
+    }
+
+    const events = await getCmsItems('calendar', 'published');
+    const container = document.getElementById('calendar-grid-container');
+    const emptyState = document.getElementById('calendar-empty-state');
+    if (events && events.length > 0) {
+      emptyState.style.display = 'none';
+      container.style.display = 'grid';
+      events.sort((a, b) => new Date(a.date || a.createdAt) - new Date(b.date || b.createdAt));
+      container.innerHTML = events.map(e => `
+        <article class="panel" style="box-shadow: var(--shadow-sm); border-top: 4px solid var(--color-primary-700);">
+          <div class="panel-body">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-2); gap: 8px;">
+              <span class="badge badge-accent">${e.summary || 'فعالية رسمية'}</span>
+              <span style="font-size: var(--text-xs); color: var(--text-muted); font-weight: 600;">📅 ${e.date || e.formattedDate}</span>
+            </div>
+            <h3 style="font-size: var(--text-base); font-weight: 800; color: var(--color-primary-950); margin-bottom: var(--space-2);">
+              ${e.title}
+            </h3>
+            <p style="font-size: var(--text-xs); color: var(--text-secondary); line-height: var(--leading-relaxed); margin: 0;">
+              ${e.content || ''}
+            </p>
+          </div>
+        </article>
+      `).join('');
+    } else {
+      container.style.display = 'none';
+      emptyState.style.display = 'flex';
     }
   </script>
-  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=6.0')}</script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=11.0');}</script>
 </body>
 </html>
-

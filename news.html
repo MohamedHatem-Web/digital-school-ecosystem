@@ -2,12 +2,13 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
+  <script>(function(){try{var t=localStorage.getItem('dse_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>الأخبار والبيانات الرسمية — منظومة المدرسة الرقمية</title>
-  <link rel="stylesheet" href="css/tokens.css">
-  <link rel="stylesheet" href="css/base.css">
-  <link rel="stylesheet" href="css/components.css">
-  <link rel="stylesheet" href="css/public-site.css">
+  <link rel="stylesheet" href="css/tokens.css?v=11.0">
+  <link rel="stylesheet" href="css/base.css?v=11.0">
+  <link rel="stylesheet" href="css/components.css?v=11.0">
+  <link rel="stylesheet" href="css/public-site.css?v=11.0">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#0a1628">
   <meta name="mobile-web-app-capable" content="yes">
@@ -16,7 +17,7 @@
 </head>
 <body>
 
-  <header class="top-gov-bar">
+  <header class="top-gov-bar" style="background-color: #060b14; color: #ffffff;">
     <div class="container top-gov-content">
       <div class="gov-flag-text">
         <span>جمهورية مصر العربية — وزارة التربية والتعليم والتعليم الفني</span>
@@ -37,7 +38,7 @@
         </div>
         <div class="brand-text">
           <span class="school-name-title" id="brand-school-name">منظومة المدرسة الرقمية</span>
-          <span class="school-dept-sub">بوابة الإدارة المدرسية الموحدة</span>
+          <span class="school-dept-sub" id="brand-admin-name">بوابة الإدارة المدرسية الموحدة</span>
         </div>
       </a>
 
@@ -65,7 +66,6 @@
 
   <section class="page-banner">
     <div class="container">
-      <div class="banner-kicker">المركز الإعلامي</div>
       <h1 class="banner-title">الأخبار والبيانات والقرارات الرسمية</h1>
       <p class="banner-subtitle">
         السجل الرسمي للإعلانات الصادرة من الإدارة المدرسية، مواعيد الجداول، وتعليمات تسليم التابلت.
@@ -136,13 +136,13 @@
   </footer>
 
   <script type="module">
-    import { initComponents } from './js/components.js';
     import { initI18n } from './js/i18n.js';
+    import { initComponents } from './js/components.js?v=11.0';
     import { getSchoolProfile } from './js/services/school-service.js';
     import { getCmsItems } from './js/services/cms-service.js';
 
-    initComponents();
     initI18n();
+    initComponents();
 
     async function loadNewsPage() {
       const profile = await getSchoolProfile();
@@ -187,7 +187,6 @@
 
     loadNewsPage();
   </script>
-  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=6.0')}</script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=11.0');}</script>
 </body>
 </html>
-
