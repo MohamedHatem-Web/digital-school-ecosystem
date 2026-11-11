@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var t=localStorage.getItem('dse_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الأخصائي الاجتماعي والإنذارات — منظومة المدرسة الرقمية</title>
+  <link rel="stylesheet" href="../css/tokens.css?v=11.0">
+  <link rel="stylesheet" href="../css/base.css?v=11.0">
+  <link rel="stylesheet" href="../css/components.css?v=11.0">
+  <link rel="stylesheet" href="../css/dashboard.css?v=11.0">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <meta name="theme-color" content="#0a1628">
+</head>
+<body>
+
+  <div class="dashboard-layout">
+    <div class="dashboard-overlay"></div>
+
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-header">
+        <a href="social-affairs.html" class="sidebar-brand-box">
+          <div class="sidebar-crest">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+            </svg>
+          </div>
+          <div>
+            <div class="sidebar-title">التربية الاجتماعية</div>
+            <div class="sidebar-sub">الإنذارات والمتابعة</div>
+          </div>
+        </a>
+        <button type="button" class="sidebar-close-btn btn btn-sm" style="color: #ffffff;">✕</button>
+      </div>
+
+      <div class="sidebar-role-indicator">
+        <span>المساحة المهنية:</span>
+        <span class="badge badge-warning">أخصائي اجتماعي</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="sidebar-menu">
+          <div class="sidebar-section-title">🤝 الخدمة الاجتماعية</div>
+          <a href="#social" class="sidebar-link active" id="soc-nav-social">
+            <span class="sidebar-icon">🤝</span>
+            <span>الإنذارات ومكتب الخدمة</span>
+          </a>
+          <a href="#students" class="sidebar-link" id="soc-nav-students">
+            <span class="sidebar-icon">🎓</span>
+            <span>سجل الطلاب والقيد</span>
+          </a>
+          <a href="#gate-pass" class="sidebar-link" id="soc-nav-gate">
+            <span class="sidebar-icon">🚪</span>
+            <span>أذونات الخروج المبكر</span>
+          </a>
+
+          <div class="sidebar-section-title">🛡️ الرقابة والمراسلات</div>
+          <a href="#audit-logs" class="sidebar-link" id="soc-nav-audit">
+            <span class="sidebar-icon">🛡️</span>
+            <span>سجل النشاطات الشامل</span>
+          </a>
+          <a href="#messages" class="sidebar-link" id="soc-nav-messages">
+            <span class="sidebar-icon">✉️</span>
+            <span>الرسائل والبريد الداخلي</span>
+          </a>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="../index.html" class="sidebar-back-portal">
+          <span>🌐</span>
+          <span>الموقع العام للمدرسة</span>
+        </a>
+      </div>
+    </aside>
+
+    <div class="dashboard-main">
+      <header class="dashboard-topbar">
+        <div class="topbar-start">
+          <button type="button" class="sidebar-toggle-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+          </button>
+          <span class="badge badge-accent">العام الدراسي 2026/2027</span>
+        </div>
+
+        <div class="topbar-end">
+          <div class="user-profile-widget">
+            <div class="user-avatar" id="soc-user-avatar">س</div>
+            <div class="user-text-info">
+              <span class="user-name" id="soc-user-name">الأخصائي الاجتماعي</span>
+              <span class="user-role-title">Social Affairs Specialist</span>
+            </div>
+            <a href="#" class="logout-action-btn logout-btn" title="تسجيل الخروج">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </header>
+
+      <main class="dashboard-workspace" id="social-workspace" style="padding: var(--space-6);">
+        <!-- Container for SPA Views -->
+        <div id="view-social-container"></div>
+        <div id="view-students-container" style="display: none;"></div>
+        <div id="view-gate-pass-container" style="display: none;"></div>
+        <div id="view-audit-container" style="display: none;"></div>
+        <div id="view-messages-container" style="display: none;">
+          <div class="panel">
+            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <h3 class="panel-title" style="margin: 0;">✉️ نظام المراسلات والبريد الداخلي المباشر</h3>
+                <p style="font-size: var(--text-xs); color: var(--text-muted); margin: 2px 0 0;">تواصل رسمي آمن مع المعلمين، الإدارة، وأولياء الأمور</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div id="soc-messages-box">
+                <p style="color: var(--text-muted); text-align: center; padding: 20px;">جارٍ تحميل صندوق الرسائل...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { checkRouteAccess } from '../js/router-guard.js';
+    import { initComponents } from '../js/components.js?v=11.0';
+    import { renderSocialView } from '../js/views/social-view.js';
+    import { renderStudentsView } from '../js/views/students-view.js';
+    import { renderGatePassView } from '../js/views/gate-pass-view.js';
+    import { getAuditLogs } from '../js/services/audit-service.js';
+    import { getMessagesForUser } from '../js/services/messaging-service.js';
+    import { getCurrentUser } from '../js/auth.js';
+
+    // Restrict access to social specialist and director
+    checkRouteAccess(['social_affairs', 'director', 'super_admin']);
+    initComponents();
+
+    const navLinks = {
+      social: document.getElementById('soc-nav-social'),
+      students: document.getElementById('soc-nav-students'),
+      'gate-pass': document.getElementById('soc-nav-gate'),
+      'audit-logs': document.getElementById('soc-nav-audit'),
+      messages: document.getElementById('soc-nav-messages'),
+    };
+
+    const containers = {
+      social: document.getElementById('view-social-container'),
+      students: document.getElementById('view-students-container'),
+      'gate-pass': document.getElementById('view-gate-pass-container'),
+      'audit-logs': document.getElementById('view-audit-container'),
+      messages: document.getElementById('view-messages-container'),
+    };
+
+    async function switchTab(tabKey) {
+      const activeKey = containers[tabKey] ? tabKey : 'social';
+
+      // Update sidebar nav state
+      Object.keys(navLinks).forEach((k) => {
+        if (navLinks[k]) {
+          navLinks[k].classList.toggle('active', k === activeKey);
+        }
+      });
+
+      // Show/hide containers
+      Object.keys(containers).forEach((k) => {
+        if (containers[k]) {
+          containers[k].style.display = k === activeKey ? 'block' : 'none';
+        }
+      });
+
+      // Lazy load view content
+      if (activeKey === 'social') {
+        await renderSocialView(containers.social);
+      } else if (activeKey === 'students') {
+        await renderStudentsView(containers.students);
+      } else if (activeKey === 'gate-pass') {
+        await renderGatePassView(containers['gate-pass']);
+      } else if (activeKey === 'audit-logs') {
+        await loadAuditLogsView();
+      } else if (activeKey === 'messages') {
+        await loadMessagesView();
+      }
+    }
+
+    async function loadAuditLogsView() {
+      const c = containers['audit-logs'];
+      c.innerHTML = '<p style="text-align:center; padding: 20px;">جارٍ تحميل سجل النشاطات...</p>';
+      const logs = (await getAuditLogs()) || [];
+      c.innerHTML = `
+        <div class="panel">
+          <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 class="panel-title" style="margin:0;">🛡️ سجل النشاطات والعمليات الرقابية الشامل</h3>
+            <span class="badge badge-warning">${logs.length} عمليات</span>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>التوقيت</th>
+                  <th>العملية / الإجراء</th>
+                  <th>المعني / الهدف</th>
+                  <th>المنفذ</th>
+                  <th>التفاصيل</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${logs.length > 0 ? logs.map(l => `
+                  <tr>
+                    <td style="font-size: 11px;">${new Date(l.timestamp || Date.now()).toLocaleString('ar-EG')}</td>
+                    <td><strong>${l.action || '—'}</strong></td>
+                    <td>${l.target || l.entityType || '—'}</td>
+                    <td><span class="badge badge-accent">${l.operatorRole || l.operator || 'النظام'}</span></td>
+                    <td style="font-size: 12px; color: var(--text-muted);">${l.details || '—'}</td>
+                  </tr>
+                `).join('') : '<tr><td colspan="5" style="text-align:center; padding: 20px;">لا توجد سجلات بعد</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadMessagesView() {
+      const user = getCurrentUser();
+      const box = document.getElementById('soc-messages-box');
+      if (!box) return;
+      const msgs = (await getMessagesForUser(user?.email || 'social@dse.edu.eg')) || [];
+      box.innerHTML = msgs.length > 0 ? `
+        <div style="display:flex; flex-direction:column; gap: var(--space-3);">
+          ${msgs.map(m => `
+            <div style="padding: var(--space-3); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--bg-surface-subtle);">
+              <div style="display:flex; justify-content:space-between; margin-bottom: 4px;">
+                <strong>من: ${m.senderName || m.senderEmail}</strong>
+                <small style="color:var(--text-muted);">${new Date(m.createdAt || Date.now()).toLocaleTimeString('ar-EG')}</small>
+              </div>
+              <p style="margin:0; font-size: var(--text-sm);">${m.body || m.content || ''}</p>
+            </div>
+          `).join('')}
+        </div>
+      ` : '<p style="text-align:center; color:var(--text-muted); padding:20px;">لا توجد رسائل واردة حالياً.</p>';
+    }
+
+    // Router on hash change
+    window.addEventListener('hashchange', () => {
+      const tab = window.location.hash.replace('#', '') || 'social';
+      switchTab(tab);
+    });
+
+    // Sidebar Mobile Toggle
+    document.querySelector('.sidebar-toggle-btn')?.addEventListener('click', () => {
+      document.querySelector('.dashboard-layout')?.classList.toggle('sidebar-open');
+    });
+    document.querySelector('.sidebar-close-btn')?.addEventListener('click', () => {
+      document.querySelector('.dashboard-layout')?.classList.remove('sidebar-open');
+    });
+
+    // Initialize
+    const initHash = window.location.hash.replace('#', '') || 'social';
+    switchTab(initHash);
+  </script>
+</body>
+</html>
+

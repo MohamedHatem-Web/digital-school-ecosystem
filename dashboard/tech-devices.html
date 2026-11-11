@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var t=localStorage.getItem('dse_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>التطوير التكنولوجي والدعم الفني — منظومة المدرسة الرقمية</title>
+  <link rel="stylesheet" href="../css/tokens.css?v=11.0">
+  <link rel="stylesheet" href="../css/base.css?v=11.0">
+  <link rel="stylesheet" href="../css/components.css?v=11.0">
+  <link rel="stylesheet" href="../css/dashboard.css?v=11.0">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <meta name="theme-color" content="#0a1628">
+</head>
+<body>
+
+  <div class="dashboard-layout">
+    <div class="dashboard-overlay"></div>
+
+    <!-- Sidebar with organized sections -->
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-header">
+        <a href="tech-devices.html" class="sidebar-brand-box">
+          <div class="sidebar-crest">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+            </svg>
+          </div>
+          <div>
+            <div class="sidebar-title">التطوير التكنولوجي</div>
+            <div class="sidebar-sub">الدعم الفني والمنظومة الرقمية</div>
+          </div>
+        </a>
+        <button type="button" class="sidebar-close-btn btn btn-sm" style="color: #ffffff;">✕</button>
+      </div>
+
+      <div class="sidebar-role-indicator">
+        <span>المساحة الشاملة:</span>
+        <span class="badge badge-accent">مسؤول التطوير / دعم فني</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="sidebar-menu">
+          <!-- القسم الأول: منظومة التابلت الحصرية -->
+          <div class="sidebar-section-title">📱 تابلت الثانوية والمخزن</div>
+          <a href="#tablets" class="sidebar-link active" id="tech-nav-tablets">
+            <span class="sidebar-icon">📱</span>
+            <span>حصر الأجهزة ومحاضر التسليم</span>
+          </a>
+          <a href="#batches" class="sidebar-link" id="tech-nav-batches">
+            <span class="sidebar-icon">📦</span>
+            <span>الدفعات والشحنات الوزارية</span>
+          </a>
+
+          <!-- القسم الثاني: الإشراف الإداري والرقابة -->
+          <div class="sidebar-section-title">📊 الإشراف والرقابة المؤسسية</div>
+          <a href="#audit-logs" class="sidebar-link" id="tech-nav-audit">
+            <span class="sidebar-icon">🛡️</span>
+            <span>سجل النشاطات الشامل</span>
+          </a>
+          <a href="#cms-hub" class="sidebar-link" id="tech-nav-cms">
+            <span class="sidebar-icon">🏛️</span>
+            <span>إدارة المحتوى والهيكل (CMS)</span>
+          </a>
+          <a href="#gallery" class="sidebar-link" id="tech-nav-gallery">
+            <span class="sidebar-icon">📸</span>
+            <span>معرض الصور والوسائط (Cloudinary)</span>
+          </a>
+
+          <!-- القسم الثالث: الشؤون الميدانية والطلاب -->
+          <div class="sidebar-section-title">🎓 الشؤون الطلابية والميدانية</div>
+          <a href="#students" class="sidebar-link" id="tech-nav-students">
+            <span class="sidebar-icon">🎓</span>
+            <span>شؤون الطلاب وسجلات القيد</span>
+          </a>
+          <a href="#social" class="sidebar-link" id="tech-nav-social">
+            <span class="sidebar-icon">🤝</span>
+            <span>الخدمة الاجتماعية والإنذارات</span>
+          </a>
+          <a href="#gate-pass" class="sidebar-link" id="tech-nav-gate">
+            <span class="sidebar-icon">🚪</span>
+            <span>أذونات الخروج المبكر</span>
+          </a>
+
+          <!-- القسم الرابع: التواصل الداخلي -->
+          <div class="sidebar-section-title">✉️ التواصل والرسائل</div>
+          <a href="#messages" class="sidebar-link" id="tech-nav-messages">
+            <span class="sidebar-icon">✉️</span>
+            <span>الرسائل والبريد الداخلي</span>
+          </a>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="../index.html" class="sidebar-back-portal">
+          <span>🌐</span>
+          <span>الموقع العام للمدرسة</span>
+        </a>
+      </div>
+    </aside>
+
+    <div class="dashboard-main">
+      <header class="dashboard-topbar">
+        <div class="topbar-start">
+          <button type="button" class="sidebar-toggle-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+          </button>
+          <span class="badge badge-accent">العام الدراسي 2026/2027</span>
+        </div>
+
+        <div class="topbar-end">
+          <div class="user-profile-widget">
+            <div class="user-avatar" id="tech-user-avatar">ت</div>
+            <div class="user-text-info">
+              <span class="user-name" id="tech-user-name">مسؤول التطوير التكنولوجي</span>
+              <span class="user-role-title">Technical Support & Admin</span>
+            </div>
+            <a href="#" class="logout-action-btn logout-btn" title="تسجيل الخروج">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </header>
+
+      <main class="dashboard-workspace" id="tech-workspace" style="padding: var(--space-6);">
+        <!-- Dedicated SPA Container Hooks -->
+        <div id="view-tablets" style="display: block;"></div>
+        <div id="view-batches" style="display: none;"></div>
+        <div id="view-audit" style="display: none;"></div>
+        <div id="view-cms" style="display: none;"></div>
+        <div id="view-gallery" style="display: none;"></div>
+        <div id="view-students" style="display: none;"></div>
+        <div id="view-social" style="display: none;"></div>
+        <div id="view-gate-pass" style="display: none;"></div>
+        <div id="view-messages" style="display: none;"></div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { checkRouteAccess } from '../js/router-guard.js';
+    import { initComponents } from '../js/components.js?v=11.0';
+    import { renderTabletsView } from '../js/views/tablets-view.js';
+    import { renderAuditView } from '../js/views/audit-view.js';
+    import { renderCmsView } from '../js/views/cms-view.js';
+    import { renderGalleryView } from '../js/views/gallery-view.js';
+    import { renderStudentsView } from '../js/views/students-view.js';
+    import { renderSocialView } from '../js/views/social-view.js';
+    import { renderGatePassView } from '../js/views/gate-pass-view.js';
+    import { renderMessagesView } from '../js/views/messages-view.js';
+    import { getTabletBatches, registerTabletBatch } from '../js/services/tablet-service.js';
+
+    // Verify access
+    checkRouteAccess(['tech_specialist', 'director', 'super_admin']);
+    initComponents();
+
+    const views = {
+      tablets: document.getElementById('view-tablets'),
+      batches: document.getElementById('view-batches'),
+      'audit-logs': document.getElementById('view-audit'),
+      'cms-hub': document.getElementById('view-cms'),
+      gallery: document.getElementById('view-gallery'),
+      students: document.getElementById('view-students'),
+      social: document.getElementById('view-social'),
+      'gate-pass': document.getElementById('view-gate-pass'),
+      messages: document.getElementById('view-messages'),
+    };
+
+    const navLinks = {
+      tablets: document.getElementById('tech-nav-tablets'),
+      batches: document.getElementById('tech-nav-batches'),
+      'audit-logs': document.getElementById('tech-nav-audit'),
+      'cms-hub': document.getElementById('tech-nav-cms'),
+      gallery: document.getElementById('tech-nav-gallery'),
+      students: document.getElementById('tech-nav-students'),
+      social: document.getElementById('tech-nav-social'),
+      'gate-pass': document.getElementById('tech-nav-gate'),
+      messages: document.getElementById('tech-nav-messages'),
+    };
+
+    async function switchTab(tabKey) {
+      const activeKey = views[tabKey] ? tabKey : 'tablets';
+
+      // Update sidebar active class
+      Object.keys(navLinks).forEach((k) => {
+        if (navLinks[k]) {
+          navLinks[k].classList.toggle('active', k === activeKey);
+        }
+      });
+
+      // Show active view container, hide others
+      Object.keys(views).forEach((k) => {
+        if (views[k]) {
+          views[k].style.display = k === activeKey ? 'block' : 'none';
+        }
+      });
+
+      // Render corresponding modular view
+      if (activeKey === 'tablets') {
+        await renderTabletsView(views.tablets);
+      } else if (activeKey === 'batches') {
+        await renderBatchesSubView(views.batches);
+      } else if (activeKey === 'audit-logs') {
+        await renderAuditView(views['audit-logs']);
+      } else if (activeKey === 'cms-hub') {
+        await renderCmsView(views['cms-hub']);
+      } else if (activeKey === 'gallery') {
+        await renderGalleryView(views.gallery);
+      } else if (activeKey === 'students') {
+        await renderStudentsView(views.students);
+      } else if (activeKey === 'social') {
+        await renderSocialView(views.social);
+      } else if (activeKey === 'gate-pass') {
+        await renderGatePassView(views['gate-pass']);
+      } else if (activeKey === 'messages') {
+        await renderMessagesView(views.messages);
+      }
+    }
+
+    async function renderBatchesSubView(container) {
+      container.innerHTML = '<p style="text-align:center; padding: 20px;">جارٍ تحميل الدفعات الوزارية...</p>';
+      const batches = (await getTabletBatches()) || [];
+
+      container.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap: var(--space-5);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap: var(--space-3);">
+            <div>
+              <h2 style="font-size: var(--text-xl); font-weight: 800; color: var(--color-primary-950); margin-bottom: 2px;">
+                📦 الدفعات والشحنات الوزارية الواردة
+              </h2>
+              <p style="font-size: var(--text-sm); color: var(--text-muted); margin: 0;">
+                سجل شحنات واستلام أجهزة التابلت الواردة من مخازن وزارة التربية والتعليم
+              </p>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" id="tech-open-batch-btn">+ تسجيل دفعة واردة جديدة</button>
+          </div>
+
+          <div class="panel" id="tech-batch-panel" style="display: none; border-inline-start: 4px solid var(--color-primary-800);">
+            <div class="panel-header" style="display:flex; justify-content:space-between;">
+              <h3 class="panel-title" style="margin:0;">تسجيل شحنة تابلت جديدة</h3>
+              <button type="button" class="btn btn-sm" id="tech-close-batch-btn">✕ إغلاق</button>
+            </div>
+            <div class="panel-body">
+              <form id="tech-batch-form">
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-3);">
+                  <div class="form-group">
+                    <label class="form-label" for="tb-num">رقم إذن الصرف أو الدفعة *</label>
+                    <input type="text" id="tb-num" class="form-control" required placeholder="مثال: BATCH-2026-03">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="tb-count">عدد الأجهزة بالدفعة *</label>
+                    <input type="number" id="tb-count" class="form-control" required min="1" placeholder="مثال: 50">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="tb-date">تاريخ الاستلام *</label>
+                    <input type="date" id="tb-date" class="form-control" required>
+                  </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end;">
+                  <button type="submit" class="btn btn-primary btn-md">اعتماد الدفعة</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="panel" style="padding:0; overflow:hidden;">
+            <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
+              <h3 class="panel-title" style="margin:0;">سجل الشحنات المسجلة بالمخزن</h3>
+              <span class="badge badge-accent">${batches.length} شحنات</span>
+            </div>
+            <div class="table-wrap" style="border:none;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>رقم الدفعة</th>
+                    <th>تاريخ التوريد</th>
+                    <th>إجمالي الأجهزة</th>
+                    <th>الحالة</th>
+                    <th>ملاحظات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${batches.length > 0 ? batches.map(b => `
+                    <tr>
+                      <td><code style="font-weight:700;">${b.batchNumber || b.id}</code></td>
+                      <td>${b.deliveryDate || b.date || '2026-10-01'}</td>
+                      <td><strong>${b.deviceCount || b.count || 0} جهاز</strong></td>
+                      <td><span class="badge badge-success">تم الفحص والمطابقة</span></td>
+                      <td style="font-size:12px; color:var(--text-muted);">${b.notes || 'واردة من مخزن الإدارة التعليمية'}</td>
+                    </tr>
+                  `).join('') : '<tr><td colspan="5" style="text-align:center; padding: 20px;">لا توجد دفعات مسجلة بعد</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const p = document.getElementById('tech-batch-panel');
+      document.getElementById('tech-open-batch-btn')?.addEventListener('click', () => { p.style.display = 'block'; });
+      document.getElementById('tech-close-batch-btn')?.addEventListener('click', () => { p.style.display = 'none'; });
+      document.getElementById('tech-batch-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const num = document.getElementById('tb-num').value.trim();
+        const count = parseInt(document.getElementById('tb-count').value, 10);
+        const date = document.getElementById('tb-date').value;
+        try {
+          await registerTabletBatch({ batchNumber: num, deviceCount: count, deliveryDate: date });
+          alert('✓ تم تسجيل الدفعة بنجاح.');
+          renderBatchesSubView(container);
+        } catch (err) {
+          alert('خطأ: ' + err.message);
+        }
+      });
+    }
+
+    // Router event
+    window.addEventListener('hashchange', () => {
+      const tab = window.location.hash.replace('#', '') || 'tablets';
+      switchTab(tab);
+    });
+
+    document.querySelector('.sidebar-toggle-btn')?.addEventListener('click', () => {
+      document.querySelector('.dashboard-layout')?.classList.toggle('sidebar-open');
+    });
+    document.querySelector('.sidebar-close-btn')?.addEventListener('click', () => {
+      document.querySelector('.dashboard-layout')?.classList.remove('sidebar-open');
+    });
+
+    const initHash = window.location.hash.replace('#', '') || 'tablets';
+    switchTab(initHash);
+  </script>
+</body>
+</html>

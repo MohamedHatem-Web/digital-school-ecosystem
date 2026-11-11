@@ -1,0 +1,2258 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var t=localStorage.getItem('dse_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مكتب مدير المدرسة — منظومة المدرسة الرقمية</title>
+  <link rel="stylesheet" href="../css/tokens.css?v=11.0">
+  <link rel="stylesheet" href="../css/base.css?v=11.0">
+  <link rel="stylesheet" href="../css/components.css?v=11.0">
+  <link rel="stylesheet" href="../css/dashboard.css?v=11.0">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <meta name="theme-color" content="#0a1628">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="المدرسة الرقمية">
+</head>
+<body>
+
+  <div class="dashboard-layout">
+    <div class="dashboard-overlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-header">
+        <a href="admin-overview.html" class="sidebar-brand-box">
+          <div class="sidebar-crest">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+            </svg>
+          </div>
+          <div>
+            <div class="sidebar-title">منظومة المدرسة</div>
+            <div class="sidebar-sub">مكتب المدير العام</div>
+          </div>
+        </a>
+        <button type="button" class="sidebar-close-btn btn btn-sm" style="color: #ffffff;">✕</button>
+      </div>
+
+      <div class="sidebar-role-indicator">
+        <span>المساحة الإشرافية:</span>
+        <span class="badge badge-primary">مدير المدرسة</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="sidebar-menu">
+          <!-- القسم الأول: الإشراف والرقابة -->
+          <div class="sidebar-section-title">📊 الإشراف والرقابة</div>
+          <a href="#overview" class="sidebar-link active" id="nav-overview-link">
+            <span class="sidebar-icon">📊</span>
+            <span>نظرة عامة واللوحة الإشرافية</span>
+          </a>
+          <a href="#audit-logs" class="sidebar-link" id="nav-audit-link">
+            <span class="sidebar-icon">🛡️</span>
+            <span>سجل النشاطات الشامل</span>
+          </a>
+
+          <!-- القسم الثاني: الموقع العام والهيكل -->
+          <div class="sidebar-section-title">🏛️ إدارة الموقع العام</div>
+          <a href="#cms-hub" class="sidebar-link" id="nav-cms-link">
+            <span class="sidebar-icon">🏛️</span>
+            <span>إدارة المحتوى والهيكل</span>
+          </a>
+          <a href="#gallery" class="sidebar-link" id="nav-gallery-link">
+            <span class="sidebar-icon">📸</span>
+            <span>معرض الصور والوسائط (Cloudinary)</span>
+          </a>
+
+          <!-- القسم الثالث: الشؤون المدرسية والطلاب -->
+          <div class="sidebar-section-title">🎓 الشؤون الطلابية والميدانية</div>
+          <a href="#students" class="sidebar-link" id="nav-students-link">
+            <span class="sidebar-icon">🎓</span>
+            <span>شؤون الطلاب والقيد</span>
+          </a>
+          <a href="#social" class="sidebar-link" id="nav-social-link">
+            <span class="sidebar-icon">🤝</span>
+            <span>الأخصائي الاجتماعي والإنذارات</span>
+          </a>
+          <a href="#gate-pass" class="sidebar-link" id="nav-gate-pass-link">
+            <span class="sidebar-icon">🚪</span>
+            <span>أذونات الخروج المبكر</span>
+          </a>
+
+          <!-- القسم الرابع: التواصل الداخلي -->
+          <div class="sidebar-section-title">✉️ التواصل المؤسسي</div>
+          <a href="#messages" class="sidebar-link" id="nav-messages-link">
+            <span class="sidebar-icon">✉️</span>
+            <span>الرسائل والبريد الداخلي</span>
+          </a>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="../index.html" class="sidebar-back-portal">
+          <span>🌐</span>
+          <span>الموقع العام للمدرسة</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <div class="dashboard-main">
+      <header class="dashboard-topbar">
+        <div class="topbar-start">
+          <button type="button" class="sidebar-toggle-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+          </button>
+          <span class="badge badge-accent">العام الدراسي 2026/2027</span>
+        </div>
+
+        <div class="topbar-end">
+          <div class="user-profile-widget">
+            <div class="user-avatar" id="topbar-user-avatar">م</div>
+            <div class="user-text-info">
+              <span class="user-name" id="topbar-user-name">مدير المدرسة</span>
+              <span class="user-role-title" id="topbar-user-role">Super Admin</span>
+            </div>
+            <a href="#" class="logout-action-btn logout-btn" title="تسجيل الخروج">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </header>
+
+      <main class="dashboard-workspace" id="admin-workspace">
+        <div id="view-admin-main" style="display: flex; flex-direction: column; gap: var(--space-6);">
+
+          <!-- Page Header & Action Bar -->
+          <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-4);">
+            <div style="display: flex; flex-direction: column; gap: var(--space-1);">
+              <h1 style="font-size: var(--text-2xl); font-weight: 800; color: var(--color-primary-950);">
+                لوحة الإشراف الإداري المركزية
+              </h1>
+              <p style="font-size: var(--text-sm); color: var(--text-muted);">
+                مؤشرات الأداء الأكاديمي، سجلات القيد الفعلي، حصر التابلت، وإدارة محتوى المنظومة.
+              </p>
+            </div>
+            <div style="display: flex; gap: var(--space-2); flex-wrap: wrap;">
+              <input type="file" id="avatar-input" accept="image/jpeg,image/png,image/webp" style="display: none;">
+              <button type="button" id="upload-avatar-btn" class="btn btn-outline btn-md">
+                📸 تحديث صورتي
+              </button>
+              <button type="button" id="trigger-dismissal-btn" class="btn btn-warning btn-md" style="font-weight: 700;">
+                🔔 إعلان انصراف اليوم الدراسي
+              </button>
+            </div>
+          </div>
+
+          <div id="dismissal-success-alert" class="alert alert-success" style="display: none;">
+            ✓ تم اعتماد وإشعار أولياء الأمور رسميًا بانتهاء اليوم الدراسي وتوثيقه في المنظومة.
+          </div>
+
+          <!-- Real Counters (Zero Fake Data) -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4);">
+            <div class="panel">
+              <div class="panel-body">
+                <div style="font-size: var(--text-xs); color: var(--text-muted); font-weight: 600; margin-bottom: var(--space-2);">
+                  أجهزة التابلت في المخزن
+                </div>
+                <div style="font-size: var(--text-3xl); font-weight: 800; color: var(--color-primary-950);" id="stat-tablets-count">
+                  0
+                </div>
+                <div style="font-size: var(--text-xs); color: var(--text-muted); margin-top: var(--space-1);">
+                  من واقع سجلات الـ IMEI الفعلية
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-body">
+                <div style="font-size: var(--text-xs); color: var(--text-muted); font-weight: 600; margin-bottom: var(--space-2);">
+                  دفعات الاستلام الوزارية
+                </div>
+                <div style="font-size: var(--text-3xl); font-weight: 800; color: var(--color-accent-700);" id="stat-batches-count">
+                  0
+                </div>
+                <div style="font-size: var(--text-xs); color: var(--text-muted); margin-top: var(--space-1);">
+                  دفعات استلام مسجلة
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-body">
+                <div style="font-size: var(--text-xs); color: var(--text-muted); font-weight: 600; margin-bottom: var(--space-2);">
+                  الأجهزة المسلمة رسميًا للطلاب
+                </div>
+                <div style="font-size: var(--text-3xl); font-weight: 800; color: var(--color-success-solid);" id="stat-delivered-count">
+                  0
+                </div>
+                <div style="font-size: var(--text-xs); color: var(--text-muted); margin-top: var(--space-1);">
+                  بمحاضر استلام موثقة
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-body">
+                <div style="font-size: var(--text-xs); color: var(--text-muted); font-weight: 600; margin-bottom: var(--space-2);">
+                  الطلاب المقيدين في المنظومة
+                </div>
+                <div style="font-size: var(--text-3xl); font-weight: 800; color: var(--color-primary-700);" id="stat-students-count">
+                  0
+                </div>
+                <div style="font-size: var(--text-xs); color: var(--text-muted); margin-top: var(--space-1);">
+                  ملفات قيد معتمدة
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interactive Director Analytics Charts Grid -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: var(--space-4);">
+            
+            <!-- Chart Panel 1: Attendance Trends (SVG Bar Chart) -->
+            <div class="panel">
+              <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <h3 class="panel-title" style="margin: 0;">📊 مؤشر انتظام الحضور الأسبوعي</h3>
+                  <p style="font-size: var(--text-xs); color: var(--text-muted); margin: 2px 0 0;">نسبة الحضور اليومية في الفصول المعتمدة</p>
+                </div>
+                <span class="badge badge-success" id="chart-avg-attendance-badge">متوسط: 97.4%</span>
+              </div>
+              <div class="panel-body">
+                <div id="attendance-chart-container" style="width: 100%; min-height: 180px;">
+                  <!-- Rendered dynamically via SVG -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Chart Panel 2: Tablet Distribution & Inventory Donut -->
+            <div class="panel">
+              <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <h3 class="panel-title" style="margin: 0;">📱 توزيع عهدة التابلت المدرسي</h3>
+                  <p style="font-size: var(--text-xs); color: var(--text-muted); margin: 2px 0 0;">نسبة التسليم الفعلي مقارنة بالمخزون</p>
+                </div>
+                <span class="badge badge-accent" id="chart-tablet-pct-badge">—</span>
+              </div>
+              <div class="panel-body" style="display: flex; align-items: center; justify-content: space-around; flex-wrap: wrap; gap: var(--space-4);">
+                <div id="tablet-donut-chart-container" style="width: 150px; height: 150px; position: relative; display: flex; align-items: center; justify-content: center;">
+                  <!-- SVG Donut Chart -->
+                </div>
+                <div id="tablet-chart-legend" style="display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--text-xs);">
+                  <!-- Dynamic Legend -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Chart Panel 3: Gate Pass & Security Exit Activity -->
+            <div class="panel">
+              <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <h3 class="panel-title" style="margin: 0;">🚪 حركة بوابة المدرسة والتصاريح</h3>
+                  <p style="font-size: var(--text-xs); color: var(--text-muted); margin: 2px 0 0;">حصر أذونات الخروج الرسمية المعتمدة</p>
+                </div>
+                <a href="#gate-pass" class="btn btn-outline btn-sm" style="font-size: 11px;">إدارة البوابة ↗</a>
+              </div>
+              <div class="panel-body" id="gate-pass-chart-container">
+                <!-- Dynamic progress bars -->
+              </div>
+            </div>
+
+            <!-- Chart Panel 4: Academic Performance by Subject -->
+            <div class="panel">
+              <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <h3 class="panel-title" style="margin: 0;">🎓 متوسط التحصيل الأكاديمي للمواد</h3>
+                  <p style="font-size: var(--text-xs); color: var(--text-muted); margin: 2px 0 0;">نتائج تقييمات شهر أكتوبر 2026</p>
+                </div>
+                <span class="badge badge-primary">الصف الأول الثانوي</span>
+              </div>
+              <div class="panel-body" id="subject-bars-chart-container">
+                <!-- Dynamic subject progress bars -->
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Audit Trail Activity Log -->
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">سجل العمليات والرقابة الإدارية (Audit Trail)</h3>
+                <p style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">
+                  توثيق فوري لكافة إجراءات قيد التابلت، ومحاضر التسليم، وتحديثات البيانات الرسمية.
+                </p>
+              </div>
+              <span class="badge badge-accent">تتبع حي</span>
+            </div>
+            <div class="panel-body">
+              <div id="audit-empty-state" class="empty-state" style="border: none; display: none;">
+                <div class="empty-state-icon">📜</div>
+                <h4 class="empty-state-title">لا توجد سجلات تشغيلية حتى الآن</h4>
+                <p class="empty-state-desc">تظهر هنا تلقائيًا كافة العمليات الموثقة فور تنفيذها في المدرسة.</p>
+              </div>
+              <div class="table-wrap" id="audit-table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>وقت العملية</th>
+                      <th>نوع الإجراء</th>
+                      <th>الهدف / البيان</th>
+                      <th>تفاصيل السجل</th>
+                      <th>المسؤول</th>
+                    </tr>
+                  </thead>
+                  <tbody id="audit-logs-body">
+                    <!-- Skeleton Loading Rows -->
+                    <tr class="skeleton-row">
+                      <td><div class="skeleton skeleton-text" style="width: 120px;"></div></td>
+                      <td><div class="skeleton skeleton-badge" style="width: 70px;"></div></td>
+                      <td><div class="skeleton skeleton-text" style="width: 150px;"></div></td>
+                      <td><div class="skeleton skeleton-text" style="width: 180px;"></div></td>
+                      <td><div class="skeleton skeleton-text" style="width: 90px;"></div></td>
+                    </tr>
+                    <tr class="skeleton-row">
+                      <td><div class="skeleton skeleton-text" style="width: 120px;"></div></td>
+                      <td><div class="skeleton skeleton-badge" style="width: 70px;"></div></td>
+                      <td><div class="skeleton skeleton-text" style="width: 140px;"></div></td>
+                      <td><div class="skeleton skeleton-text" style="width: 160px;"></div></td>
+                      <td><div class="skeleton skeleton-text" style="width: 90px;"></div></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Academic Classes & Sections Management -->
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">الهيكل الأكاديمي والفصول الدراسية</h3>
+                <p style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">
+                  إدارة المراحل التعليمية وتوزيع القاعات الدراسية.
+                </p>
+              </div>
+              <button type="button" id="toggle-class-form-btn" class="btn btn-outline btn-sm">+ إضافة فصل دراسي</button>
+            </div>
+            <div class="panel-body">
+              <div id="class-form-panel" style="display: none; padding: var(--space-4); background: var(--bg-surface-subtle); border: 1px solid var(--border-light); border-radius: var(--radius-sm); margin-bottom: var(--space-4);">
+                <form id="new-class-form">
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-3);">
+                    <div class="form-group">
+                      <label class="form-label" for="cls-name">مسمى الفصل <span class="required">*</span></label>
+                      <input type="text" id="cls-name" class="form-control" placeholder="مثال: فصل 1/3" required>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="cls-grade">المرحلة الدراسية <span class="required">*</span></label>
+                      <select id="cls-grade" class="form-control">
+                        <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                        <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                        <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="cls-room">القاعة الدراسية</label>
+                      <input type="text" id="cls-room" class="form-control" placeholder="مثال: قاعة 103">
+                    </div>
+                  </div>
+                  <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-3);">
+                    <button type="button" id="cancel-class-btn" class="btn btn-sm">إلغاء</button>
+                    <button type="submit" class="btn btn-primary btn-sm">حفظ الفصل الدراسي</button>
+                  </div>
+                </form>
+              </div>
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>مسمى الفصل</th>
+                      <th>المرحلة الأكاديمية</th>
+                      <th>المقر / القاعة</th>
+                      <th>الحالة</th>
+                    </tr>
+                  </thead>
+                  <tbody id="classes-table-body">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Public Website CMS Management -->
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">إدارة ونشر محتوى الموقع العام (CMS)</h3>
+                <p style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">
+                  نشر البيانات الرسمية، الأخبار والأنشطة لزوار الموقع العام للمدرسة فوراً.
+                </p>
+              </div>
+              <button type="button" id="toggle-cms-form-btn" class="btn btn-primary btn-sm">+ نشر بيان أو خبر رسمي</button>
+            </div>
+            <div class="panel-body">
+              <div id="cms-form-panel" style="display: none; padding: var(--space-4); background: var(--bg-surface-subtle); border: 1px solid var(--border-light); border-radius: var(--radius-sm); margin-bottom: var(--space-4);">
+                <form id="new-cms-form">
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-3);">
+                    <div class="form-group" style="grid-column: span 2;">
+                      <label class="form-label" for="cms-title">عنوان الخبر أو البيان الرسمي <span class="required">*</span></label>
+                      <input type="text" id="cms-title" class="form-control" placeholder="مثال: إعلان فتح باب استلام تابلت الصف الأول الثانوي" required>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="cms-category">تصنيف المحتوى <span class="required">*</span></label>
+                      <select id="cms-category" class="form-control">
+                        <option value="news">بيانات رسمية وأخبار</option>
+                        <option value="activities">أنشطة طلابية ومعارض</option>
+                        <option value="announcements">تنبيهات إدارية هامة</option>
+                        <option value="leadership">القيادة المدرسية</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="cms-status">حالة النشر</label>
+                      <select id="cms-status" class="form-control">
+                        <option value="published">نشر فوري بالموقع العام</option>
+                        <option value="draft">حفظ كمسودة للإدارة فقط</option>
+                      </select>
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                      <label class="form-label" for="cms-summary">الموجز أو نص البيان <span class="required">*</span></label>
+                      <textarea id="cms-summary" rows="3" class="form-control" placeholder="اكتب تفاصيل الإعلان الرسمي الموجه للطلاب وأولياء الأمور..." required></textarea>
+                    </div>
+                  </div>
+                  <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-3);">
+                    <button type="button" id="cancel-cms-btn" class="btn btn-sm">إلغاء</button>
+                    <button type="submit" class="btn btn-primary btn-sm">نشر على الموقع العام</button>
+                  </div>
+                </form>
+              </div>
+
+              <div id="cms-empty-state" class="empty-state" style="border: none; display: none;">
+                <div class="empty-state-icon">📢</div>
+                <h4 class="empty-state-title">لا توجد منشورات على الموقع العام حالياً</h4>
+                <p class="empty-state-desc">استخدم الزر أعلاه لإضافة أول بيان رسمي أو خبر للطلاب وأولياء الأمور.</p>
+              </div>
+
+              <div class="table-wrap" id="cms-table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>تاريخ النشر</th>
+                      <th>التصنيف</th>
+                      <th>عنوان المحتوى</th>
+                      <th>حالة العرض</th>
+                      <th>إجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cms-table-body">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- School Profile Setup Panel (Allows entering the real school identity!) -->
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">تكوين هوية وبيانات المدرسة الرسمية</h3>
+                <p style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">
+                  البيانات التي تُدخل هنا تظهر فوراً في ترويسة الموقع العام وكافة المحاضر الرسمية.
+                </p>
+              </div>
+              <span class="badge badge-primary">إعدادات الإدارة</span>
+            </div>
+            <div class="panel-body">
+              <div id="profile-saved-alert" class="alert alert-success" style="display: none;">
+                ✓ تم حفظ واعتماد بيانات المدرسة بنجاح وتحديث الموقع العام.
+              </div>
+
+              <form id="school-profile-form">
+                <!-- School Logo Customization Box -->
+                <div style="background: var(--bg-surface-subtle); border: 1.5px dashed var(--border-default); border-radius: var(--radius-md); padding: var(--space-4); margin-bottom: var(--space-5); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-4);">
+                  <div style="display: flex; align-items: center; gap: var(--space-4);">
+                    <div id="prof-logo-preview" style="width: 72px; height: 72px; border-radius: var(--radius-md); background: var(--bg-surface); border: 2px solid var(--border-subtle); display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: var(--shadow-xs); padding: 4px;">
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-primary-600);">
+                        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+                        <path d="M6 6h10"></path>
+                        <path d="M6 10h10"></path>
+                      </svg>
+                    </div>
+                    <div>
+                      <div style="font-weight: 700; font-size: var(--text-sm); color: var(--text-primary); margin-bottom: 2px;">شعار المدرسة الرسمي المعتمد (Institutional Logo)</div>
+                      <div style="font-size: var(--text-xs); color: var(--text-muted);">يظهر فورياً مكان الشعار الافتراضي في الهيدر، الفوتر، لوحات التحكم، وقسم الهيرو.</div>
+                    </div>
+                  </div>
+
+                  <div style="display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap;">
+                    <input type="file" id="prof-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display: none;">
+                    <button type="button" class="btn btn-outline btn-sm" id="prof-logo-upload-btn">
+                      📸 اختيار صورة الشعار
+                    </button>
+                    <button type="button" class="btn btn-outline btn-sm" id="prof-logo-clear-btn" style="display: none; color: var(--color-danger-text);">
+                      ✕ إزالة الشعار
+                    </button>
+                    <input type="hidden" id="prof-logo-val" value="">
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4);">
+                  <div class="form-group">
+                    <label class="form-label" for="prof-name-ar">اسم المدرسة الرسمي (بالعربية) <span class="required">*</span></label>
+                    <input type="text" id="prof-name-ar" class="form-control" placeholder="أدخل الاسم الرسمي المعتمد للمدرسة" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="prof-admin">الإدارة التعليمية التابعة لها <span class="required">*</span></label>
+                    <input type="text" id="prof-admin" class="form-control" placeholder="مثال: إدارة النزهة التعليمية" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="prof-address">العنوان والمقر</label>
+                    <input type="text" id="prof-address" class="form-control" placeholder="محافظة القاهرة — شارع...">
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="prof-phone">رقم الهاتف الرسمي</label>
+                    <input type="text" id="prof-phone" class="form-control" placeholder="+20 2 XXXXXXXX">
+                  </div>
+
+                  <div style="grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4); margin-top: var(--space-2);">
+                    <div class="form-group">
+                      <label class="form-label" for="prof-story">نبذة تعريفية وتاريخ المدرسة (About Story)</label>
+                      <textarea id="prof-story" class="form-control" rows="3" placeholder="نبذة عن تاريخ تأسيس المدرسة ومسيرتها التعليمية..."></textarea>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="prof-vision">الرؤية المعتمدة (School Vision)</label>
+                      <textarea id="prof-vision" class="form-control" rows="3" placeholder="رؤية المدرسة نحو التميز العلمي والتربوي..."></textarea>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="prof-mission">الرسالة التربوية (School Mission)</label>
+                      <textarea id="prof-mission" class="form-control" rows="3" placeholder="رسالة المدرسة في إعداد جيل واعٍ ومبتكر..."></textarea>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; margin-top: var(--space-4);">
+                  <button type="submit" class="btn btn-primary btn-md">حفظ واعتماد هوية المدرسة</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+        </div>
+        <!-- End of View 1: Main Admin View -->
+
+        <!-- View 2: Comprehensive Activity & Audit Trail -->
+        <div id="view-audit-logs" class="portal-tab-view" style="display: none; flex-direction: column; gap: var(--space-5);">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: var(--space-3);">
+            <div>
+              <h1 style="font-size: var(--text-2xl); font-weight: 800; color: var(--color-primary-950); margin-bottom: var(--space-1);">
+                🛡️ سجل النشاطات الشامل والتوثيق الأمني
+              </h1>
+              <p style="font-size: var(--text-sm); color: var(--text-muted); margin: 0;">
+                توثيق فوري ومؤرخ لكافة الإجراءات والعمليات المنفذة من قِبل المدير، الأخصائيين، المعلمين، الطلاب، وأولياء الأمور.
+              </p>
+            </div>
+            <div style="display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap;">
+              <button type="button" class="btn btn-outline btn-sm" id="audit-refresh-btn">
+                <span>🔄</span> <span>تحديث السجل</span>
+              </button>
+              <button type="button" class="btn btn-primary btn-sm" id="audit-export-csv-btn">
+                <span>📥</span> <span>تصدير السجل الرسمي (CSV / Excel)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Real KPI Counters -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4);">
+            <div class="audit-kpi-card">
+              <span style="font-size: var(--text-xs); color: var(--text-muted); font-weight: 600;">إجمالي العمليات الموثقة</span>
+              <span style="font-size: var(--text-2xl); font-weight: 800; color: var(--color-primary-950);" id="audit-stat-total">0</span>
+              <span style="font-size: 11px; color: var(--text-muted);">سجل عمليات سحابي</span>
+            </div>
+            <div class="audit-kpi-card">
+              <span style="font-size: var(--text-xs); color: var(--text-muted); font-weight: 600;">عمليات اليوم</span>
+              <span style="font-size: var(--text-2xl); font-weight: 800; color: var(--color-accent-700);" id="audit-stat-today">0</span>
+              <span style="font-size: 11px; color: var(--text-muted);">نشاط خلال الـ 24 ساعة الماضية</span>
+            </div>
+            <div class="audit-kpi-card">
+              <span style="font-size: var(--text-xs); color: var(--text-muted); font-weight: 600;">عمليات الإدارة والأخصائيين</span>
+              <span style="font-size: var(--text-2xl); font-weight: 800; color: var(--color-success-solid);" id="audit-stat-admin">0</span>
+              <span style="font-size: 11px; color: var(--text-muted);">إجراءات إشرافية وتنظيمية</span>
+            </div>
+            <div class="audit-kpi-card">
+              <span style="font-size: var(--text-xs); color: var(--text-muted); font-weight: 600;">عمليات المعلمين والطلاب</span>
+              <span style="font-size: var(--text-2xl); font-weight: 800; color: #3b82f6;" id="audit-stat-staff">0</span>
+              <span style="font-size: 11px; color: var(--text-muted);">حضور، درجات، وتواصل</span>
+            </div>
+          </div>
+
+          <!-- Search & Multi-Filters Toolbar -->
+          <div class="audit-filter-bar">
+            <div style="position: relative; min-width: 240px; flex: 1 1 280px;">
+              <input type="text" id="audit-search-input" class="form-control" placeholder="بحث بالاسم، نوع العملية، الهدف، أو التفاصيل..." style="height: 38px; border-radius: var(--radius-full); font-size: var(--text-xs);">
+            </div>
+
+            <div style="display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center;">
+              <select id="audit-filter-role" class="form-control" style="height: 38px; font-size: var(--text-xs); min-width: 140px; border-radius: var(--radius-full);">
+                <option value="all">كافة الأدوار 👥</option>
+                <option value="director">👑 مدير المدرسة</option>
+                <option value="social_affairs">🤝 الأخصائي الاجتماعي</option>
+                <option value="tech_specialist">💻 مسؤول التطوير التكنولوجي</option>
+                <option value="student_affairs">🎓 شؤون الطلاب والقيد</option>
+                <option value="teacher">👨‍🏫 السادة المعلمون</option>
+                <option value="student">🎒 الطلاب</option>
+                <option value="parent">👨‍👦 أولياء الأمور</option>
+                <option value="system">⚙️ النظام الآلي</option>
+              </select>
+
+              <select id="audit-filter-cat" class="form-control" style="height: 38px; font-size: var(--text-xs); min-width: 140px; border-radius: var(--radius-full);">
+                <option value="all">كافة التصنيفات 📁</option>
+                <option value="auth">🔐 أمان وتسجيل دخول</option>
+                <option value="attendance">📋 حضور وغياب وانصراف</option>
+                <option value="tablet">📱 أجهزة التابلت والعهد</option>
+                <option value="gate_pass">🚪 أذونات وبوابات</option>
+                <option value="grades">📊 رصد درجات وتقييمات</option>
+                <option value="social">🤝 إنذارات ومتابعة</option>
+                <option value="messaging">✉️ مراسلات وبريد</option>
+                <option value="cms">🏛️ محتوى وهوية المدرسة</option>
+                <option value="profile">⚙️ إعدادات النظام</option>
+              </select>
+
+              <input type="date" id="audit-filter-from" class="form-control" style="height: 38px; font-size: var(--text-xs); width: 135px; border-radius: var(--radius-full);" title="من تاريخ">
+              <input type="date" id="audit-filter-to" class="form-control" style="height: 38px; font-size: var(--text-xs); width: 135px; border-radius: var(--radius-full);" title="إلى تاريخ">
+            </div>
+          </div>
+
+          <!-- Glassmorphism Table Panel -->
+          <div class="audit-glass-panel">
+            <div class="table-wrap" style="border: none;">
+              <table class="data-table" id="audit-data-table">
+                <thead>
+                  <tr>
+                    <th style="width: 170px;">التاريخ والوقت</th>
+                    <th>المنفذ والصفة الرسمية</th>
+                    <th>التصنيف</th>
+                    <th>العملية المنفذة</th>
+                    <th>الهدف / المستهدف</th>
+                    <th style="text-align: center; width: 90px;">التفاصيل</th>
+                  </tr>
+                </thead>
+                <tbody id="audit-logs-tbody">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+            <div id="audit-empty-state" class="empty-state" style="display: none; padding: var(--space-10);">
+              <div class="empty-state-icon">🛡️</div>
+              <h3 class="empty-state-title">لا توجد سجلات مطابقة للبحث</h3>
+              <p class="empty-state-desc">جرب تعديل الفلاتر أو شروط البحث لعرض النشاطات الأخرى.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- View 3: Institutional CMS Hub -->
+        <div id="view-cms-hub" class="portal-tab-view" style="display: none; flex-direction: column; gap: var(--space-5);">
+          <div>
+            <h1 style="font-size: var(--text-2xl); font-weight: 800; color: var(--color-primary-950); margin-bottom: var(--space-1);">
+              🏛️ مركز إدارة المحتوى والهيكل المدرسي (CMS Hub)
+            </h1>
+            <p style="font-size: var(--text-sm); color: var(--text-muted); margin: 0;">
+              إدارة وتحديث محتوى صفحات الموقع العام الرسمية: القيادة المدرسية، الأخبار والبيانات، الأنشطة، والتقويم السنوي.
+            </p>
+          </div>
+
+          <!-- CMS Sub-Tabs Navigation -->
+          <div style="display: flex; gap: var(--space-2); flex-wrap: wrap;">
+            <button type="button" class="cms-nav-tab active" data-cms-target="cms-leadership">
+              <span>👥</span> <span>القيادة المدرسية والمكتب الفني</span>
+            </button>
+            <button type="button" class="cms-nav-tab" data-cms-target="cms-news">
+              <span>📰</span> <span>الأخبار والبيانات الرسمية</span>
+            </button>
+            <button type="button" class="cms-nav-tab" data-cms-target="cms-activities">
+              <span>🏆</span> <span>الأنشطة والمسابقات</span>
+            </button>
+            <button type="button" class="cms-nav-tab" data-cms-target="cms-calendar">
+              <span>📅</span> <span>التقويم الدراسي والمواعيد</span>
+            </button>
+          </div>
+
+          <!-- CMS Section 1: Leadership Board -->
+          <div id="cms-leadership-section" class="cms-panel-view" style="display: flex; flex-direction: column; gap: var(--space-4);">
+            <div class="panel">
+              <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <h3 class="panel-title">إضافة عضو جديد إلى دليل القيادة المدرسية (leadership.html)</h3>
+                  <p style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">يظهر مباشرة على صفحة القيادة مع صورته وترتيبه وصلاحياته.</p>
+                </div>
+              </div>
+              <div class="panel-body">
+                <form id="cms-leader-form">
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-4);">
+                    <div class="form-group">
+                      <label class="form-label" for="ldr-name">اسم المسؤول / القيادي *</label>
+                      <input type="text" id="ldr-name" class="form-control" placeholder="مثال: د. طارق محمود المنشاوي" required>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="ldr-title">الصفة / المسمى الوظيفي *</label>
+                      <input type="text" id="ldr-title" class="form-control" placeholder="مثال: مدير عام المدرسة، وكيل شؤون الطلاب..." required>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="ldr-order">ترتيب الظهور في الصفحة</label>
+                      <input type="number" id="ldr-order" class="form-control" value="1" min="1" max="99">
+                    </div>
+                  </div>
+
+                  <!-- Leader Photo Upload Box -->
+                  <div style="background: var(--bg-surface-subtle); border: 1px dashed var(--border-default); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); margin-bottom: var(--space-4); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3);">
+                    <div style="display: flex; align-items: center; gap: var(--space-3);">
+                      <div id="ldr-photo-preview" style="width: 48px; height: 48px; border-radius: 50%; background: var(--bg-surface); border: 2px solid var(--border-subtle); display: flex; align-items: center; justify-content: center; overflow: hidden; font-size: 20px;">
+                        👔
+                      </div>
+                      <div>
+                        <div style="font-size: var(--text-xs); font-weight: 700; color: var(--text-primary);">صورة المسؤول الشخصية</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">اختيار ملف صورة يظهر في صفحة القيادة المدرسية</div>
+                      </div>
+                    </div>
+                    <div style="display: flex; gap: var(--space-2); align-items: center;">
+                      <input type="file" id="ldr-photo-file" accept="image/png,image/jpeg,image/webp" style="display: none;">
+                      <button type="button" class="btn btn-outline btn-sm" id="ldr-photo-btn">📸 رفع صورة</button>
+                      <button type="button" class="btn btn-outline btn-sm" id="ldr-photo-clear-btn" style="display: none; color: var(--color-danger-text);">✕ إزالة</button>
+                      <input type="hidden" id="ldr-photo-url" value="">
+                    </div>
+                  </div>
+
+                  <div class="form-group" style="margin-bottom: var(--space-4);">
+                    <label class="form-label" for="ldr-bio">المهام والاختصاصات الرسمية</label>
+                    <textarea id="ldr-bio" class="form-control" rows="2" placeholder="نبذة عن المسؤولية والمهام الإشرافية..."></textarea>
+                  </div>
+
+                  <div style="display: flex; justify-content: flex-end;">
+                    <button type="submit" class="btn btn-primary btn-md">➕ إضافة واعتماد القيادي</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <!-- Current Leaders Grid -->
+            <div class="panel">
+              <div class="panel-header">
+                <h3 class="panel-title">أعضاء القيادة المدرسية المعتمدين حاليًا</h3>
+              </div>
+              <div class="panel-body" style="padding: 0;">
+                <div class="table-wrap" style="border: none;">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 60px;">الترتيب</th>
+                        <th>الصورة والاسم</th>
+                        <th>المسمى الوظيفي</th>
+                        <th>المهام</th>
+                        <th style="text-align: center; width: 100px;">إجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody id="cms-leaders-tbody">
+                      <!-- Dynamically populated -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CMS Section 2: News & Official Announcements -->
+          <div id="cms-news-section" class="cms-panel-view" style="display: none; flex-direction: column; gap: var(--space-4);">
+            <div class="panel">
+              <div class="panel-header">
+                <h3 class="panel-title">نشر بيان أو خبر رسمي جديد (news.html)</h3>
+              </div>
+              <div class="panel-body">
+                <form id="cms-news-form">
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-4);">
+                    <div class="form-group">
+                      <label class="form-label" for="news-title">عنوان الخبر أو البيان *</label>
+                      <input type="text" id="news-title" class="form-control" placeholder="مثال: تعليمات تسليم شريحة التابلت..." required>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="news-summary">ملخص موجز *</label>
+                      <input type="text" id="news-summary" class="form-control" placeholder="ملخص يظهر في بطاقة الخبر..." required>
+                    </div>
+                  </div>
+                  <div class="form-group" style="margin-bottom: var(--space-4);">
+                    <label class="form-label" for="news-content">نص البيان والتعليمات كاملة *</label>
+                    <textarea id="news-content" class="form-control" rows="4" placeholder="التفاصيل الرسمية للبيان..." required></textarea>
+                  </div>
+                  <div style="display: flex; justify-content: flex-end;">
+                    <button type="submit" class="btn btn-primary btn-md">📢 نشر وتعميم البيان</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header"><h3 class="panel-title">الأخبار والبيانات المنشورة</h3></div>
+              <div class="panel-body" style="padding: 0;">
+                <div class="table-wrap" style="border: none;">
+                  <table class="data-table">
+                    <thead><tr><th>التاريخ</th><th>العنوان</th><th>الملخص</th><th style="text-align: center; width: 100px;">إجراءات</th></tr></thead>
+                    <tbody id="cms-news-tbody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CMS Section 3: Activities -->
+          <div id="cms-activities-section" class="cms-panel-view" style="display: none; flex-direction: column; gap: var(--space-4);">
+            <div class="panel">
+              <div class="panel-header">
+                <h3 class="panel-title">إدراج فعالية أو نشاط مدرسي جديد (activities.html)</h3>
+              </div>
+              <div class="panel-body">
+                <form id="cms-activity-form">
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-4);">
+                    <div class="form-group">
+                      <label class="form-label" for="act-title">اسم النشاط أو المسابقة *</label>
+                      <input type="text" id="act-title" class="form-control" placeholder="مثال: دوري العلوم والابتكار الرقمي" required>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="act-summary">تصنيف النشاط *</label>
+                      <input type="text" id="act-summary" class="form-control" placeholder="مثال: نشاط علمي، رياضي، ثقافي..." required>
+                    </div>
+                  </div>
+                  <div class="form-group" style="margin-bottom: var(--space-4);">
+                    <label class="form-label" for="act-content">تفاصيل النشاط وشروط المشاركة *</label>
+                    <textarea id="act-content" class="form-control" rows="3" placeholder="مواعيد التجمع، الجوائز، والضوابط..." required></textarea>
+                  </div>
+                  <div style="display: flex; justify-content: flex-end;">
+                    <button type="submit" class="btn btn-primary btn-md">🏆 حفظ واعتماد النشاط</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header"><h3 class="panel-title">الأنشطة والمسابقات المعتمدة</h3></div>
+              <div class="panel-body" style="padding: 0;">
+                <div class="table-wrap" style="border: none;">
+                  <table class="data-table">
+                    <thead><tr><th>التاريخ</th><th>النشاط</th><th>التصنيف</th><th style="text-align: center; width: 100px;">إجراءات</th></tr></thead>
+                    <tbody id="cms-activities-tbody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CMS Section 4: Academic Calendar -->
+          <div id="cms-calendar-section" class="cms-panel-view" style="display: none; flex-direction: column; gap: var(--space-4);">
+            <div class="panel">
+              <div class="panel-header">
+                <h3 class="panel-title">إدراج موعد بالتقويم الدراسي (calendar.html)</h3>
+              </div>
+              <div class="panel-body">
+                <form id="cms-calendar-form">
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-4);">
+                    <div class="form-group">
+                      <label class="form-label" for="cal-title">عنوان الحدث أو الاختبار *</label>
+                      <input type="text" id="cal-title" class="form-control" placeholder="مثال: امتحانات شهر نوفمبر" required>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="cal-type">نوع الموعد *</label>
+                      <select id="cal-type" class="form-control" required>
+                        <option value="اختبار شهري">اختبار شهري 📝</option>
+                        <option value="امتحانات الفصل الدراسي">امتحانات الفصل الدراسي 🎓</option>
+                        <option value="عطلة رسمية">عطلة رسمية 🏖️</option>
+                        <option value="تسليم التابلت">تسليم التابلت والعهد 📱</option>
+                        <option value="بداية ونهاية الفصل">بداية ونهاية الفصل 🔔</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="cal-date">تاريخ الموعد *</label>
+                      <input type="date" id="cal-date" class="form-control" required>
+                    </div>
+                  </div>
+                  <div class="form-group" style="margin-bottom: var(--space-4);">
+                    <label class="form-label" for="cal-content">تفاصيل وتعليمات الموعد</label>
+                    <textarea id="cal-content" class="form-control" rows="2" placeholder="الفئات المستهدفة، التوقيت، والشروط..."></textarea>
+                  </div>
+                  <div style="display: flex; justify-content: flex-end;">
+                    <button type="submit" class="btn btn-primary btn-md">📅 إدراج بالتقويم</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header"><h3 class="panel-title">مواعيد التقويم الدراسي المعتمدة</h3></div>
+              <div class="panel-body" style="padding: 0;">
+                <div class="table-wrap" style="border: none;">
+                  <table class="data-table">
+                    <thead><tr><th>التاريخ</th><th>الموعد</th><th>النوع</th><th style="text-align: center; width: 100px;">إجراءات</th></tr></thead>
+                    <tbody id="cms-calendar-tbody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- View 2: Internal Messaging & Official Communications -->
+        <div id="view-messages" class="portal-tab-view" style="display: none; flex-direction: column; gap: var(--space-5);">
+          <div>
+            <h1 style="font-size: var(--text-2xl); font-weight: 800; color: var(--color-primary-950); margin-bottom: var(--space-1);">
+              ✉️ نظام المراسلات والبريد الداخلي المؤسسي
+            </h1>
+            <p style="font-size: var(--text-sm); color: var(--text-muted); margin: 0;">
+              تواصل آمن ومباشر مع كافة الأقسام الإدارية والتعليمية بالمدرسة.
+            </p>
+          </div>
+
+          <!-- Top Action Bar -->
+          <div class="msg-action-toolbar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3); background: var(--bg-surface); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-xs);">
+            <div style="display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap;">
+              <button type="button" class="btn btn-primary btn-md" id="compose-msg-btn" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+                <span>✍️</span>
+                <span>كتابة رسالة جديدة</span>
+              </button>
+
+              <div class="segmented-control" style="display: inline-flex; background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-full); padding: 3px;">
+                <button type="button" class="segmented-btn active" id="tab-inbox-btn" style="border: none; background: var(--bg-surface); color: var(--text-primary); font-weight: 700; padding: 6px 14px; border-radius: var(--radius-full); cursor: pointer; transition: all 0.2s; box-shadow: var(--shadow-xs); display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-xs);">
+                  <span>📥</span>
+                  <span>صندوق الوارد</span>
+                  <span id="inbox-count-badge" style="background: var(--color-accent-600); color: #ffffff; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 800;">0</span>
+                </button>
+                <button type="button" class="segmented-btn" id="tab-sent-btn" style="border: none; background: transparent; color: var(--text-muted); font-weight: 600; padding: 6px 14px; border-radius: var(--radius-full); cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-xs);">
+                  <span>📤</span>
+                  <span>الرسائل الصادرة</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="msg-search-wrap" style="position: relative; min-width: 280px; flex: 0 1 340px;">
+              <span style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; font-size: 14px;">🔍</span>
+              <input type="text" id="msg-search-input" class="form-control" placeholder="بحث في المراسلات، المرسل، أو النص..." style="padding-right: 36px; height: 38px; border-radius: var(--radius-full); font-size: var(--text-xs); border: 1px solid var(--border-subtle);">
+            </div>
+          </div>
+
+          <!-- Compose Message Panel -->
+          <div id="compose-panel" class="panel" style="display: none; border-inline-start: 4px solid var(--color-primary-700);">
+            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+              <h3 class="panel-title" style="margin: 0;">✍️ تحرير رسالة إدارية / تربوية داخلية</h3>
+              <button type="button" class="btn btn-sm" id="close-compose-btn">✕ إغلاق</button>
+            </div>
+            <div class="panel-body">
+              <form id="compose-form">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-4);">
+                  <div class="form-group">
+                    <label class="form-label" for="msg-recipient">الجهة أو الشخص المستلم *</label>
+                    <select id="msg-recipient" class="form-control" required>
+                      <option value="all_staff">📢 كافة هيئة التدريس والإدارة المدرسية</option>
+                      <option value="director">👑 إدارة المدرسة (المدير العام)</option>
+                      <option value="student_affairs">🎓 قسم شؤون الطلاب والقيد</option>
+                      <option value="social_affairs">🤝 قسم الخدمة والأخصائي الاجتماعي</option>
+                      <option value="teachers">👨‍🏫 السادة معلمي المواد الدراسية</option>
+                      <option value="tech_specialist">💻 مسؤول التطوير التكنولوجي</option>
+                      <option value="parent">👨‍👦 أولياء أمور الطلاب</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="msg-priority">مستوى الأهمية والاستعجال *</label>
+                    <select id="msg-priority" class="form-control">
+                      <option value="normal">عادي (إخطار روتيني)</option>
+                      <option value="high">هام (متابعة خلال 24 ساعة)</option>
+                      <option value="urgent">🚨 عاجل وفوري</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: var(--space-4);">
+                  <label class="form-label" for="msg-subject">موضوع الرسالة *</label>
+                  <input type="text" id="msg-subject" class="form-control" placeholder="مثال: تعليمات الاختبارات الشهرية، إشادة بتفوق طالب، موعد اجتماع..." required>
+                </div>
+
+                <div class="form-group" style="margin-bottom: var(--space-4);">
+                  <label class="form-label" for="msg-body">نص الرسالة والبيان المعتمد *</label>
+                  <textarea id="msg-body" class="form-control" rows="4" placeholder="اكتب تفاصيل الرسالة بوضوح ودقة رسمية..." required></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: var(--space-2);">
+                  <button type="button" class="btn btn-outline" id="cancel-compose-btn">إلغاء</button>
+                  <button type="submit" class="btn btn-primary" id="send-msg-submit-btn">
+                    📨 إرسال الرسالة وتوثيقها
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Messages List Table Panel -->
+          <div class="panel">
+            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <h3 class="panel-title" id="list-panel-title">📥 البريد الوارد المعتمد</h3>
+                <p style="font-size: var(--text-xs); color: var(--text-muted); margin: 2px 0 0;">سجل المراسلات والتعليمات الداخلية الموجهة لك</p>
+              </div>
+              <span class="badge badge-success" id="active-tab-badge">صندوق الوارد</span>
+            </div>
+
+            <div class="panel-body" style="padding: 0;">
+              <div id="messages-skeleton" style="padding: var(--space-4); display: none;">
+                <div class="skeleton-table-row cols-5">
+                  <div class="skeleton skeleton-badge" style="width: 60px;"></div>
+                  <div class="skeleton skeleton-text" style="width: 140px;"></div>
+                  <div class="skeleton skeleton-text" style="width: 220px;"></div>
+                  <div class="skeleton skeleton-text" style="width: 90px;"></div>
+                  <div class="skeleton skeleton-btn" style="width: 70px;"></div>
+                </div>
+              </div>
+
+              <div class="table-wrap" id="messages-table-wrap" style="display: none; border: none;">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 80px;">الأهمية</th>
+                      <th style="width: 170px;" id="sender-receiver-th">المرسل</th>
+                      <th>موضوع الرسالة</th>
+                      <th style="width: 130px;">التوقيت</th>
+                      <th style="width: 100px; text-align: center;">إجراء</th>
+                    </tr>
+                  </thead>
+                  <tbody id="messages-table-body">
+                  </tbody>
+                </table>
+              </div>
+
+              <div id="messages-empty-state" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">📭</div>
+                <h4 class="empty-state-title">لا توجد رسائل في هذا المجلد حاليًا</h4>
+                <p class="empty-state-desc">استخدم زر "كتابة رسالة جديدة" للتواصل مع إدارة المدرسة أو المعلمين أو أولياء الأمور.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- End of View: Messages -->
+
+        <!-- View 5: Media Gallery -->
+        <div id="view-gallery" class="portal-tab-view" style="display: none; flex-direction: column; gap: var(--space-5);"></div>
+
+        <!-- View 6: Tablet Devices (IMEI) -->
+        <div id="view-tablets" class="portal-tab-view" style="display: none; flex-direction: column; gap: var(--space-5);"></div>
+
+        <!-- View 7: Student Affairs & Registry -->
+        <div id="view-students" class="portal-tab-view" style="display: none; flex-direction: column; gap: var(--space-5);"></div>
+
+        <!-- View 8: Social Affairs & Discipline -->
+        <div id="view-social" class="portal-tab-view" style="display: none; flex-direction: column; gap: var(--space-5);"></div>
+
+        <!-- View 9: Gate Pass Management -->
+        <div id="view-gate-pass" class="portal-tab-view" style="display: none; flex-direction: column; gap: var(--space-5);"></div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Audit Log Details Modal -->
+  <div class="modal-backdrop" id="audit-detail-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; padding: var(--space-4);">
+    <div style="background: var(--bg-surface); border-radius: var(--radius-md); max-width: 580px; width: 100%; border: 1px solid var(--border-default); box-shadow: var(--shadow-xl); overflow: hidden;">
+      <div style="background: var(--color-primary-950); color: #ffffff; padding: var(--space-4) var(--space-5); display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: var(--space-2);">
+          <span>🛡️</span>
+          <h3 style="margin: 0; font-size: var(--text-base); color: #ffffff;">تفاصيل العملية وسجل التوثيق</h3>
+        </div>
+        <button type="button" id="close-audit-modal-btn" style="background: transparent; border: none; color: #ffffff; font-size: var(--text-lg); cursor: pointer;">✕</button>
+      </div>
+      <div style="padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); font-size: var(--text-sm);">
+        <div><strong>المعرف الرقمي:</strong> <code id="modal-audit-id" style="font-size: 11px;"></code></div>
+        <div><strong>التاريخ والتوقيت:</strong> <span id="modal-audit-date"></span></div>
+        <div><strong>المنفذ:</strong> <span id="modal-audit-operator"></span></div>
+        <div><strong>الصفة الرسمية:</strong> <span id="modal-audit-role"></span></div>
+        <div><strong>التصنيف:</strong> <span id="modal-audit-category"></span></div>
+        <div><strong>العملية:</strong> <span id="modal-audit-action" style="font-weight: 700;"></span></div>
+        <div><strong>المستهدف:</strong> <span id="modal-audit-target"></span></div>
+        <div><strong>التفاصيل:</strong></div>
+        <div id="modal-audit-details" style="background: var(--bg-surface-subtle); padding: var(--space-3); border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); white-space: pre-wrap; font-size: var(--text-xs); line-height: var(--leading-relaxed);"></div>
+      </div>
+      <div style="padding: var(--space-4) var(--space-5); background: var(--bg-surface-subtle); display: flex; justify-content: flex-end; border-top: 1px solid var(--border-subtle);">
+        <button type="button" class="btn btn-primary btn-sm" id="close-audit-modal-done-btn">إغلاق البيان</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message Detail Modal -->
+  <div class="modal-backdrop" id="msg-detail-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; padding: var(--space-4);">
+    <div class="panel" style="max-width: 620px; width: 100%; box-shadow: var(--shadow-lg);">
+      <div class="panel-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+          <span class="badge" id="modal-priority-badge" style="margin-bottom: 6px;">عادي</span>
+          <h3 class="panel-title" id="modal-msg-subject" style="margin: 0; font-size: var(--text-lg);">موضوع الرسالة</h3>
+        </div>
+        <button type="button" class="btn btn-sm" id="close-detail-modal-btn">✕</button>
+      </div>
+      <div class="panel-body">
+        <div style="background: var(--bg-surface-subtle); padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); margin-bottom: var(--space-4); font-size: var(--text-xs); display: flex; flex-direction: column; gap: 4px;">
+          <div><strong>من:</strong> <span id="modal-msg-sender">—</span></div>
+          <div><strong>إلى:</strong> <span id="modal-msg-recipient">—</span></div>
+          <div><strong>تاريخ الإرسال:</strong> <span id="modal-msg-date">—</span></div>
+        </div>
+        <div id="modal-msg-body" style="white-space: pre-wrap; line-height: var(--leading-relaxed); font-size: var(--text-sm); color: var(--text-primary); margin-bottom: var(--space-6); padding: var(--space-2) 0;">
+        </div>
+        <div style="display: flex; justify-content: flex-end;">
+          <button type="button" class="btn btn-primary btn-sm" id="modal-done-btn">إغلاق البيان</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { checkRouteAccess } from '../js/router-guard.js';
+    import { initComponents } from '../js/components.js?v=11.0';
+    import { initI18n } from '../js/i18n.js';
+    import { getCurrentUser } from '../js/auth.js';
+    import { getSchoolProfile, saveSchoolProfile } from '../js/services/school-service.js';
+    import { getTabletBatches, getTabletDevices } from '../js/services/tablet-service.js';
+    import { getAuditLogs, recordAuditEvent, filterAuditLogs, exportAuditLogsToCsv, AUDIT_ROLES_MAP, AUDIT_CATEGORIES_MAP } from '../js/services/audit-service.js';
+    import { getCmsItems, createCmsItem, deleteCmsItem } from '../js/services/cms-service.js';
+    import { getSchoolClasses, createSchoolClass } from '../js/services/academic-service.js';
+    import { getStudents } from '../js/services/student-service.js';
+    import { getWeeklyAttendanceTrends } from '../js/services/attendance-service.js';
+    import { getSubjectPerformanceAverages } from '../js/services/grade-service.js';
+    import { getGatePasses } from '../js/services/gate-pass-service.js';
+    import { getMessages, sendMessage, markMessageAsRead, getAllowedRecipients, getUnreadCount } from '../js/services/messaging-service.js';
+    import { renderGalleryView } from '../js/views/gallery-view.js';
+    import { renderTabletsView } from '../js/views/tablets-view.js';
+    import { renderStudentsView } from '../js/views/students-view.js';
+    import { renderSocialView } from '../js/views/social-view.js';
+    import { renderGatePassView } from '../js/views/gate-pass-view.js';
+
+    // Verify access for administrative roles (Director, Social Affairs, Tech Specialist, Super Admin)
+    checkRouteAccess(['director', 'social_affairs', 'tech_specialist', 'super_admin']);
+    initComponents();
+    initI18n();
+
+    const currentUser = getCurrentUser() || { displayName: 'مدير المدرسة', role: 'director', email: 'director@dse.edu.eg' };
+
+    // --------------------------------------------------------------------------
+    // State variables
+    // --------------------------------------------------------------------------
+    let allAuditLogs = [];
+    let currentMsgFilter = 'inbox';
+    let loadedMessages = [];
+
+    // --------------------------------------------------------------------------
+    // Tab & View Navigation Routing (Single Page Application Hub)
+    // --------------------------------------------------------------------------
+    const views = {
+      overview: document.getElementById('view-admin-main'),
+      'audit-logs': document.getElementById('view-audit-logs'),
+      'cms-hub': document.getElementById('view-cms-hub'),
+      gallery: document.getElementById('view-gallery'),
+      tablets: document.getElementById('view-tablets'),
+      students: document.getElementById('view-students'),
+      social: document.getElementById('view-social'),
+      'gate-pass': document.getElementById('view-gate-pass'),
+      messages: document.getElementById('view-messages'),
+    };
+
+    const sidebarLinks = {
+      overview: document.getElementById('nav-overview-link'),
+      'audit-logs': document.getElementById('nav-audit-link'),
+      'cms-hub': document.getElementById('nav-cms-link'),
+      gallery: document.getElementById('nav-gallery-link'),
+      tablets: document.getElementById('nav-tablets-link'),
+      students: document.getElementById('nav-students-link'),
+      social: document.getElementById('nav-social-link'),
+      'gate-pass': document.getElementById('nav-gate-pass-link'),
+      messages: document.getElementById('nav-messages-link'),
+    };
+
+    async function switchView(tabKey) {
+      const activeKey = views[tabKey] ? tabKey : 'overview';
+      Object.keys(views).forEach((k) => {
+        if (views[k]) views[k].style.display = k === activeKey ? 'flex' : 'none';
+        if (sidebarLinks[k]) {
+          if (k === activeKey) sidebarLinks[k].classList.add('active');
+          else sidebarLinks[k].classList.remove('active');
+        }
+      });
+
+      if (activeKey === 'overview') await loadOverviewDynamicSections();
+      if (activeKey === 'audit-logs') loadAuditLogsSection();
+      if (activeKey === 'cms-hub') loadCmsHubSection();
+      if (activeKey === 'gallery') await renderGalleryView(views.gallery);
+      if (activeKey === 'tablets') await renderTabletsView(views.tablets);
+      if (activeKey === 'students') await renderStudentsView(views.students);
+      if (activeKey === 'social') await renderSocialView(views.social);
+      if (activeKey === 'gate-pass') await renderGatePassView(views['gate-pass']);
+      if (activeKey === 'messages') loadMessagesSection();
+    }
+
+    window.addEventListener('hashchange', () => {
+      const hash = window.location.hash.replace('#', '');
+      switchView(hash);
+    });
+
+    Object.keys(sidebarLinks).forEach((k) => {
+      if (sidebarLinks[k]) {
+        sidebarLinks[k].addEventListener('click', (e) => {
+          e.preventDefault();
+          window.location.hash = k;
+          switchView(k);
+        });
+      }
+    });
+
+    // --------------------------------------------------------------------------
+    // School Metrics & Profile Form with Logo
+    // --------------------------------------------------------------------------
+    const devices = (await getTabletDevices()) || [];
+    const batches = (await getTabletBatches()) || [];
+    const delivered = devices.filter((d) => d.status === 'delivered');
+    const students = (await getStudents()) || [];
+
+    document.getElementById('stat-tablets-count').textContent = devices.length;
+    document.getElementById('stat-batches-count').textContent = batches.length;
+    document.getElementById('stat-delivered-count').textContent = delivered.length;
+    document.getElementById('stat-students-count').textContent = students.length;
+
+    // Dismissal announcement button
+    const dismissalBtn = document.getElementById('trigger-dismissal-btn');
+    const dismissalAlert = document.getElementById('dismissal-success-alert');
+    if (dismissalBtn && dismissalAlert) {
+      dismissalBtn.addEventListener('click', async () => {
+        dismissalAlert.style.display = 'flex';
+        try {
+          await recordAuditEvent({
+            action: 'إعلان واعتماد انصراف اليوم الدراسي رسمياً',
+            target: 'كافة الفصول والصفوف',
+            details: 'اعتماد رسمي لانتهاء اليوم الدراسي وإشعار أولياء الأمور بالمغادرة الآمنة',
+            category: 'attendance',
+            operatorRole: 'director',
+            operatorName: currentUser.displayName,
+          });
+          await loadOverviewAuditTrail();
+        } catch (e) {
+          console.warn('Dismissal audit notice:', e);
+        }
+        setTimeout(() => { dismissalAlert.style.display = 'none'; }, 4000);
+      });
+    }
+
+    // Load profile form & logo
+    const profile = await getSchoolProfile();
+    const logoFile = document.getElementById('prof-logo-file');
+    const logoUploadBtn = document.getElementById('prof-logo-upload-btn');
+    const logoClearBtn = document.getElementById('prof-logo-clear-btn');
+    const logoVal = document.getElementById('prof-logo-val');
+    const logoPreview = document.getElementById('prof-logo-preview');
+
+    const defaultPreviewSvg = `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-primary-600);"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path><path d="M6 6h10"></path><path d="M6 10h10"></path></svg>`;
+
+    function setLogoPreview(url) {
+      if (url) {
+        logoPreview.innerHTML = `<img src="${url}" alt="شعار المدرسة" style="width:100%;height:100%;object-fit:contain;border-radius:inherit;">`;
+        logoVal.value = url;
+        logoClearBtn.style.display = 'inline-flex';
+      } else {
+        logoPreview.innerHTML = defaultPreviewSvg;
+        logoVal.value = '';
+        logoClearBtn.style.display = 'none';
+      }
+    }
+
+    if (profile) {
+      if (profile.nameAr) document.getElementById('prof-name-ar').value = profile.nameAr;
+      if (profile.administration) document.getElementById('prof-admin').value = profile.administration;
+      if (profile.address) document.getElementById('prof-address').value = profile.address;
+      if (profile.phone) document.getElementById('prof-phone').value = profile.phone;
+      if (profile.aboutStory) document.getElementById('prof-story').value = profile.aboutStory;
+      if (profile.vision) document.getElementById('prof-vision').value = profile.vision;
+      if (profile.mission) document.getElementById('prof-mission').value = profile.mission;
+      if (profile.branding && profile.branding.logoUrl) {
+        setLogoPreview(profile.branding.logoUrl);
+      }
+    }
+
+    logoUploadBtn.addEventListener('click', () => logoFile.click());
+
+    logoFile.addEventListener('change', () => {
+      const file = logoFile.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) {
+        alert('حجم صورة الشعار يجب ألا يتجاوز 2 ميجابايت لضمان سرعة التحميل.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setLogoPreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    logoClearBtn.addEventListener('click', () => {
+      logoFile.value = '';
+      setLogoPreview('');
+    });
+
+    document.getElementById('school-profile-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const updatedProfile = await saveSchoolProfile({
+        nameAr: document.getElementById('prof-name-ar').value.trim(),
+        administration: document.getElementById('prof-admin').value.trim(),
+        address: document.getElementById('prof-address').value.trim(),
+        phone: document.getElementById('prof-phone').value.trim(),
+        aboutStory: document.getElementById('prof-story').value.trim(),
+        vision: document.getElementById('prof-vision').value.trim(),
+        mission: document.getElementById('prof-mission').value.trim(),
+        branding: {
+          ...(profile?.branding || {}),
+          logoUrl: logoVal.value.trim(),
+        }
+      });
+      document.getElementById('profile-saved-alert').style.display = 'flex';
+      await loadOverviewAuditTrail();
+      setTimeout(() => {
+        document.getElementById('profile-saved-alert').style.display = 'none';
+      }, 3000);
+    });
+
+    // --------------------------------------------------------------------------
+    // View 2: Comprehensive Activity & Audit Trail
+    // --------------------------------------------------------------------------
+    async function loadAuditLogsSection() {
+      allAuditLogs = await getAuditLogs();
+      updateAuditStats(allAuditLogs);
+      renderAuditLogsTable();
+    }
+
+    function updateAuditStats(logs) {
+      document.getElementById('audit-stat-total').textContent = logs.length;
+      const todayStr = new Date().toISOString().split('T')[0];
+      const todayCount = logs.filter(l => (l.timestamp || '').startsWith(todayStr)).length;
+      document.getElementById('audit-stat-today').textContent = todayCount;
+
+      const adminRoles = ['director', 'social_affairs', 'tech_specialist', 'student_affairs', 'super_admin'];
+      const adminCount = logs.filter(l => adminRoles.includes(l.operatorRole)).length;
+      document.getElementById('audit-stat-admin').textContent = adminCount;
+
+      const staffCount = logs.filter(l => ['teacher', 'student', 'parent'].includes(l.operatorRole)).length;
+      document.getElementById('audit-stat-staff').textContent = staffCount;
+    }
+
+    function renderAuditLogsTable() {
+      const q = document.getElementById('audit-search-input').value;
+      const role = document.getElementById('audit-filter-role').value;
+      const category = document.getElementById('audit-filter-cat').value;
+      const startDate = document.getElementById('audit-filter-from').value;
+      const endDate = document.getElementById('audit-filter-to').value;
+
+      const filtered = filterAuditLogs(allAuditLogs, { query: q, role, category, startDate, endDate });
+      const tbody = document.getElementById('audit-logs-tbody');
+      const emptyState = document.getElementById('audit-empty-state');
+      const tableWrap = document.querySelector('#view-audit-logs .table-wrap');
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        if (tableWrap) tableWrap.style.display = 'none';
+        if (emptyState) emptyState.style.display = 'flex';
+        return;
+      }
+
+      if (tableWrap) tableWrap.style.display = 'block';
+      if (emptyState) emptyState.style.display = 'none';
+
+      const roleBadgeClasses = {
+        director: 'badge-primary',
+        social_affairs: 'badge-warning',
+        tech_specialist: 'badge-accent',
+        student_affairs: 'badge-primary',
+        teacher: 'badge-primary',
+        student: 'badge-accent',
+        parent: 'badge-accent',
+        system: 'badge-default',
+      };
+
+      tbody.innerHTML = filtered.map((log) => {
+        const initial = (log.operatorName || 'م').trim().charAt(0);
+        const badgeCls = roleBadgeClasses[log.operatorRole] || 'badge-default';
+        return `
+          <tr>
+            <td style="font-size: 11.5px; color: var(--text-muted); font-weight: 600;">
+              ${log.formattedDate || log.timestamp}
+            </td>
+            <td>
+              <div class="audit-user-cell">
+                <span class="audit-avatar">${initial}</span>
+                <div>
+                  <div style="font-weight: 700; font-size: var(--text-xs); color: var(--text-primary);">${log.operatorName || 'مستخدم المنظومة'}</div>
+                  <span class="badge ${badgeCls}" style="font-size: 10px; padding: 1px 6px;">${log.roleTitleAr || log.operatorRole}</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="badge badge-default" style="font-size: 11px;">${log.categoryTitleAr || log.category}</span>
+            </td>
+            <td style="font-weight: 700; font-size: var(--text-xs); color: var(--color-primary-950);">
+              ${log.action}
+            </td>
+            <td style="font-size: var(--text-xs); color: var(--text-secondary);">
+              ${log.target || '—'}
+            </td>
+            <td style="text-align: center;">
+              <button type="button" class="btn btn-outline btn-sm view-audit-btn" data-log-id="${log.id}" style="padding: 2px 8px; font-size: 11px;">
+                🔍 تفاصيل
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      // Bind detail view buttons
+      document.querySelectorAll('.view-audit-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.logId;
+          const entry = allAuditLogs.find((l) => l.id === id);
+          if (entry) showAuditDetailModal(entry);
+        });
+      });
+    }
+
+    function showAuditDetailModal(entry) {
+      document.getElementById('modal-audit-id').textContent = entry.id;
+      document.getElementById('modal-audit-date').textContent = entry.formattedDate || entry.timestamp;
+      document.getElementById('modal-audit-operator').textContent = `${entry.operatorName} (${entry.operatorEmail || 'غير محدد'})`;
+      document.getElementById('modal-audit-role').textContent = entry.roleTitleAr || entry.operatorRole;
+      document.getElementById('modal-audit-category').textContent = entry.categoryTitleAr || entry.category;
+      document.getElementById('modal-audit-action').textContent = entry.action;
+      document.getElementById('modal-audit-target').textContent = entry.target || '—';
+      document.getElementById('modal-audit-details').textContent = entry.details || 'لا توجد ملاحظات أو تفاصيل إضافية مسجلة لهذه العملية.';
+      document.getElementById('audit-detail-modal').style.display = 'flex';
+    }
+
+    const closeAuditModal = () => { document.getElementById('audit-detail-modal').style.display = 'none'; };
+    document.getElementById('close-audit-modal-btn').addEventListener('click', closeAuditModal);
+    document.getElementById('close-audit-modal-done-btn').addEventListener('click', closeAuditModal);
+
+    // Filter bar inputs
+    ['audit-search-input', 'audit-filter-role', 'audit-filter-cat', 'audit-filter-from', 'audit-filter-to'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('input', renderAuditLogsTable);
+        el.addEventListener('change', renderAuditLogsTable);
+      }
+    });
+
+    document.getElementById('audit-refresh-btn').addEventListener('click', loadAuditLogsSection);
+    document.getElementById('audit-export-csv-btn').addEventListener('click', () => {
+      const q = document.getElementById('audit-search-input').value;
+      const role = document.getElementById('audit-filter-role').value;
+      const category = document.getElementById('audit-filter-cat').value;
+      const startDate = document.getElementById('audit-filter-from').value;
+      const endDate = document.getElementById('audit-filter-to').value;
+      const filtered = filterAuditLogs(allAuditLogs, { query: q, role, category, startDate, endDate });
+      exportAuditLogsToCsv(filtered);
+    });
+
+    // --------------------------------------------------------------------------
+    // View 3: Institutional CMS Hub
+    // --------------------------------------------------------------------------
+    const cmsSubTabs = document.querySelectorAll('.cms-nav-tab');
+    const cmsSections = {
+      'cms-leadership': document.getElementById('cms-leadership-section'),
+      'cms-news': document.getElementById('cms-news-section'),
+      'cms-activities': document.getElementById('cms-activities-section'),
+      'cms-calendar': document.getElementById('cms-calendar-section'),
+    };
+
+    cmsSubTabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        cmsSubTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const target = tab.dataset.cmsTarget;
+        Object.keys(cmsSections).forEach((k) => {
+          if (cmsSections[k]) cmsSections[k].style.display = k === target ? 'flex' : 'none';
+        });
+      });
+    });
+
+    async function loadCmsHubSection() {
+      await Promise.all([
+        loadCmsLeaders(),
+        loadCmsNews(),
+        loadCmsActivities(),
+        loadCmsCalendar(),
+      ]);
+    }
+
+    // CMS 1: Leadership
+    const ldrPhotoFile = document.getElementById('ldr-photo-file');
+    const ldrPhotoBtn = document.getElementById('ldr-photo-btn');
+    const ldrPhotoClearBtn = document.getElementById('ldr-photo-clear-btn');
+    const ldrPhotoUrl = document.getElementById('ldr-photo-url');
+    const ldrPhotoPreview = document.getElementById('ldr-photo-preview');
+
+    ldrPhotoBtn.addEventListener('click', () => ldrPhotoFile.click());
+    ldrPhotoFile.addEventListener('change', () => {
+      const file = ldrPhotoFile.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        ldrPhotoUrl.value = e.target.result;
+        ldrPhotoPreview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+        ldrPhotoClearBtn.style.display = 'inline-flex';
+      };
+      reader.readAsDataURL(file);
+    });
+    ldrPhotoClearBtn.addEventListener('click', () => {
+      ldrPhotoFile.value = '';
+      ldrPhotoUrl.value = '';
+      ldrPhotoPreview.innerHTML = '👔';
+      ldrPhotoClearBtn.style.display = 'none';
+    });
+
+    document.getElementById('cms-leader-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await createCmsItem({
+        category: 'leadership',
+        title: document.getElementById('ldr-name').value.trim(),
+        summary: document.getElementById('ldr-title').value.trim(),
+        content: document.getElementById('ldr-bio').value.trim(),
+        sortOrder: Number(document.getElementById('ldr-order').value) || 1,
+        imageUrl: ldrPhotoUrl.value.trim(),
+        authorName: currentUser.displayName,
+      });
+      document.getElementById('cms-leader-form').reset();
+      ldrPhotoClearBtn.click();
+      await loadCmsLeaders();
+    });
+
+    async function loadCmsLeaders() {
+      const leaders = await getCmsItems('leadership', 'all');
+      leaders.sort((a, b) => (Number(a.sortOrder) || 99) - (Number(b.sortOrder) || 99));
+      const tbody = document.getElementById('cms-leaders-tbody');
+      if (leaders.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:var(--space-6);color:var(--text-muted);">لم يتم إضافة قيادات مدرسية بعد.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = leaders.map((ldr) => `
+        <tr>
+          <td style="font-weight:700; text-align:center;">${ldr.sortOrder || 1}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:var(--space-2);">
+              <div style="width:36px;height:36px;border-radius:50%;overflow:hidden;background:var(--bg-surface-subtle);display:flex;align-items:center;justify-content:center;border:1px solid var(--border-subtle);flex-shrink:0;">
+                ${ldr.imageUrl ? `<img src="${ldr.imageUrl}" style="width:100%;height:100%;object-fit:cover;">` : '👔'}
+              </div>
+              <span style="font-weight:700;font-size:var(--text-xs);color:var(--text-primary);">${ldr.title}</span>
+            </div>
+          </td>
+          <td><span class="badge badge-primary">${ldr.summary}</span></td>
+          <td style="font-size:var(--text-xs);color:var(--text-secondary);max-width:280px;">${ldr.content || '—'}</td>
+          <td style="text-align:center;">
+            <button type="button" class="btn btn-outline btn-sm delete-ldr-btn" data-id="${ldr.id}" style="color:var(--color-danger-text);padding:2px 8px;font-size:11px;">
+              🗑️ حذف
+            </button>
+          </td>
+        </tr>
+      `).join('');
+
+      tbody.querySelectorAll('.delete-ldr-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (confirm('هل أنت متأكد من حذف هذا العضو من القيادة المدرسية؟')) {
+            await deleteCmsItem(btn.dataset.id);
+            await loadCmsLeaders();
+          }
+        });
+      });
+    }
+
+    // CMS 2: News
+    document.getElementById('cms-news-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await createCmsItem({
+        category: 'news',
+        title: document.getElementById('news-title').value.trim(),
+        summary: document.getElementById('news-summary').value.trim(),
+        content: document.getElementById('news-content').value.trim(),
+        authorName: currentUser.displayName,
+      });
+      document.getElementById('cms-news-form').reset();
+      await loadCmsNews();
+    });
+
+    async function loadCmsNews() {
+      const items = await getCmsItems('news', 'all');
+      const tbody = document.getElementById('cms-news-tbody');
+      if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:var(--space-6);color:var(--text-muted);">لا توجد بيانات أو أخبار منشورة.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = items.map(n => `
+        <tr>
+          <td style="font-size:11px;color:var(--text-muted);">${n.formattedDate || n.date}</td>
+          <td style="font-weight:700;font-size:var(--text-xs);color:var(--color-primary-950);">${n.title}</td>
+          <td style="font-size:var(--text-xs);color:var(--text-secondary);">${n.summary}</td>
+          <td style="text-align:center;">
+            <button type="button" class="btn btn-outline btn-sm delete-news-btn" data-id="${n.id}" style="color:var(--color-danger-text);padding:2px 8px;font-size:11px;">🗑️ حذف</button>
+          </td>
+        </tr>
+      `).join('');
+
+      tbody.querySelectorAll('.delete-news-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (confirm('حذف هذا البيان الإخباري؟')) {
+            await deleteCmsItem(btn.dataset.id);
+            await loadCmsNews();
+          }
+        });
+      });
+    }
+
+    // CMS 3: Activities
+    document.getElementById('cms-activity-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await createCmsItem({
+        category: 'activities',
+        title: document.getElementById('act-title').value.trim(),
+        summary: document.getElementById('act-summary').value.trim(),
+        content: document.getElementById('act-content').value.trim(),
+        authorName: currentUser.displayName,
+      });
+      document.getElementById('cms-activity-form').reset();
+      await loadCmsActivities();
+    });
+
+    async function loadCmsActivities() {
+      const items = await getCmsItems('activities', 'all');
+      const tbody = document.getElementById('cms-activities-tbody');
+      if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:var(--space-6);color:var(--text-muted);">لا توجد أنشطة مسجلة.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = items.map(a => `
+        <tr>
+          <td style="font-size:11px;color:var(--text-muted);">${a.formattedDate || a.date}</td>
+          <td style="font-weight:700;font-size:var(--text-xs);color:var(--color-primary-950);">${a.title}</td>
+          <td><span class="badge badge-accent">${a.summary}</span></td>
+          <td style="text-align:center;">
+            <button type="button" class="btn btn-outline btn-sm delete-act-btn" data-id="${a.id}" style="color:var(--color-danger-text);padding:2px 8px;font-size:11px;">🗑️ حذف</button>
+          </td>
+        </tr>
+      `).join('');
+
+      tbody.querySelectorAll('.delete-act-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (confirm('حذف هذا النشاط المدرسي؟')) {
+            await deleteCmsItem(btn.dataset.id);
+            await loadCmsActivities();
+          }
+        });
+      });
+    }
+
+    // CMS 4: Calendar
+    document.getElementById('cms-calendar-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await createCmsItem({
+        category: 'calendar',
+        title: document.getElementById('cal-title').value.trim(),
+        summary: document.getElementById('cal-type').value,
+        date: document.getElementById('cal-date').value,
+        content: document.getElementById('cal-content').value.trim(),
+        authorName: currentUser.displayName,
+      });
+      document.getElementById('cms-calendar-form').reset();
+      await loadCmsCalendar();
+    });
+
+    async function loadCmsCalendar() {
+      const items = await getCmsItems('calendar', 'all');
+      const tbody = document.getElementById('cms-calendar-tbody');
+      if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:var(--space-6);color:var(--text-muted);">لا توجد مواعيد مسجلة في التقويم.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = items.map(c => `
+        <tr>
+          <td style="font-weight:700;font-size:var(--text-xs);color:var(--text-primary);">${c.date || c.formattedDate}</td>
+          <td style="font-weight:700;font-size:var(--text-xs);color:var(--color-primary-950);">${c.title}</td>
+          <td><span class="badge badge-accent">${c.summary}</span></td>
+          <td style="text-align:center;">
+            <button type="button" class="btn btn-outline btn-sm delete-cal-btn" data-id="${c.id}" style="color:var(--color-danger-text);padding:2px 8px;font-size:11px;">🗑️ حذف</button>
+          </td>
+        </tr>
+      `).join('');
+
+      tbody.querySelectorAll('.delete-cal-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (confirm('حذف هذا الموعد من التقويم الدراسي؟')) {
+            await deleteCmsItem(btn.dataset.id);
+            await loadCmsCalendar();
+          }
+        });
+      });
+    }
+
+    // --------------------------------------------------------------------------
+    // View 4: Internal Messaging & Communications
+    // --------------------------------------------------------------------------
+    // Populate Recipient Dropdown dynamically based on role permissions
+    const recipientSelect = document.getElementById('msg-recipient');
+    if (recipientSelect) {
+      const allowed = getAllowedRecipients(currentUser);
+      recipientSelect.innerHTML = allowed.map(r => `<option value="${r.id}" data-role="${r.role}">${r.name}</option>`).join('');
+    }
+
+    async function loadMessagesSection() {
+      const unreadCount = await getUnreadCount(currentUser.uid || currentUser.email, currentUser.role);
+      const badge = document.getElementById('inbox-count-badge');
+      if (badge) badge.textContent = unreadCount;
+
+      loadedMessages = await getMessages({
+        userId: currentUser.uid || currentUser.email,
+        userEmail: currentUser.email,
+        userRole: currentUser.role,
+        filter: currentMsgFilter,
+      });
+
+      renderMessagesTable();
+    }
+
+    function renderMessagesTable() {
+      const q = (document.getElementById('msg-search-input')?.value || '').toLowerCase().trim();
+      const filtered = loadedMessages.filter((m) => {
+        if (!q) return true;
+        return (m.subject || '').toLowerCase().includes(q) ||
+               (m.body || '').toLowerCase().includes(q) ||
+               (m.senderName || '').toLowerCase().includes(q) ||
+               (m.recipientName || '').toLowerCase().includes(q);
+      });
+
+      const tbody = document.getElementById('messages-table-body');
+      const emptyState = document.getElementById('messages-empty-state');
+      const tableWrap = document.getElementById('messages-table-wrap');
+      const senderReceiverTh = document.getElementById('sender-receiver-th');
+
+      if (senderReceiverTh) {
+        senderReceiverTh.textContent = currentMsgFilter === 'inbox' ? 'المرسل' : 'المستلم';
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        tableWrap.style.display = 'none';
+        emptyState.style.display = 'flex';
+        return;
+      }
+
+      tableWrap.style.display = 'block';
+      emptyState.style.display = 'none';
+
+      tbody.innerHTML = filtered.map((m) => {
+        const isRead = (m.readBy || []).includes(currentUser.uid || currentUser.email);
+        const prioBadge = m.priority === 'urgent' ? '<span class="badge badge-danger">🚨 عاجل</span>' : (m.priority === 'high' ? '<span class="badge badge-warning">هام</span>' : '<span class="badge badge-default">عادي</span>');
+        const counterparty = currentMsgFilter === 'inbox' ? m.senderName : m.recipientName;
+
+        return `
+          <tr style="${!isRead && currentMsgFilter === 'inbox' ? 'font-weight: 800; background: rgba(37, 99, 235, 0.04);' : ''}">
+            <td>${prioBadge}</td>
+            <td style="font-size: var(--text-xs); color: var(--text-primary);">${counterparty}</td>
+            <td>
+              <div style="font-size: var(--text-xs); color: var(--color-primary-950);">${m.subject}</div>
+            </td>
+            <td style="font-size: 11px; color: var(--text-muted);">${m.formattedDate || m.createdAt}</td>
+            <td style="text-align: center;">
+              <button type="button" class="btn btn-outline btn-sm open-msg-btn" data-id="${m.id}" style="padding: 2px 8px; font-size: 11px;">
+                📨 عرض
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      tbody.querySelectorAll('.open-msg-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const msg = loadedMessages.find((m) => m.id === btn.dataset.id);
+          if (msg) openMessageModal(msg);
+        });
+      });
+    }
+
+    function openMessageModal(msg) {
+      document.getElementById('modal-msg-subject').textContent = msg.subject;
+      document.getElementById('modal-msg-sender').textContent = `${msg.senderName} (${msg.senderRole})`;
+      document.getElementById('modal-msg-recipient').textContent = msg.recipientName;
+      document.getElementById('modal-msg-date').textContent = msg.formattedDate || msg.createdAt;
+      document.getElementById('modal-msg-body').textContent = msg.body;
+
+      const prioEl = document.getElementById('modal-priority-badge');
+      if (prioEl) {
+        prioEl.className = `badge ${msg.priority === 'urgent' ? 'badge-danger' : (msg.priority === 'high' ? 'badge-warning' : 'badge-default')}`;
+        prioEl.textContent = msg.priority === 'urgent' ? '🚨 عاجل وفوري' : (msg.priority === 'high' ? 'هام' : 'عادي');
+      }
+
+      document.getElementById('msg-detail-modal').style.display = 'flex';
+      markMessageAsRead(msg.id, currentUser.uid || currentUser.email);
+    }
+
+    const closeMsgModal = () => { document.getElementById('msg-detail-modal').style.display = 'none'; };
+    document.getElementById('close-detail-modal-btn').addEventListener('click', closeMsgModal);
+    document.getElementById('modal-done-btn').addEventListener('click', closeMsgModal);
+
+    // Toggle Inbox / Sent
+    const tabInboxBtn = document.getElementById('tab-inbox-btn');
+    const tabSentBtn = document.getElementById('tab-sent-btn');
+    const activeBadge = document.getElementById('active-tab-badge');
+
+    tabInboxBtn.addEventListener('click', () => {
+      currentMsgFilter = 'inbox';
+      tabInboxBtn.classList.add('active');
+      tabSentBtn.classList.remove('active');
+      tabInboxBtn.style.background = 'var(--bg-surface)';
+      tabSentBtn.style.background = 'transparent';
+      if (activeBadge) activeBadge.textContent = 'صندوق الوارد';
+      loadMessagesSection();
+    });
+
+    tabSentBtn.addEventListener('click', () => {
+      currentMsgFilter = 'sent';
+      tabSentBtn.classList.add('active');
+      tabInboxBtn.classList.remove('active');
+      tabSentBtn.style.background = 'var(--bg-surface)';
+      tabInboxBtn.style.background = 'transparent';
+      if (activeBadge) activeBadge.textContent = 'الرسائل الصادرة';
+      loadMessagesSection();
+    });
+
+    // Compose Panel Toggle & Submit
+    const composeBtn = document.getElementById('compose-msg-btn');
+    const composePanel = document.getElementById('compose-panel');
+    const closeComposeBtn = document.getElementById('close-compose-btn');
+    const cancelComposeBtn = document.getElementById('cancel-compose-btn');
+
+    composeBtn.addEventListener('click', () => { composePanel.style.display = 'block'; });
+    const hideCompose = () => { composePanel.style.display = 'none'; };
+    closeComposeBtn.addEventListener('click', hideCompose);
+    cancelComposeBtn.addEventListener('click', hideCompose);
+
+    document.getElementById('compose-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const recSelect = document.getElementById('msg-recipient');
+      const selectedOption = recSelect.options[recSelect.selectedIndex];
+
+      await sendMessage({
+        senderId: currentUser.uid || currentUser.email,
+        senderEmail: currentUser.email,
+        senderName: currentUser.displayName,
+        senderRole: currentUser.role,
+        recipientId: recSelect.value,
+        recipientRole: selectedOption.dataset.role || 'all',
+        recipientName: selectedOption.textContent.trim(),
+        priority: document.getElementById('msg-priority').value,
+        subject: document.getElementById('msg-subject').value.trim(),
+        body: document.getElementById('msg-body').value.trim(),
+      });
+
+      document.getElementById('compose-form').reset();
+      hideCompose();
+      tabSentBtn.click();
+      await loadOverviewAuditTrail();
+    });
+
+    document.getElementById('msg-search-input')?.addEventListener('input', renderMessagesTable);
+
+    // --------------------------------------------------------------------------
+    // Director Analytics Charts (Overview Tab — 100% Real Database Metrics)
+    // --------------------------------------------------------------------------
+    async function renderOverviewCharts() {
+      await Promise.all([
+        renderAttendanceChart(),
+        renderTabletDonutChart(devices, delivered),
+        renderGatePassChart(),
+        renderSubjectBarsChart(),
+      ]);
+    }
+
+    async function renderAttendanceChart() {
+      const container = document.getElementById('attendance-chart-container');
+      const badge = document.getElementById('chart-avg-attendance-badge');
+      if (!container) return;
+
+      try {
+        const trends = await getWeeklyAttendanceTrends();
+        if (badge) {
+          badge.textContent = trends.hasRealData ? `متوسط: ${trends.averageRate}%` : 'بانتظار رصد الحضور';
+        }
+
+        const days = trends.days;
+        const barWidth = 38;
+        const gap = 18;
+        const chartH = 185;
+        const chartW = days.length * (barWidth + gap);
+        const topMargin = 32;
+        const usableH = 115;
+
+        let barsHtml = '';
+        days.forEach((d, i) => {
+          const rate = d.hasData ? d.rate : 0;
+          const h = Math.max((rate / 100) * usableH, rate > 0 ? 8 : 4);
+          const x = i * (barWidth + gap) + gap / 2;
+          const y = chartH - 28 - h;
+          const fill = rate >= 90 ? 'var(--color-primary-600, #2563eb)' : (rate >= 75 ? '#3b82f6' : '#94a3b8');
+
+          barsHtml += `
+            <rect x="${x}" y="${y}" width="${barWidth}" height="${h}" rx="5" fill="${fill}" opacity="0.88"/>
+            <text x="${x + barWidth / 2}" y="${y - 8}" text-anchor="middle" fill="var(--text-primary)" font-size="11.5" font-weight="700">${rate > 0 ? rate + '%' : '—'}</text>
+            <text x="${x + barWidth / 2}" y="${chartH - 8}" text-anchor="middle" fill="var(--text-muted)" font-size="11.5" font-weight="600">${d.day}</text>
+          `;
+        });
+
+        container.innerHTML = `<svg viewBox="0 0 ${chartW} ${chartH}" width="100%" height="${chartH}" style="direction:ltr; overflow: visible;">${barsHtml}</svg>`;
+      } catch (err) {
+        console.warn('Attendance chart error:', err);
+      }
+    }
+
+    function renderTabletDonutChart(allDevices, deliveredDevices) {
+      const container = document.getElementById('tablet-donut-chart-container');
+      const legend = document.getElementById('tablet-chart-legend');
+      const badge = document.getElementById('chart-tablet-pct-badge');
+      if (!container) return;
+
+      const total = allDevices.length;
+      const deliv = deliveredDevices.length;
+      const inStock = total - deliv;
+
+      if (total === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:var(--text-xs);padding:var(--space-6);">لا توجد أجهزة مسجلة بعد</div>';
+        if (legend) legend.innerHTML = '';
+        if (badge) badge.textContent = '—';
+        return;
+      }
+
+      const pct = Math.round((deliv / total) * 100);
+      if (badge) badge.textContent = `${pct}% مسلّم`;
+
+      const r = 54, cx = 70, cy = 70, sw = 14;
+      const circ = 2 * Math.PI * r;
+      const delivArc = (deliv / total) * circ;
+      const stockArc = circ - delivArc;
+
+      container.innerHTML = `
+        <svg viewBox="0 0 140 140" width="140" height="140" style="transform: rotate(-90deg);">
+          <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border-subtle)" stroke-width="${sw}"/>
+          <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#10b981" stroke-width="${sw}" stroke-dasharray="${delivArc} ${stockArc}" stroke-linecap="round"/>
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+          <span style="font-size:var(--text-2xl);font-weight:800;color:var(--color-primary-950);">${total}</span>
+          <span style="font-size:10px;color:var(--text-muted);">إجمالي</span>
+        </div>
+      `;
+
+      if (legend) {
+        legend.innerHTML = `
+          <div style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#10b981;"></span><span>مسلّم: ${deliv}</span></div>
+          <div style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--border-subtle);"></span><span>في المخزن: ${inStock}</span></div>
+        `;
+      }
+    }
+
+    async function renderGatePassChart() {
+      const container = document.getElementById('gate-pass-chart-container');
+      if (!container) return;
+
+      try {
+        const passes = (await getGatePasses()) || [];
+        const approvedCount = passes.filter(p => p.status === 'approved' || p.status === 'used').length;
+        const pendingCount = passes.filter(p => p.status === 'pending').length;
+        const rejectedCount = passes.filter(p => p.status === 'rejected').length;
+        const maxVal = Math.max(approvedCount, pendingCount, rejectedCount, 1);
+
+        const items = [
+          { label: 'أذونات معتمدة ومؤكدة', value: approvedCount, color: '#10b981' },
+          { label: 'طلبات قيد المراجعة', value: pendingCount, color: '#f59e0b' },
+          { label: 'أذونات ملغاة / مرفوضة', value: rejectedCount, color: '#ef4444' },
+        ];
+
+        container.innerHTML = items.map(item => `
+          <div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3);">
+            <span style="min-width:140px;font-size:var(--text-xs);color:var(--text-muted);font-weight:600;">${item.label}</span>
+            <div style="flex:1;height:22px;background:var(--bg-surface-subtle);border-radius:var(--radius-sm);overflow:hidden;position:relative;">
+              <div style="height:100%;width:${item.value > 0 ? Math.max((item.value / maxVal) * 100, 8) : 0}%;background:${item.color};border-radius:var(--radius-sm);transition:width .4s;"></div>
+            </div>
+            <span style="min-width:32px;text-align:center;font-weight:800;font-size:var(--text-sm);color:var(--color-primary-950);">${item.value}</span>
+          </div>
+        `).join('');
+
+        if (passes.length === 0) {
+          container.innerHTML += '<div style="text-align:center;padding:var(--space-2);font-size:var(--text-xs);color:var(--text-muted);">لا توجد أذونات خروج مسجلة حتى الآن</div>';
+        }
+      } catch (err) {
+        console.warn('Gate pass chart error:', err);
+      }
+    }
+
+    async function renderSubjectBarsChart() {
+      const container = document.getElementById('subject-bars-chart-container');
+      if (!container) return;
+
+      try {
+        const averages = (await getSubjectPerformanceAverages()) || [];
+        if (averages.length === 0) {
+          container.innerHTML = `
+            <div style="text-align:center;padding:var(--space-6);color:var(--text-muted);font-size:var(--text-xs);">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto var(--space-2);display:block;opacity:.5;"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 4-6"/></svg>
+              لم يتم تسجيل نتائج تقييمات بعد — ستظهر هنا تلقائياً عند إدخال الدرجات من بوابة المعلم.
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = averages.slice(0, 5).map(item => `
+          <div style="margin-bottom: var(--space-3);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:var(--text-xs);">
+              <strong style="color:var(--color-primary-950);">${item.subject}</strong>
+              <span style="font-weight:800; color:${item.color};">${item.percentage}%</span>
+            </div>
+            <div style="height:8px; background:var(--bg-surface-subtle); border-radius:99px; overflow:hidden;">
+              <div style="height:100%; width:${item.percentage}%; background:${item.color}; border-radius:99px; transition:width .5s;"></div>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        console.warn('Subject bars error:', err);
+      }
+    }
+
+    // --------------------------------------------------------------------------
+    // Overview Sections: Real Audit Trail, Classes, and CMS Feed
+    // --------------------------------------------------------------------------
+    async function loadOverviewAuditTrail() {
+      const tbody = document.getElementById('audit-logs-body');
+      const emptyState = document.getElementById('audit-empty-state');
+      const tableWrap = document.getElementById('audit-table-wrap');
+      if (!tbody) return;
+
+      try {
+        const logs = await getAuditLogs();
+        if (!logs || logs.length === 0) {
+          tbody.innerHTML = '';
+          if (tableWrap) tableWrap.style.display = 'none';
+          if (emptyState) emptyState.style.display = 'flex';
+          return;
+        }
+
+        if (tableWrap) tableWrap.style.display = 'block';
+        if (emptyState) emptyState.style.display = 'none';
+
+        const roleBadgeClasses = {
+          director: 'badge-primary',
+          social_affairs: 'badge-warning',
+          tech_specialist: 'badge-accent',
+          student_affairs: 'badge-primary',
+          teacher: 'badge-primary',
+          student: 'badge-accent',
+          parent: 'badge-accent',
+          system: 'badge-default',
+        };
+
+        const recent = logs.slice(0, 8);
+        tbody.innerHTML = recent.map((log) => {
+          const badgeCls = roleBadgeClasses[log.operatorRole] || 'badge-default';
+          return `
+            <tr>
+              <td style="font-size: 11.5px; color: var(--text-muted); font-weight: 600;">${log.formattedDate || log.timestamp}</td>
+              <td><span class="badge ${badgeCls}" style="font-size: 10.5px;">${log.action || 'إجراء'}</span></td>
+              <td style="font-weight: 700; font-size: var(--text-xs); color: var(--color-primary-950);">${log.target || '—'}</td>
+              <td style="font-size: var(--text-xs); color: var(--text-secondary); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${log.details || '—'}</td>
+              <td style="font-size: var(--text-xs); font-weight: 700;">${log.operatorName || 'مسؤول'}</td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        console.warn('Overview audit trail notice:', err);
+      }
+    }
+
+    let overviewClassesInitialized = false;
+    async function loadOverviewClasses() {
+      const tbody = document.getElementById('classes-table-body');
+      if (!tbody) return;
+
+      try {
+        const classes = await getSchoolClasses();
+        if (!classes || classes.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px; color: var(--text-muted);">لا توجد فصول دراسية مسجلة بعد</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = classes.map((c) => `
+          <tr>
+            <td style="font-weight: 700; font-size: var(--text-xs); color: var(--color-primary-950);">${c.name}</td>
+            <td style="font-size: var(--text-xs);">${c.grade || 'المرحلة الثانوية'}</td>
+            <td style="font-size: var(--text-xs); color: var(--text-muted);">${c.room || 'قاعة دراسية'}</td>
+            <td><span class="badge badge-success" style="font-size: 10.5px;">نشط ومعتمد</span></td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        console.warn('Overview classes notice:', err);
+      }
+
+      if (!overviewClassesInitialized) {
+        overviewClassesInitialized = true;
+        const toggleBtn = document.getElementById('toggle-class-form-btn');
+        const formPanel = document.getElementById('class-form-panel');
+        const cancelBtn = document.getElementById('cancel-class-btn');
+        const form = document.getElementById('new-class-form');
+
+        if (toggleBtn && formPanel) {
+          toggleBtn.addEventListener('click', () => { formPanel.style.display = 'block'; });
+        }
+        if (cancelBtn && formPanel) {
+          cancelBtn.addEventListener('click', () => { formPanel.style.display = 'none'; });
+        }
+        if (form) {
+          form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('cls-name').value.trim();
+            const grade = document.getElementById('cls-grade').value;
+            const room = document.getElementById('cls-room').value.trim();
+            if (!name) return;
+
+            try {
+              await createSchoolClass({ name, grade, room });
+              form.reset();
+              if (formPanel) formPanel.style.display = 'none';
+              await loadOverviewClasses();
+              await loadOverviewAuditTrail();
+            } catch (err) {
+              alert('خطأ أثناء حفظ الفصل: ' + err.message);
+            }
+          });
+        }
+      }
+    }
+
+    let overviewCmsInitialized = false;
+    async function loadOverviewCms() {
+      const tbody = document.getElementById('cms-table-body');
+      const emptyState = document.getElementById('cms-empty-state');
+      const tableWrap = document.getElementById('cms-table-wrap');
+      if (!tbody) return;
+
+      try {
+        const items = await getCmsItems();
+        if (!items || items.length === 0) {
+          tbody.innerHTML = '';
+          if (tableWrap) tableWrap.style.display = 'none';
+          if (emptyState) emptyState.style.display = 'flex';
+          return;
+        }
+
+        if (tableWrap) tableWrap.style.display = 'block';
+        if (emptyState) emptyState.style.display = 'none';
+
+        const categoryNames = {
+          news: 'بيان رسمي / أخبار',
+          activities: 'أنشطة ومعارض',
+          announcements: 'تنبيه إداري',
+          leadership: 'القيادة المدرسية',
+        };
+
+        tbody.innerHTML = items.map((item) => `
+          <tr>
+            <td style="font-size: 11.5px; color: var(--text-muted); font-weight: 600;">${item.formattedDate || item.date || item.createdAt || '—'}</td>
+            <td><span class="badge badge-accent" style="font-size: 10.5px;">${categoryNames[item.category] || item.category}</span></td>
+            <td style="font-weight: 700; font-size: var(--text-xs); color: var(--color-primary-950);">${item.title}</td>
+            <td>
+              <span class="badge ${item.status === 'published' ? 'badge-success' : 'badge-default'}" style="font-size: 10.5px;">
+                ${item.status === 'published' ? 'منشور بالموقع' : 'مسودة'}
+              </span>
+            </td>
+            <td style="text-align: center;">
+              <button type="button" class="btn btn-outline btn-sm delete-overview-cms-btn" data-cms-id="${item.id}" style="padding: 2px 8px; font-size: 10.5px; color: var(--color-danger-text);">
+                حذف
+              </button>
+            </td>
+          </tr>
+        `).join('');
+
+        tbody.querySelectorAll('.delete-overview-cms-btn').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            if (confirm('هل أنت متأكد من رغبتك في حذف هذا المحتوى من الموقع العام؟')) {
+              await deleteCmsItem(btn.dataset.cmsId);
+              await loadOverviewCms();
+              await loadOverviewAuditTrail();
+              await loadOverviewAuditTrail();
+            }
+          });
+        });
+      } catch (err) {
+        console.warn('Overview CMS notice:', err);
+      }
+
+      if (!overviewCmsInitialized) {
+        overviewCmsInitialized = true;
+        const toggleBtn = document.getElementById('toggle-cms-form-btn');
+        const formPanel = document.getElementById('cms-form-panel');
+        const cancelBtn = document.getElementById('cancel-cms-btn');
+        const form = document.getElementById('new-cms-form');
+
+        if (toggleBtn && formPanel) {
+          toggleBtn.addEventListener('click', () => { formPanel.style.display = 'block'; });
+        }
+        if (cancelBtn && formPanel) {
+          cancelBtn.addEventListener('click', () => { formPanel.style.display = 'none'; });
+        }
+        if (form) {
+          form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = document.getElementById('cms-title').value.trim();
+            const category = document.getElementById('cms-category').value;
+            const status = document.getElementById('cms-status').value;
+            const summary = document.getElementById('cms-summary').value.trim();
+            if (!title) return;
+
+            try {
+              await createCmsItem({ title, category, status, summary, authorName: currentUser.displayName });
+              form.reset();
+              if (formPanel) formPanel.style.display = 'none';
+              await loadOverviewCms();
+              await loadOverviewAuditTrail();
+            } catch (err) {
+              alert('خطأ أثناء حفظ المحتوى: ' + err.message);
+            }
+          });
+        }
+      }
+    }
+
+    async function loadOverviewDynamicSections() {
+      renderOverviewCharts();
+      await Promise.all([
+        loadOverviewAuditTrail(),
+        loadOverviewClasses(),
+        loadOverviewCms(),
+      ]);
+    }
+
+    // Initial load of overview dynamic sections (charts, audit, classes, cms)
+    await loadOverviewDynamicSections();
+
+    // Initial view router check
+    const initialHash = window.location.hash.replace('#', '');
+    switchView(initialHash || 'overview');
+  </script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=11.0');}</script>
+</body>
+</html>

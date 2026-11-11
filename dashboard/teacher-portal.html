@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var t=localStorage.getItem('dse_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>بوابة المعلم ورصد الحضور — منظومة المدرسة الرقمية</title>
+  <link rel="stylesheet" href="../css/tokens.css?v=11.0">
+  <link rel="stylesheet" href="../css/base.css?v=11.0">
+  <link rel="stylesheet" href="../css/components.css?v=11.0">
+  <link rel="stylesheet" href="../css/dashboard.css?v=11.0">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <meta name="theme-color" content="#0a1628">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="المدرسة الرقمية">
+</head>
+<body>
+
+  <div class="dashboard-layout">
+    <div class="dashboard-overlay"></div>
+
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-header">
+        <a href="teacher-portal.html" class="sidebar-brand-box">
+          <div class="sidebar-crest">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+            </svg>
+          </div>
+          <div>
+            <div class="sidebar-title">بوابة المعلم</div>
+            <div class="sidebar-sub">دفتر التحضير والحضور</div>
+          </div>
+        </a>
+        <button type="button" class="sidebar-close-btn btn btn-sm" style="color: #ffffff;">✕</button>
+      </div>
+
+      <div class="sidebar-role-indicator">
+        <span>المساحة الأكاديمية:</span>
+        <span class="badge badge-primary">معلم معتمد</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="sidebar-menu">
+          <a href="#academic" class="sidebar-link active" id="tab-nav-academic">
+            <span class="sidebar-icon">✅</span>
+            <span>رصد الحضور والغياب ورصد الدرجات</span>
+          </a>
+          <a href="#messages" class="sidebar-link" id="tab-nav-messages">
+            <span class="sidebar-icon">✉️</span>
+            <span>الرسائل والبريد الداخلي</span>
+          </a>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="../index.html" class="sidebar-back-portal">
+          <span>🌐</span>
+          <span>الموقع العام للمدرسة</span>
+        </a>
+      </div>
+    </aside>
+
+    <div class="dashboard-main">
+      <header class="dashboard-topbar">
+        <div class="topbar-start">
+          <button type="button" class="sidebar-toggle-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+          </button>
+          <span class="badge badge-accent" id="portal-topbar-badge">مكتب المعلم</span>
+        </div>
+
+        <div class="topbar-end">
+          <div class="user-profile-widget" style="cursor: pointer;" title="انقر لتعديل بياناتك الرسمية">
+            <div class="user-avatar" id="topbar-user-avatar">إ</div>
+            <div class="user-text-info">
+              <span class="user-name" id="topbar-user-name">أ. إبراهيم فؤاد القاضي</span>
+              <span class="user-role-title" id="topbar-user-role">معلم معتمد</span>
+            </div>
+            <a href="#" class="logout-action-btn logout-btn" title="تسجيل الخروج">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </header>
+
+      <main class="dashboard-workspace">
+        <!-- View 1: Academic (Attendance & Grades) -->
+        <div id="view-academic" class="portal-tab-view" style="display: flex; flex-direction: column; gap: var(--space-6);">
+
+          <div>
+            <h1 style="font-size: var(--text-2xl); font-weight: 800; color: var(--color-primary-950);">
+              رصد الحضور والغياب اليومي للفصول
+            </h1>
+            <p style="font-size: var(--text-sm); color: var(--text-muted);">
+              تسجيل الحضور اليومي للطلاب المقيدين في الفصول المسندة لك رسميًا.
+            </p>
+          </div>
+
+          <!-- Daily Attendance Section -->
+          <div class="panel">
+            <div class="panel-header" style="flex-wrap: wrap; gap: var(--space-3);">
+              <div>
+                <h3 class="panel-title">قوائم الطلاب ورصد الحصة الحالية</h3>
+                <p style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">
+                  اختر الفصل المراد رصد حضور الحصة له:
+                </p>
+              </div>
+              <div style="display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap;">
+                <button type="button" class="btn btn-sm btn-primary teacher-class-filter active" data-class="all" style="font-weight: 700;">
+                  👥 كافة الفصول
+                </button>
+                <button type="button" class="btn btn-sm btn-outline teacher-class-filter" data-class="فصل 1/1" style="font-weight: 700;">
+                  🎓 فصل 1/1 (يوسف وزياد)
+                </button>
+                <button type="button" class="btn btn-sm btn-outline teacher-class-filter" data-class="فصل 1/2" style="font-weight: 700;">
+                  🎓 فصل 1/2 (مريم)
+                </button>
+              </div>
+            </div>
+            <div class="panel-body" style="padding: 0;">
+              <div id="teacher-students-container">
+                <!-- Skeleton Loading State -->
+                <div id="teacher-skeleton">
+                  <div style="padding:0;">
+                    <div class="skeleton-table-row cols-4">
+                      <div class="skeleton skeleton-text" style="width:80%;"></div>
+                      <div class="skeleton skeleton-text" style="width:60%;"></div>
+                      <div class="skeleton skeleton-text" style="width:70%;"></div>
+                      <div class="skeleton skeleton-text" style="width:50%;"></div>
+                    </div>
+                    <div class="skeleton-table-row cols-4">
+                      <div class="skeleton skeleton-text" style="width:75%;"></div>
+                      <div class="skeleton skeleton-text" style="width:55%;"></div>
+                      <div class="skeleton skeleton-text" style="width:65%;"></div>
+                      <div class="skeleton skeleton-text" style="width:60%;"></div>
+                    </div>
+                    <div class="skeleton-table-row cols-4">
+                      <div class="skeleton skeleton-text" style="width:85%;"></div>
+                      <div class="skeleton skeleton-text" style="width:50%;"></div>
+                      <div class="skeleton skeleton-text" style="width:75%;"></div>
+                      <div class="skeleton skeleton-text" style="width:55%;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Assessments & Grades Recording Section -->
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">التقييمات الشهرية ورصد درجات الطلاب</h3>
+                <p style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">
+                  إنشاء اختبارات قصيرة وواجبات ورصد درجات وملاحظات الطلاب مباشرة في السجل الأكاديمي.
+                </p>
+              </div>
+              <button type="button" id="toggle-assessment-form-btn" class="btn btn-outline btn-sm">+ إنشاء تقييم جديد</button>
+            </div>
+            <div class="panel-body">
+              <!-- Assessment Form -->
+              <div id="assessment-form-panel" style="display: none; padding: var(--space-4); background: var(--bg-surface-subtle); border: 1px solid var(--border-light); border-radius: var(--radius-sm); margin-bottom: var(--space-4);">
+                <form id="new-assessment-form">
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-3);">
+                    <div class="form-group">
+                      <label class="form-label" for="asm-title">عنوان التقييم / الاختبار <span class="required">*</span></label>
+                      <input type="text" id="asm-title" class="form-control" placeholder="مثال: تقييم شهر نوفمبر 2026" required>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="asm-subject">المادة الدراسية <span class="required">*</span></label>
+                      <input type="text" id="asm-subject" class="form-control" placeholder="مثال: اللغة العربية" required>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="asm-max">الدرجة العظمى <span class="required">*</span></label>
+                      <input type="number" id="asm-max" class="form-control" value="20" required min="1">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="asm-date">تاريخ الرصد</label>
+                      <input type="date" id="asm-date" class="form-control">
+                    </div>
+                  </div>
+                  <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-3);">
+                    <button type="button" id="cancel-asm-btn" class="btn btn-sm">إلغاء</button>
+                    <button type="submit" class="btn btn-primary btn-sm">حفظ التقييم</button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- Grade Recording Matrix -->
+              <div id="grades-roster-container">
+                <!-- Skeleton Loading State for Grades -->
+                <div id="grades-skeleton">
+                  <div class="skeleton-table-row cols-5">
+                    <div class="skeleton skeleton-text" style="width:75%;"></div>
+                    <div class="skeleton skeleton-text" style="width:60%;"></div>
+                    <div class="skeleton skeleton-text" style="width:50%;"></div>
+                    <div class="skeleton skeleton-text" style="width:65%;"></div>
+                    <div class="skeleton skeleton-text" style="width:55%;"></div>
+                  </div>
+                  <div class="skeleton-table-row cols-5">
+                    <div class="skeleton skeleton-text" style="width:80%;"></div>
+                    <div class="skeleton skeleton-text" style="width:55%;"></div>
+                    <div class="skeleton skeleton-text" style="width:60%;"></div>
+                    <div class="skeleton skeleton-text" style="width:50%;"></div>
+                    <div class="skeleton skeleton-text" style="width:65%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <!-- End of View 1: Academic -->
+
+        <!-- View 2: Internal Messaging & Official Communications -->
+        <div id="view-messages" class="portal-tab-view" style="display: none; flex-direction: column; gap: var(--space-5);">
+          <div>
+            <h1 style="font-size: var(--text-2xl); font-weight: 800; color: var(--color-primary-950); margin-bottom: var(--space-1);">
+              ✉️ نظام المراسلات والبريد الداخلي المؤسسي
+            </h1>
+            <p style="font-size: var(--text-sm); color: var(--text-muted); margin: 0;">
+              تواصل آمن ومباشر مع إدارة المدرسة، الأقسام الإدارية، المعلمين، وأولياء الأمور.
+            </p>
+          </div>
+
+          <!-- Top Action Bar -->
+          <div class="msg-action-toolbar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3); background: var(--bg-surface); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-xs);">
+            <div style="display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap;">
+              <button type="button" class="btn btn-primary btn-md" id="compose-msg-btn" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+                <span>✍️</span>
+                <span>كتابة رسالة جديدة</span>
+              </button>
+
+              <!-- Segmented Control for Tabs -->
+              <div class="segmented-control" style="display: inline-flex; background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-full); padding: 3px;">
+                <button type="button" class="segmented-btn active" id="tab-inbox-btn" style="border: none; background: var(--bg-surface); color: var(--text-primary); font-weight: 700; padding: 6px 14px; border-radius: var(--radius-full); cursor: pointer; transition: all 0.2s; box-shadow: var(--shadow-xs); display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-xs);">
+                  <span>📥</span>
+                  <span>صندوق الوارد</span>
+                  <span id="inbox-count-badge" style="background: var(--color-accent-600); color: #ffffff; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 800;">0</span>
+                </button>
+                <button type="button" class="segmented-btn" id="tab-sent-btn" style="border: none; background: transparent; color: var(--text-muted); font-weight: 600; padding: 6px 14px; border-radius: var(--radius-full); cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-xs);">
+                  <span>📤</span>
+                  <span>الرسائل الصادرة</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Sleek Search Box -->
+            <div class="msg-search-wrap" style="position: relative; min-width: 280px; flex: 0 1 340px;">
+              <span style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; font-size: 14px;">🔍</span>
+              <input type="text" id="msg-search-input" class="form-control" placeholder="بحث في المراسلات، المرسل، أو النص..." style="padding-right: 36px; height: 38px; border-radius: var(--radius-full); font-size: var(--text-xs); border: 1px solid var(--border-subtle);">
+            </div>
+          </div>
+
+          <!-- Compose Message Panel (collapsible) -->
+          <div id="compose-panel" class="panel" style="display: none; border-inline-start: 4px solid var(--color-primary-700);">
+            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+              <h3 class="panel-title" style="margin: 0;">✍️ تحرير رسالة إدارية / تربوية داخلية</h3>
+              <button type="button" class="btn btn-sm" id="close-compose-btn">✕ إغلاق</button>
+            </div>
+            <div class="panel-body">
+              <form id="compose-form">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-4);">
+                  <div class="form-group">
+                    <label class="form-label" for="msg-recipient">الجهة أو الشخص المستلم *</label>
+                    <select id="msg-recipient" class="form-control" required>
+                      <option value="all_staff">📢 كافة هيئة التدريس والإدارة المدرسية</option>
+                      <option value="director">👑 إدارة المدرسة (المدير العام)</option>
+                      <option value="student_affairs">🎓 قسم شؤون الطلاب والقيد</option>
+                      <option value="social_affairs">🤝 قسم الخدمة والأخصائي الاجتماعي</option>
+                      <option value="teachers">👨‍🏫 السادة معلمي المواد الدراسية</option>
+                      <option value="tech_specialist">💻 مسؤول التطوير التكنولوجي</option>
+                      <option value="parent">👨‍👦 أولياء أمور الطلاب</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="msg-priority">مستوى الأهمية والاستعجال *</label>
+                    <select id="msg-priority" class="form-control">
+                      <option value="normal">عادي (إخطار روتيني)</option>
+                      <option value="high">هام (متابعة خلال 24 ساعة)</option>
+                      <option value="urgent">🚨 عاجل وفوري</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: var(--space-4);">
+                  <label class="form-label" for="msg-subject">موضوع الرسالة *</label>
+                  <input type="text" id="msg-subject" class="form-control" placeholder="مثال: تعليمات الاختبارات الشهرية، إشادة بتفوق طالب، موعد اجتماع..." required>
+                </div>
+
+                <div class="form-group" style="margin-bottom: var(--space-4);">
+                  <label class="form-label" for="msg-body">نص الرسالة والبيان المعتمد *</label>
+                  <textarea id="msg-body" class="form-control" rows="4" placeholder="اكتب تفاصيل الرسالة بوضوح ودقة رسمية..." required></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: var(--space-2);">
+                  <button type="button" class="btn btn-outline" id="cancel-compose-btn">إلغاء</button>
+                  <button type="submit" class="btn btn-primary" id="send-msg-submit-btn">
+                    📨 إرسال الرسالة وتوثيقها
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Messages List Table Panel -->
+          <div class="panel">
+            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <h3 class="panel-title" id="list-panel-title">📥 البريد الوارد المعتمد</h3>
+                <p style="font-size: var(--text-xs); color: var(--text-muted); margin: 2px 0 0;">سجل المراسلات والتعليمات الداخلية الموجهة لك</p>
+              </div>
+              <span class="badge badge-success" id="active-tab-badge">صندوق الوارد</span>
+            </div>
+
+            <div class="panel-body" style="padding: 0;">
+              <div id="messages-skeleton" style="padding: var(--space-4); display: none;">
+                <div class="skeleton-table-row cols-5">
+                  <div class="skeleton skeleton-badge" style="width: 60px;"></div>
+                  <div class="skeleton skeleton-text" style="width: 140px;"></div>
+                  <div class="skeleton skeleton-text" style="width: 220px;"></div>
+                  <div class="skeleton skeleton-text" style="width: 90px;"></div>
+                  <div class="skeleton skeleton-btn" style="width: 70px;"></div>
+                </div>
+              </div>
+
+              <div class="table-wrap" id="messages-table-wrap" style="display: none; border: none;">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 80px;">الأهمية</th>
+                      <th style="width: 170px;" id="sender-receiver-th">المرسل</th>
+                      <th>موضوع الرسالة</th>
+                      <th style="width: 130px;">التوقيت</th>
+                      <th style="width: 100px; text-align: center;">إجراء</th>
+                    </tr>
+                  </thead>
+                  <tbody id="messages-table-body">
+                  </tbody>
+                </table>
+              </div>
+
+              <div id="messages-empty-state" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">📭</div>
+                <h4 class="empty-state-title">لا توجد رسائل في هذا المجلد حاليًا</h4>
+                <p class="empty-state-desc">استخدم زر "كتابة رسالة جديدة" للتواصل مع إدارة المدرسة أو المعلمين أو أولياء الأمور.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- End of View 2: Messages -->
+      </main>
+    </div>
+  </div>
+
+  <!-- Message Detail Modal -->
+  <div class="modal-backdrop" id="msg-detail-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; padding: var(--space-4);">
+    <div class="panel" style="max-width: 620px; width: 100%; box-shadow: var(--shadow-lg);">
+      <div class="panel-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+          <span class="badge" id="modal-priority-badge" style="margin-bottom: 6px;">عادي</span>
+          <h3 class="panel-title" id="modal-msg-subject" style="margin: 0; font-size: var(--text-lg);">موضوع الرسالة</h3>
+        </div>
+        <button type="button" class="btn btn-sm" id="close-detail-modal-btn">✕</button>
+      </div>
+      <div class="panel-body">
+        <div style="background: var(--bg-surface-subtle); padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); margin-bottom: var(--space-4); font-size: var(--text-xs); display: flex; flex-direction: column; gap: 4px;">
+          <div><strong>من:</strong> <span id="modal-msg-sender">—</span></div>
+          <div><strong>إلى:</strong> <span id="modal-msg-recipient">—</span></div>
+          <div><strong>تاريخ الإرسال:</strong> <span id="modal-msg-date">—</span></div>
+        </div>
+        <div id="modal-msg-body" style="white-space: pre-wrap; line-height: var(--leading-relaxed); font-size: var(--text-sm); color: var(--text-primary); margin-bottom: var(--space-6); padding: var(--space-2) 0;">
+        </div>
+        <div style="display: flex; justify-content: flex-end;">
+          <button type="button" class="btn btn-primary btn-sm" id="modal-done-btn">إغلاق البيان</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { checkRouteAccess } from '../js/router-guard.js';
+    import { initComponents } from '../js/components.js?v=11.0';
+    import { getCurrentUser } from '../js/auth.js';
+    import { DEFAULT_SCHOOL_ID } from '../js/services/school-service.js';
+    import { getStudents } from '../js/services/student-service.js';
+    import { recordAuditEvent } from '../js/services/audit-service.js';
+    import { getMessages, sendMessage, markMessageAsRead, getAllowedRecipients, getUnreadCount } from '../js/services/messaging-service.js';
+
+    checkRouteAccess(['teacher', 'director', 'super_admin']);
+    initComponents();
+
+    const currentUser = getCurrentUser() || { displayName: 'معلم معتمد', role: 'teacher', email: 'teacher@dse.edu.eg' };
+    const schoolId = currentUser.schoolId || DEFAULT_SCHOOL_ID;
+    const container = document.getElementById('teacher-students-container');
+
+    // View Switching
+    const viewAcademic = document.getElementById('view-academic');
+    const viewMessages = document.getElementById('view-messages');
+    const tabNavAcademic = document.getElementById('tab-nav-academic');
+    const tabNavMessages = document.getElementById('tab-nav-messages');
+
+    function switchView(tabKey) {
+      if (tabKey === 'messages') {
+        viewAcademic.style.display = 'none';
+        viewMessages.style.display = 'flex';
+        tabNavAcademic.classList.remove('active');
+        tabNavMessages.classList.add('active');
+        loadTeacherMessages();
+      } else {
+        viewMessages.style.display = 'none';
+        viewAcademic.style.display = 'flex';
+        tabNavMessages.classList.remove('active');
+        tabNavAcademic.classList.add('active');
+      }
+    }
+
+    tabNavAcademic.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.location.hash = 'academic';
+      switchView('academic');
+    });
+
+    tabNavMessages.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.location.hash = 'messages';
+      switchView('messages');
+    });
+
+    window.addEventListener('hashchange', () => {
+      const h = window.location.hash.replace('#', '');
+      switchView(h);
+    });
+
+    // Populate Recipient Dropdown based on strict teacher permissions
+    const recipientSelect = document.getElementById('msg-recipient');
+    if (recipientSelect) {
+      const allowed = getAllowedRecipients(currentUser);
+      recipientSelect.innerHTML = allowed.map(r => `<option value="${r.id}" data-role="${r.role}">${r.name}</option>`).join('');
+    }
+
+    // Attendance Roster
+    async function renderTeacherRoster() {
+      const students = await getStudents(schoolId);
+
+      if (students.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state" style="border: none; margin: var(--space-6);">
+            <div class="empty-state-icon">📋</div>
+            <h4 class="empty-state-title">لا توجد قوائم طلاب مسجلة في هذا الفصل حاليًا</h4>
+            <p class="empty-state-desc">
+              يقوم مسؤول شؤون الطلاب بإسناد الطلاب للفصول لتظهر هنا في جدول الرصد.
+            </p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="table-wrap" style="border: none;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>اسم الطالب</th>
+                <th>كود الطالب</th>
+                <th>المرحلة</th>
+                <th>حالة الحضور لليوم</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${students.map((s, idx) => `
+                <tr>
+                  <td><strong>${s.name}</strong></td>
+                  <td><code>${s.code}</code></td>
+                  <td>${s.grade}</td>
+                  <td>
+                    <select class="form-control attendance-select" data-code="${s.code}" data-name="${s.name}" style="max-width: 170px; padding: 4px 8px; font-size: var(--text-xs);">
+                      <option value="present">حاضر ✓</option>
+                      <option value="absent_unexcused">غياب بدون عذر ✗</option>
+                      <option value="absent_excused">غياب بعذر ⚠️</option>
+                      <option value="late">تأخر صباحي ⏰</option>
+                    </select>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <div style="padding: var(--space-4); display: flex; justify-content: flex-end; border-top: 1px solid var(--border-light);">
+            <button type="button" id="save-attendance-btn" class="btn btn-primary btn-md">
+              اعتماد دفتر الحضور اليومي
+            </button>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('save-attendance-btn').addEventListener('click', async () => {
+        await recordAuditEvent({
+          action: 'رصد واعتماد حضور وغياب الفصل',
+          target: `عدد ${students.length} طالب`,
+          details: 'تم الحفظ والاعتماد في دفتر الحضور الرسمي',
+          operatorRole: 'teacher',
+          schoolId,
+        });
+        alert('تم اعتماد وحفظ دفتر الحضور اليومي بنجاح وتوثيقه في المنظومة.');
+      });
+    }
+
+    renderTeacherRoster();
+
+    // --------------------------------------------------------------------------
+    // Teacher Messaging System
+    // --------------------------------------------------------------------------
+    let currentFilter = 'inbox';
+    let teacherMessages = [];
+
+    async function loadTeacherMessages() {
+      const unreadCount = await getUnreadCount(currentUser.uid || currentUser.email, currentUser.role);
+      const badge = document.getElementById('inbox-count-badge');
+      if (badge) badge.textContent = unreadCount;
+
+      teacherMessages = await getMessages({
+        userId: currentUser.uid || currentUser.email,
+        userEmail: currentUser.email,
+        userRole: currentUser.role,
+        filter: currentFilter,
+      });
+
+      renderTeacherMessagesTable();
+    }
+
+    function renderTeacherMessagesTable() {
+      const q = (document.getElementById('msg-search-input')?.value || '').toLowerCase().trim();
+      const filtered = teacherMessages.filter((m) => {
+        if (!q) return true;
+        return (m.subject || '').toLowerCase().includes(q) ||
+               (m.body || '').toLowerCase().includes(q) ||
+               (m.senderName || '').toLowerCase().includes(q) ||
+               (m.recipientName || '').toLowerCase().includes(q);
+      });
+
+      const tbody = document.getElementById('messages-table-body');
+      const emptyState = document.getElementById('messages-empty-state');
+      const tableWrap = document.getElementById('messages-table-wrap');
+      const senderReceiverTh = document.getElementById('sender-receiver-th');
+
+      if (senderReceiverTh) {
+        senderReceiverTh.textContent = currentFilter === 'inbox' ? 'المرسل' : 'المستلم';
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        tableWrap.style.display = 'none';
+        emptyState.style.display = 'flex';
+        return;
+      }
+
+      tableWrap.style.display = 'block';
+      emptyState.style.display = 'none';
+
+      tbody.innerHTML = filtered.map((m) => {
+        const isRead = (m.readBy || []).includes(currentUser.uid || currentUser.email);
+        const prioBadge = m.priority === 'urgent' ? '<span class="badge badge-danger">🚨 عاجل</span>' : (m.priority === 'high' ? '<span class="badge badge-warning">هام</span>' : '<span class="badge badge-default">عادي</span>');
+        const counterparty = currentFilter === 'inbox' ? m.senderName : m.recipientName;
+
+        return `
+          <tr style="${!isRead && currentFilter === 'inbox' ? 'font-weight: 800; background: rgba(37, 99, 235, 0.04);' : ''}">
+            <td>${prioBadge}</td>
+            <td style="font-size: var(--text-xs); color: var(--text-primary);">${counterparty}</td>
+            <td>
+              <div style="font-size: var(--text-xs); color: var(--color-primary-950);">${m.subject}</div>
+            </td>
+            <td style="font-size: 11px; color: var(--text-muted);">${m.formattedDate || m.createdAt}</td>
+            <td style="text-align: center;">
+              <button type="button" class="btn btn-outline btn-sm open-teacher-msg-btn" data-id="${m.id}" style="padding: 2px 8px; font-size: 11px;">
+                📨 عرض
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      tbody.querySelectorAll('.open-teacher-msg-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const msg = teacherMessages.find((m) => m.id === btn.dataset.id);
+          if (msg) openMessageModal(msg);
+        });
+      });
+    }
+
+    function openMessageModal(msg) {
+      document.getElementById('modal-msg-subject').textContent = msg.subject;
+      document.getElementById('modal-msg-sender').textContent = `${msg.senderName} (${msg.senderRole})`;
+      document.getElementById('modal-msg-recipient').textContent = msg.recipientName;
+      document.getElementById('modal-msg-date').textContent = msg.formattedDate || msg.createdAt;
+      document.getElementById('modal-msg-body').textContent = msg.body;
+
+      const prioEl = document.getElementById('modal-priority-badge');
+      if (prioEl) {
+        prioEl.className = `badge ${msg.priority === 'urgent' ? 'badge-danger' : (msg.priority === 'high' ? 'badge-warning' : 'badge-default')}`;
+        prioEl.textContent = msg.priority === 'urgent' ? '🚨 عاجل وفوري' : (msg.priority === 'high' ? 'هام' : 'عادي');
+      }
+
+      document.getElementById('msg-detail-modal').style.display = 'flex';
+      markMessageAsRead(msg.id, currentUser.uid || currentUser.email);
+    }
+
+    const closeMsgModal = () => { document.getElementById('msg-detail-modal').style.display = 'none'; };
+    document.getElementById('close-detail-modal-btn').addEventListener('click', closeMsgModal);
+    document.getElementById('modal-done-btn').addEventListener('click', closeMsgModal);
+
+    // Toggle Tabs
+    const tabInboxBtn = document.getElementById('tab-inbox-btn');
+    const tabSentBtn = document.getElementById('tab-sent-btn');
+    const activeBadge = document.getElementById('active-tab-badge');
+
+    tabInboxBtn.addEventListener('click', () => {
+      currentFilter = 'inbox';
+      tabInboxBtn.classList.add('active');
+      tabSentBtn.classList.remove('active');
+      tabInboxBtn.style.background = 'var(--bg-surface)';
+      tabSentBtn.style.background = 'transparent';
+      if (activeBadge) activeBadge.textContent = 'صندوق الوارد';
+      loadTeacherMessages();
+    });
+
+    tabSentBtn.addEventListener('click', () => {
+      currentFilter = 'sent';
+      tabSentBtn.classList.add('active');
+      tabInboxBtn.classList.remove('active');
+      tabSentBtn.style.background = 'var(--bg-surface)';
+      tabInboxBtn.style.background = 'transparent';
+      if (activeBadge) activeBadge.textContent = 'الرسائل الصادرة';
+      loadTeacherMessages();
+    });
+
+    // Compose
+    const composeBtn = document.getElementById('compose-msg-btn');
+    const composePanel = document.getElementById('compose-panel');
+    const closeComposeBtn = document.getElementById('close-compose-btn');
+    const cancelComposeBtn = document.getElementById('cancel-compose-btn');
+
+    composeBtn.addEventListener('click', () => { composePanel.style.display = 'block'; });
+    const hideCompose = () => { composePanel.style.display = 'none'; };
+    closeComposeBtn.addEventListener('click', hideCompose);
+    cancelComposeBtn.addEventListener('click', hideCompose);
+
+    document.getElementById('compose-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const recSelect = document.getElementById('msg-recipient');
+      const selectedOption = recSelect.options[recSelect.selectedIndex];
+
+      await sendMessage({
+        senderId: currentUser.uid || currentUser.email,
+        senderEmail: currentUser.email,
+        senderName: currentUser.displayName,
+        senderRole: currentUser.role,
+        recipientId: recSelect.value,
+        recipientRole: selectedOption.dataset.role || 'student',
+        recipientName: selectedOption.textContent.trim(),
+        priority: document.getElementById('msg-priority').value,
+        subject: document.getElementById('msg-subject').value.trim(),
+        body: document.getElementById('msg-body').value.trim(),
+      });
+
+      document.getElementById('compose-form').reset();
+      hideCompose();
+      tabSentBtn.click();
+    });
+
+    document.getElementById('msg-search-input')?.addEventListener('input', renderTeacherMessagesTable);
+
+    if (window.location.hash === '#messages') {
+      switchView('messages');
+    }
+  </script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=11.0');}</script>
+</body>
+</html>
