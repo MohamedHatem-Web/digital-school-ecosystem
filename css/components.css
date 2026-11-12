@@ -88,8 +88,8 @@
 
 .btn-outline:hover {
   background-color: var(--bg-surface-subtle);
-  border-color: #3b82f6;
-  color: #172554;
+  border-color: var(--color-primary-600);
+  color: var(--color-primary-900);
   transform: translateY(-1px);
 }
 
@@ -917,7 +917,7 @@
 .brand-crest.has-custom-logo,
 .sidebar-crest.has-custom-logo {
   background: #ffffff !important;
-  border: 1.5px solid rgba(37, 99, 235, 0.25) !important;
+  border: 1.5px solid rgba(42, 75, 112, 0.24) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
   padding: 3px !important;
 }
@@ -937,15 +937,15 @@
   height: 76px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.96);
-  border: 2px solid rgba(37, 99, 235, 0.25);
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12), 0 0 25px rgba(37, 99, 235, 0.15);
+  border: 2px solid rgba(42, 75, 112, 0.24);
+  box-shadow: 0 10px 24px rgba(17, 29, 50, 0.12);
   padding: 6px;
   margin-bottom: var(--space-4);
   transition: all 0.3s ease;
 }
 
 [data-theme="dark"] .hero-logo-badge {
-  background: rgba(15, 23, 42, 0.88);
+  background: rgba(29, 44, 66, 0.92);
   border-color: rgba(59, 130, 246, 0.4);
   box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6), 0 0 25px rgba(37, 99, 235, 0.3);
 }
@@ -961,17 +961,17 @@
    Dark Mode Components Elevation (Guaranteed High-Contrast)
    -------------------------------------------------------------------------- */
 [data-theme="dark"] .btn-primary {
-  background-color: #2563eb !important;
+  background-color: var(--btn-primary-bg) !important;
   color: #ffffff !important;
-  border-color: #3b82f6 !important;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3) !important;
+  border-color: var(--btn-primary-bg) !important;
+  box-shadow: var(--btn-primary-shadow) !important;
 }
 
 [data-theme="dark"] .btn-primary:hover {
-  background-color: #1d4ed8 !important;
-  border-color: #2563eb !important;
+  background-color: var(--btn-primary-hover) !important;
+  border-color: var(--btn-primary-hover) !important;
   color: #ffffff !important;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45) !important;
+  box-shadow: var(--btn-primary-shadow) !important;
 }
 
 [data-theme="dark"] .btn-outline {
@@ -994,10 +994,10 @@
 .affairs-top-tab.active,
 .gallery-filter-btn.active,
 .tab-btn.active {
-  background-color: #1e3a8a !important;
+  background-color: var(--btn-primary-bg) !important;
   color: #ffffff !important;
-  border-color: #1e3a8a !important;
-  box-shadow: 0 2px 8px rgba(30, 58, 138, 0.25) !important;
+  border-color: var(--btn-primary-bg) !important;
+  box-shadow: var(--btn-primary-shadow) !important;
   font-weight: 700 !important;
 }
 
@@ -1024,10 +1024,10 @@
 [data-theme="dark"] .affairs-top-tab.active,
 [data-theme="dark"] .gallery-filter-btn.active,
 [data-theme="dark"] .tab-btn.active {
-  background-color: #2563eb !important;
+  background-color: var(--btn-primary-bg) !important;
   color: #ffffff !important;
-  border-color: #3b82f6 !important;
-  box-shadow: 0 0 14px rgba(37, 99, 235, 0.4) !important;
+  border-color: var(--btn-primary-bg) !important;
+  box-shadow: var(--btn-primary-shadow) !important;
   font-weight: 700 !important;
 }
 
@@ -1041,7 +1041,7 @@
 
 [data-theme="dark"] .form-control:focus,
 [data-theme="dark"] .form-select:focus {
-  border-color: #3b82f6 !important;
+  border-color: var(--color-primary-700) !important;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25) !important;
   background-color: var(--bg-surface) !important;
 }
@@ -1114,8 +1114,8 @@
 }
 
 [data-theme="dark"] .audit-avatar {
-  background: #1e3a8a;
-  color: #bfdbfe;
+  background: var(--color-primary-100);
+  color: var(--color-primary-950);
 }
 
 .cms-nav-tab {
@@ -1141,7 +1141,7 @@
 }
 
 [data-theme="dark"] .cms-nav-tab.active {
-  background: #2563eb;
-  border-color: #3b82f6;
+  background: var(--btn-primary-bg);
+  border-color: var(--btn-primary-bg);
   color: #ffffff;
 }

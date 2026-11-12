@@ -8,12 +8,10 @@ import {
   db,
   signInWithEmailAndPassword,
   signOut,
-  sendPasswordResetEmail,
   onAuthStateChanged,
   doc,
   getDoc,
   setDoc,
-  serverTimestamp,
 } from './firebase.js';
 import { recordAuditEvent } from './services/audit-service.js';
 
@@ -54,6 +52,8 @@ export function translateAuthError(errorCode) {
       return 'تم إيقاف هذا الحساب رسميًا من قِبل إدارة المدرسة.';
     case 'auth/too-many-requests':
       return 'تم تقييد المحاولات مؤقتًا لكثرة المحاولات الخاطئة. انتظر قليلاً ثم أعد المحاولة.';
+    case 'auth/profile-not-provisioned':
+      return 'الحساب غير مفعّل في سجل الصلاحيات. تواصل مع مسؤول النظام لتفعيله.';
     case 'auth/network-request-failed':
       return 'تعذر الاتصال بالخادم، يرجى فحص الاتصال بالإنترنت.';
     case 'auth/missing-password':
@@ -85,26 +85,29 @@ export async function loginWithEmailPassword(emailOrCode, password) {
   // Fetch role and schoolId from Firestore users collection
   const userDocRef = doc(db, 'users', firebaseUser.uid);
   const userSnapshot = await getDoc(userDocRef);
+  if (!userSnapshot.exists()) {
+    clearCachedUserSession();
+    await signOut(auth);
+    const error = new Error('الحساب غير مفعّل في سجل الصلاحيات.');
+    error.code = 'auth/profile-not-provisioned';
+    throw error;
+  }
 
-  let profile = {
+  const userData = userSnapshot.data();
+  if (!ROLES_METADATA[userData.role] || !userData.schoolId || (userData.status && userData.status !== 'active')) {
+    clearCachedUserSession();
+    await signOut(auth);
+    const error = new Error('ملف الصلاحيات غير صالح أو غير نشط.');
+    error.code = 'auth/profile-not-provisioned';
+    throw error;
+  }
+  const profile = {
     uid: firebaseUser.uid,
     email: firebaseUser.email,
     displayName: firebaseUser.displayName || 'مستخدم المنظومة',
-    role: 'director', // safe fallback
-    schoolId: 'sch_cairo_sec_01',
-    status: 'active',
+    ...userData,
+    schoolId: userData.schoolId,
   };
-
-  if (userSnapshot.exists()) {
-    profile = { ...profile, ...userSnapshot.data(), schoolId: 'sch_cairo_sec_01' };
-  } else {
-    // If user document is not yet in Firestore, provision default record
-    await setDoc(userDocRef, {
-      ...profile,
-      createdAt: serverTimestamp(),
-      lastLogin: serverTimestamp(),
-    }, { merge: true });
-  }
 
   // Authoritative Staff & User Identity Map
   const knownStaffNames = {
@@ -215,6 +218,15 @@ export function getCurrentUser() {
   }
 }
 
+function clearCachedUserSession() {
+  localStorage.removeItem('dse_user_session');
+  sessionStorage.removeItem('dse_user_session');
+  if (typeof document !== 'undefined') {
+    document.cookie = 'dse_user_session=; path=/; max-age=0; SameSite=Lax';
+    document.cookie = 'dse_role=; path=/; max-age=0; SameSite=Lax';
+  }
+}
+
 /**
  * Switch active role and identity for family accounts (Student vs. Parent)
  * Stores preference in localStorage and browser cookies
@@ -289,13 +301,6 @@ export async function logout() {
 }
 
 /**
- * Send password reset email via Firebase Authentication
- */
-export async function requestPasswordReset(email) {
-  return await sendPasswordResetEmail(auth, email.trim());
-}
-
-/**
  * Determine redirect destination after successful login
  */
 export function getRoleDashboardUrl(role) {
@@ -316,17 +321,19 @@ export function observeAuthState(callback) {
     try {
       const userDocRef = doc(db, 'users', firebaseUser.uid);
       const userSnapshot = await getDoc(userDocRef);
-      let profile = {
+      const userData = userSnapshot.exists() ? userSnapshot.data() : null;
+      if (!userData || !ROLES_METADATA[userData.role] || !userData.schoolId || (userData.status && userData.status !== 'active')) {
+        clearCachedUserSession();
+        callback(null);
+        return;
+      }
+      const profile = {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
         displayName: firebaseUser.displayName || 'مستخدم المنظومة',
-        role: 'director',
-        schoolId: 'sch_cairo_sec_01',
-        status: 'active',
+        ...userData,
+        schoolId: userData.schoolId,
       };
-      if (userSnapshot.exists()) {
-        profile = { ...profile, ...userSnapshot.data(), schoolId: 'sch_cairo_sec_01' };
-      }
       
       const knownStaffNames = {
         'director@dse.edu.eg': 'د. طارق محمود المنشاوي',

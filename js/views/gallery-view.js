@@ -11,6 +11,7 @@ import {
   addMediaToAlbum,
   MEDIA_CATEGORIES,
 } from '../services/media-service.js';
+import { showToast, showConfirmModal } from '../components.js';
 
 let isInitialized = false;
 let currentAlbums = [];
@@ -190,8 +191,14 @@ function renderAlbumsGrid() {
 
   grid.querySelectorAll('.delete-album-btn').forEach((btn) => {
     btn.addEventListener('click', async () => {
-      if (confirm('هل أنت متأكد من حذف هذا الألبوم بكافة وسائطه؟')) {
+      const ok = await showConfirmModal({
+        title: 'حذف ألبوم الصور',
+        message: 'هل أنت متأكد من حذف هذا الألبوم بكافة وسائطه؟',
+        danger: true,
+      });
+      if (ok) {
         await deleteAlbum(btn.dataset.id);
+        showToast('تم حذف الألبوم بنجاح');
         await loadAlbums();
       }
     });

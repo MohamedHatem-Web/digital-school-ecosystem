@@ -10,13 +10,10 @@
 - فحص كامل للملفات، استبعاد التكرارات، وتوثيق مصفوفة الحالة الفنية والأمنية.
 - إنتاج وثائق: `PROJECT_AUDIT.md`, `FEATURE_STATUS.md`, `IMPLEMENTATION_PLAN.md`, `SECURITY_AUDIT.md`.
 
-### المرحلة 2: تكامل التخزين السحابي وقواعد الأمان (Storage & Security Rules)
-1. استيراد دوال Firebase Storage Modular في [`js/firebase.js`](js/firebase.js) (`ref`, `uploadBytes`, `getDownloadURL`, `deleteObject`).
-2. إنشاء ملف قواعد أمان التخزين السحابي [`storage.rules`](storage.rules) الذي يعزل:
-   - صور الملفات الشخصية للمستخدمين (`users/{uid}/profile.jpg`).
-   - مستندات وقرارات الطلاب الرسمية بصيغة PDF (`schools/{schoolId}/students/{studentId}/docs/`).
-   - وسائط وألبومات الموقع العام (`schools/{schoolId}/media/`).
-3. تحديث قواعد Firestore في [`firestore.rules`](firestore.rules) لتشمل كافة الجداول الفرعية (الدرجات، التقييمات، الحالات الاجتماعية، محتوى الـ CMS).
+### المرحلة 2: قواعد Firestore والوسائط (Firestore & Media Security)
+1. قصر تخزين البيانات المنظمة والصلاحيات على Firestore عبر [`firestore.rules`](firestore.rules).
+2. رفع صور الموقع حصريًا إلى Cloudinary عبر Cloudflare Worker.
+3. مستندات PDF غير مفعلة حاليًا ولا تُحفظ كـData URL أو تخزين محلي.
 
 ### المرحلة 3: الهيكل الأكاديمي وسجلات الطلاب الموحدة (School Academic Structure)
 1. بناء خدمة سحابية [`js/services/academic-service.js`](js/services/academic-service.js) لإدارة:
@@ -24,7 +21,7 @@
    - الشعب والفصول الدراسية (1/1، 1/2، إلخ).
    - المواد الدراسية وإسناد المعلمين للفصول.
 2. ترقية خدمة شؤون الطلاب [`js/services/student-service.js`](js/services/student-service.js) لتشمل:
-   - رفع المستندات الرسمية (PDF) مع فحص الامتداد والحجم وحفظ الرابط في Firestore.
+   - إدارة بيانات القيد وربط الطالب بولي أمره الرسمي؛ رفع PDF غير متاح حاليًا.
    - التحقق من ربط الطالب بولي أمره الرسمي عبر بطاقة الرقم القومي.
 
 ### المرحلة 4: بوابة المعلم والتقييمات الأكاديمية (Teacher Portal & Assessments)
@@ -60,5 +57,5 @@
 2. إمكانية مراجعة الصور واعتمادها أو إزالتها من قِبل مدير المدرسة.
 
 ### المرحلة 9: الاختبار الشامل والتحقق من الجاهزية (Comprehensive QA Testing)
-1. إنشاء وتشغيل برنامج فحص آلي شامل يختبر كافة مسارات القراءة والكتابة وعزل المدارس في Firestore و Firebase Storage.
+1. إنشاء وتشغيل اختبارات آلية لمسارات القراءة والكتابة وعزل المدارس في Firestore وCloudflare Worker.
 2. إعداد وثيقتي: `TEST_REPORT.md` و `SETUP_GUIDE.md`.

@@ -10,6 +10,7 @@ import {
   useGatePass,
 } from '../services/gate-pass-service.js';
 import { getStudents } from '../services/student-service.js';
+import { showToast } from '../components.js';
 
 let isInitialized = false;
 let passesList = [];
@@ -216,10 +217,10 @@ function bindGatePassEvents(container) {
       });
       form.reset();
       panel.style.display = 'none';
-      alert('تم إصدار تصريح الخروج وتوثيقه بنجاح.');
+      showToast('✓ تم إصدار تصريح الخروج وتوثيقه بنجاح.');
       await loadGatePassData();
     } catch (err) {
-      alert(err.message || 'حدث خطأ أثناء إصدار التصريح.');
+      showToast(err.message || 'حدث خطأ أثناء إصدار التصريح.', 'error');
     }
   });
 }

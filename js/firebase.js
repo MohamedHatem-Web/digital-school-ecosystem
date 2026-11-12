@@ -9,7 +9,6 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
-  sendPasswordResetEmail,
   onAuthStateChanged,
   updateProfile,
   setPersistence,
@@ -31,21 +30,12 @@ import {
   orderBy,
   limit,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import {
-  getStorage,
-  ref,
-  uploadBytes,
-  getDownloadURL,
-  deleteObject,
-} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-storage.js';
-
 import { FIREBASE_CONFIG } from './config.js';
 
 // Initialize core Firebase app singletons
 export const firebaseApp = initializeApp(FIREBASE_CONFIG);
 export const auth = getAuth(firebaseApp);
 export const db = getFirestore(firebaseApp);
-export const storage = getStorage(firebaseApp);
 
 // Enforce persistent session across browser restarts & tab switches
 try {
@@ -66,7 +56,6 @@ export {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
-  sendPasswordResetEmail,
   onAuthStateChanged,
   updateProfile,
 };
@@ -88,10 +77,3 @@ export {
   limit,
 };
 
-// Re-export Modular Storage utilities
-export {
-  ref,
-  uploadBytes,
-  getDownloadURL,
-  deleteObject,
-};

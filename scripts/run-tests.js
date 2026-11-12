@@ -1,7 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 
-const API_KEY = 'AIzaSyBD4WFrHSJB5EjpFwsOnlPzNCxf91vEyQw';
+const API_KEY = process.env.FIREBASE_WEB_API_KEY;
+const TEST_PASSWORD = process.env.DSE_TEST_PASSWORD;
 const PROJECT_ID = 'digital-school-ecosystem';
 
 const testResults = [];
@@ -98,7 +99,6 @@ async function checkEndpoints() {
     '/calendar.html',
     '/contact.html',
     '/login.html',
-    '/reset-password.html',
     '/dashboard/admin-overview.html',
     '/dashboard/tech-devices.html',
     '/dashboard/student-affairs.html',
@@ -123,6 +123,11 @@ async function checkEndpoints() {
 
 // 3. Firebase Auth Authentication Test
 async function checkFirebaseAuth() {
+  if (!API_KEY || !TEST_PASSWORD) {
+    console.log('SKIP: Firebase Auth checks require FIREBASE_WEB_API_KEY and DSE_TEST_PASSWORD environment variables.');
+    return;
+  }
+
   const accounts = [
     { role: 'director', email: 'director@dse.edu.eg' },
     { role: 'tech_specialist', email: 'tech@dse.edu.eg' },
@@ -139,7 +144,7 @@ async function checkFirebaseAuth() {
       const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: acc.email, password: 'Password@2026', returnSecureToken: true }),
+        body: JSON.stringify({ email: acc.email, password: TEST_PASSWORD, returnSecureToken: true }),
       });
       const data = await res.json();
       logTest(`Firebase Auth: ${acc.email} (${acc.role})`, res.ok, res.ok ? 'Authenticated' : data.error?.message);

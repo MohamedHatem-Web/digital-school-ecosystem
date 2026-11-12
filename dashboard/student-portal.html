@@ -515,65 +515,152 @@
       stuTabSent.click();
     });
 
-    // Show student name in welcome banner
-    if (currentUser?.displayName) {
-      const welcomeEl = document.getElementById('student-welcome-name');
-      const nameEl = document.getElementById('stu-name-display');
-      if (welcomeEl) welcomeEl.textContent = `مرحبًا، ${currentUser.displayName}`;
-      if (nameEl) nameEl.textContent = currentUser.displayName;
+    // Weekly Class Schedule Data
+    const CLASS_SCHEDULES = {
+      'فصل 1/1': {
+        advisor: 'أ. إبراهيم فؤاد القاضي',
+        days: [
+          { day: 'الأحد', p1: 'اللغة العربية', p2: 'الرياضيات', p3: 'اللغة الإنجليزية', p4: 'الفيزياء', p5: 'التربية الدينية' },
+          { day: 'الإثنين', p1: 'الكيمياء', p2: 'اللغة الإنجليزية', p3: 'الرياضيات', p4: 'اللغة العربية', p5: 'الحاسب الآلي' },
+          { day: 'الثلاثاء', p1: 'الأحياء', p2: 'الفيزياء', p3: 'اللغة العربية', p4: 'الرياضيات', p5: 'التربية الرياضية' },
+          { day: 'الأربعاء', p1: 'الرياضيات', p2: 'الكيمياء', p3: 'اللغة الإنجليزية', p4: 'التاريخ', p5: 'اللغة الفرنسية' },
+          { day: 'الخميس', p1: 'اللغة العربية', p2: 'الأحياء', p3: 'الجغرافيا', p4: 'التربية الوطنية', p5: 'نشاط تكنولوجي' },
+        ]
+      },
+      'فصل 1/2': {
+        advisor: 'أ. هاني مصطفى السيد',
+        days: [
+          { day: 'الأحد', p1: 'الرياضيات', p2: 'اللغة العربية', p3: 'الفيزياء', p4: 'اللغة الإنجليزية', p5: 'الحاسب الآلي' },
+          { day: 'الإثنين', p1: 'اللغة العربية', p2: 'الكيمياء', p3: 'اللغة الفرنسية', p4: 'الرياضيات', p5: 'التربية الدينية' },
+          { day: 'الثلاثاء', p1: 'الفيزياء', p2: 'الأحياء', p3: 'الرياضيات', p4: 'اللغة العربية', p5: 'التاريخ' },
+          { day: 'الأربعاء', p1: 'اللغة الإنجليزية', p2: 'الرياضيات', p3: 'الكيمياء', p4: 'الجغرافيا', p5: 'التربية الرياضية' },
+          { day: 'الخميس', p1: 'الأحياء', p2: 'اللغة العربية', p3: 'نشاط تكنولوجي', p4: 'التربية الوطنية', p5: 'اللغة الإنجليزية' },
+        ]
+      }
+    };
+
+    function renderStudentSchedule(studentClass) {
+      const container = document.getElementById('student-schedule-container');
+      const advisorBadge = document.getElementById('student-class-advisor-badge');
+      if (!container) return;
+
+      const scheduleData = CLASS_SCHEDULES[studentClass] || CLASS_SCHEDULES['فصل 1/1'];
+      if (advisorBadge) {
+        advisorBadge.textContent = `رائد الفصل: ${scheduleData.advisor}`;
+      }
+
+      container.innerHTML = `
+        <div class="table-wrap" style="border: none; margin: 0;">
+          <table class="data-table" style="font-size: var(--text-sm);">
+            <thead>
+              <tr style="background: var(--bg-surface-subtle);">
+                <th style="width: 15%; text-align: center;">اليوم</th>
+                <th style="text-align: center;">الحصة 1<br><small style="color:var(--text-muted);font-weight:normal;">08:00 - 08:45</small></th>
+                <th style="text-align: center;">الحصة 2<br><small style="color:var(--text-muted);font-weight:normal;">08:50 - 09:35</small></th>
+                <th style="text-align: center;">الحصة 3<br><small style="color:var(--text-muted);font-weight:normal;">09:40 - 10:25</small></th>
+                <th style="text-align: center;">الحصة 4<br><small style="color:var(--text-muted);font-weight:normal;">10:55 - 11:40</small></th>
+                <th style="text-align: center;">الحصة 5<br><small style="color:var(--text-muted);font-weight:normal;">11:45 - 12:30</small></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${scheduleData.days.map(d => `
+                <tr>
+                  <td style="font-weight: 700; text-align: center; background: var(--bg-surface-subtle);">${d.day}</td>
+                  <td style="text-align: center;"><span class="badge badge-outline" style="font-size: 12px;">${d.p1}</span></td>
+                  <td style="text-align: center;"><span class="badge badge-outline" style="font-size: 12px;">${d.p2}</span></td>
+                  <td style="text-align: center;"><span class="badge badge-outline" style="font-size: 12px;">${d.p3}</span></td>
+                  <td style="text-align: center;"><span class="badge badge-outline" style="font-size: 12px;">${d.p4}</span></td>
+                  <td style="text-align: center;"><span class="badge badge-outline" style="font-size: 12px;">${d.p5}</span></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
     }
 
-    // Load student data — find the student record matching current user
-    async function loadStudentData() {
+    // Load student data — find the student record matching current active student
+    async function loadStudentData(targetCode = null) {
       try {
         const students = await getStudents(schoolId);
         
-        // Try to match current user to a student record
-        let myStudent = students.find((s) => 
-          s.email === currentUser?.email || 
-          s.uid === currentUser?.uid ||
-          s.linkedStudentUid === currentUser?.uid
-        );
+        // Active code from argument, localStorage, or cookie
+        let activeCode = targetCode || localStorage.getItem('dse_active_student_code');
+        if (!activeCode) {
+          const m = document.cookie.match(/(?:^|;\s*)dse_active_student_code=([^;]+)/);
+          if (m) activeCode = decodeURIComponent(m[1]);
+        }
+        if (!activeCode) {
+          activeCode = '2026101'; // Default to Youssef
+        }
 
-        // Fallback: if no match, use first student (single-school scenario)
-        if (!myStudent && students.length > 0) {
-          myStudent = students[0];
+        // Update active code storage
+        localStorage.setItem('dse_active_student_code', activeCode);
+        document.cookie = `dse_active_student_code=${activeCode}; path=/; max-age=2592000`;
+
+        // Update switcher buttons UI
+        const youssefBtn = document.getElementById('switch-stu-youssef');
+        const mariamBtn = document.getElementById('switch-stu-mariam');
+        if (youssefBtn && mariamBtn) {
+          if (activeCode === '2026102') {
+            youssefBtn.className = 'btn btn-sm btn-outline';
+            mariamBtn.className = 'btn btn-sm btn-primary';
+          } else {
+            youssefBtn.className = 'btn btn-sm btn-primary';
+            mariamBtn.className = 'btn btn-sm btn-outline';
+          }
+        }
+
+        // Find matching student
+        let myStudent = students.find(s => s.code === activeCode);
+        if (!myStudent) {
+          myStudent = students.find((s) => 
+            s.email === currentUser?.email || 
+            s.uid === currentUser?.uid ||
+            s.linkedStudentUid === currentUser?.uid
+          ) || students[0];
         }
 
         if (myStudent) {
-          // Update identity panel
+          // Update welcome & identity panels
+          const welcomeEl = document.getElementById('student-welcome-name');
           const nameEl = document.getElementById('stu-name-display');
           const codeEl = document.getElementById('stu-code-display');
           const gradeEl = document.getElementById('stu-grade-display');
           const parentEl = document.getElementById('stu-parent-display');
 
-          if (nameEl) nameEl.textContent = currentUser?.displayName || myStudent.name;
+          if (welcomeEl) welcomeEl.textContent = `مرحبًا، ${myStudent.name}`;
+          if (nameEl) nameEl.textContent = myStudent.name;
           if (codeEl) codeEl.textContent = myStudent.code || '—';
           if (gradeEl) gradeEl.textContent = myStudent.grade || 'غير محدد';
           if (parentEl) {
-            parentEl.textContent = myStudent.parentInfo?.parentName || 'غير مسجل';
+            parentEl.textContent = myStudent.parentInfo?.parentName || 'أ. أحمد المنشاوي';
           }
 
-          // Load grades
+          // Render class schedule
+          const studentClass = myStudent.grade?.includes('1/2') ? 'فصل 1/2' : 'فصل 1/1';
+          renderStudentSchedule(studentClass);
+
+          // Load grades & tablet
           await loadStudentGrades(myStudent.code);
 
           // Setup print button
           const printCertBtn = document.getElementById('print-my-cert-btn');
           if (printCertBtn) {
-            printCertBtn.addEventListener('click', () => {
+            printCertBtn.onclick = () => {
               printEnrollmentCertificate({
-                name: currentUser?.displayName || myStudent.name,
+                name: myStudent.name,
                 code: myStudent.code,
                 nationalId: myStudent.nationalId || '—',
                 grade: myStudent.grade || 'الصف الأول الثانوي',
               });
-            });
+            };
           }
 
           // Load tablet
           await loadStudentTablet(myStudent.code);
         } else {
-          // No student found - show current user info
+          // No student found
           const codeEl = document.getElementById('stu-code-display');
           const gradeEl = document.getElementById('stu-grade-display');
           const parentEl = document.getElementById('stu-parent-display');
@@ -581,7 +668,6 @@
           if (gradeEl) gradeEl.textContent = '—';
           if (parentEl) parentEl.textContent = '—';
 
-          // Show empty grades
           document.getElementById('student-grades-container').innerHTML = `
             <div class="empty-state" style="border: none;">
               <div class="empty-state-icon">📝</div>
@@ -593,6 +679,16 @@
       } catch (e) {
         console.warn('Student data load error:', e);
       }
+    }
+
+    // Attach Sibling Switcher Listeners
+    const youssefBtn = document.getElementById('switch-stu-youssef');
+    const mariamBtn = document.getElementById('switch-stu-mariam');
+    if (youssefBtn) {
+      youssefBtn.addEventListener('click', () => loadStudentData('2026101'));
+    }
+    if (mariamBtn) {
+      mariamBtn.addEventListener('click', () => loadStudentData('2026102'));
     }
 
     async function loadStudentGrades(studentCode) {

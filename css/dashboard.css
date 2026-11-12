@@ -40,7 +40,7 @@
   bottom: 0;
   right: 0;
   width: var(--sidebar-width);
-  background-color: #080e1a;
+  background-color: #17243a;
   color: #ffffff;
   display: flex;
   flex-direction: column;
@@ -79,7 +79,7 @@
 .sidebar-crest {
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, #172542 0%, #0f1a30 100%);
+  background: linear-gradient(135deg, #274a70 0%, #17243a 100%);
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
@@ -320,7 +320,7 @@
 .user-avatar {
   width: 32px;
   height: 32px;
-  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+  background: linear-gradient(135deg, var(--color-primary-800) 0%, var(--color-primary-600) 100%);
   color: #ffffff;
   font-weight: 700;
   font-size: var(--text-xs);

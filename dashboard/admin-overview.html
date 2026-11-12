@@ -87,6 +87,13 @@
             <span class="sidebar-icon">✉️</span>
             <span>الرسائل والبريد الداخلي</span>
           </a>
+
+          <!-- القسم الخامس: صيانة المنظومة والبيانات -->
+          <div class="sidebar-section-title">⚙️ صيانة المنظومة والبيانات</div>
+          <a href="#system-data" class="sidebar-link" id="nav-system-data-link">
+            <span class="sidebar-icon">⚙️</span>
+            <span>تهيئة وتصفير بيانات المنظومة</span>
+          </a>
         </div>
       </nav>
 
@@ -711,7 +718,7 @@
                     </div>
                     <div class="form-group">
                       <label class="form-label" for="ldr-order">ترتيب الظهور في الصفحة</label>
-                      <input type="number" id="ldr-order" class="form-control" value="1" min="1" max="99">
+                      <input type="number" id="ldr-order" class="form-control" min="1" max="99" required>
                     </div>
                   </div>
 
@@ -740,7 +747,7 @@
                   </div>
 
                   <div style="display: flex; justify-content: flex-end;">
-                    <button type="submit" class="btn btn-primary btn-md">➕ إضافة واعتماد القيادي</button>
+                    <button type="submit" id="cms-leader-submit-btn" class="btn btn-primary btn-md">➕ إضافة واعتماد القيادي</button>
                   </div>
                 </form>
               </div>
@@ -1116,15 +1123,21 @@
     </div>
   </div>
 
+  <!-- View 10: System Data Maintenance & Production Preparation -->
+  <div id="view-system-data" class="portal-tab-view" style="display: none; flex-direction: column; gap: var(--space-5);">
+    <!-- Dynamically populated by renderSystemDataManagementView -->
+  </div>
+
   <script type="module">
     import { checkRouteAccess } from '../js/router-guard.js';
-    import { initComponents } from '../js/components.js?v=11.0';
+    import { initComponents, showToast, showConfirmModal } from '../js/components.js?v=11.0';
     import { initI18n } from '../js/i18n.js';
     import { getCurrentUser } from '../js/auth.js';
-    import { getSchoolProfile, saveSchoolProfile } from '../js/services/school-service.js';
+    import { getSchoolProfile, saveSchoolProfile, purgeDemoData, restoreDemoData } from '../js/services/school-service.js';
     import { getTabletBatches, getTabletDevices } from '../js/services/tablet-service.js';
     import { getAuditLogs, recordAuditEvent, filterAuditLogs, exportAuditLogsToCsv, AUDIT_ROLES_MAP, AUDIT_CATEGORIES_MAP } from '../js/services/audit-service.js';
     import { getCmsItems, createCmsItem, deleteCmsItem } from '../js/services/cms-service.js';
+    import { compressMediaImage, uploadMediaImage } from '../js/services/cloudinary-service.js';
     import { getSchoolClasses, createSchoolClass } from '../js/services/academic-service.js';
     import { getStudents } from '../js/services/student-service.js';
     import { getWeeklyAttendanceTrends } from '../js/services/attendance-service.js';
@@ -1150,6 +1163,8 @@
     let allAuditLogs = [];
     let currentMsgFilter = 'inbox';
     let loadedMessages = [];
+    const initializedViews = new Set();
+    let cmsHubLoadPromise = null;
 
     // --------------------------------------------------------------------------
     // Tab & View Navigation Routing (Single Page Application Hub)
@@ -1164,6 +1179,7 @@
       social: document.getElementById('view-social'),
       'gate-pass': document.getElementById('view-gate-pass'),
       messages: document.getElementById('view-messages'),
+      'system-data': document.getElementById('view-system-data'),
     };
 
     const sidebarLinks = {
@@ -1176,6 +1192,7 @@
       social: document.getElementById('nav-social-link'),
       'gate-pass': document.getElementById('nav-gate-pass-link'),
       messages: document.getElementById('nav-messages-link'),
+      'system-data': document.getElementById('nav-system-data-link'),
     };
 
     async function switchView(tabKey) {
@@ -1188,15 +1205,209 @@
         }
       });
 
+      if (initializedViews.has(activeKey)) return;
       if (activeKey === 'overview') await loadOverviewDynamicSections();
-      if (activeKey === 'audit-logs') loadAuditLogsSection();
-      if (activeKey === 'cms-hub') loadCmsHubSection();
+      if (activeKey === 'audit-logs') await loadAuditLogsSection();
+      if (activeKey === 'cms-hub') await loadCmsHubSection();
       if (activeKey === 'gallery') await renderGalleryView(views.gallery);
       if (activeKey === 'tablets') await renderTabletsView(views.tablets);
       if (activeKey === 'students') await renderStudentsView(views.students);
       if (activeKey === 'social') await renderSocialView(views.social);
       if (activeKey === 'gate-pass') await renderGatePassView(views['gate-pass']);
-      if (activeKey === 'messages') loadMessagesSection();
+      if (activeKey === 'messages') await loadMessagesSection();
+      if (activeKey === 'system-data') await renderSystemDataManagementView();
+      initializedViews.add(activeKey);
+    }
+
+    async function renderSystemDataManagementView() {
+      const container = views['system-data'];
+      if (!container) return;
+
+      const isCleanMode = localStorage.getItem('dse_clean_mode_sch_cairo_sec_01') === 'true';
+
+      container.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: var(--space-5);">
+          <!-- Header -->
+          <div>
+            <h1 style="font-size: var(--text-2xl); font-weight: 800; color: var(--color-primary-950); margin-bottom: var(--space-1);">
+              ⚙️ تهيئة وإدارة بيانات المنظومة والإنتاج الفعلي
+            </h1>
+            <p style="font-size: var(--text-sm); color: var(--text-muted); margin: 0;">
+              التحكم في وضع تشغيل المنظومة: التبديل بين البيانات التجريبية (Demo Seed) والبدء الفعلي بالبيانات الحقيقية للمدرسة.
+            </p>
+          </div>
+
+          <!-- Operational Status Card -->
+          <div class="panel" style="border-inline-start: 4px solid ${isCleanMode ? '#10b981' : '#f59e0b'};">
+            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-2);">
+              <h3 class="panel-title" style="margin: 0;">حالة قاعدة البيانات التشغيلية</h3>
+              <span class="badge ${isCleanMode ? 'badge-success' : 'badge-warning'}" style="font-size: var(--text-sm); font-weight: 700;">
+                ${isCleanMode ? '🟢 وضع الإنتاج الحقيقي (Clean Mode) — جاهز لتسجيل بيانات المدرسة' : '🟡 وضع العرض التجريبي (Demo Mode) — بيانات افتراضية للاختبار'}
+              </span>
+            </div>
+            <div class="panel-body">
+              <p style="font-size: var(--text-sm); color: var(--text-secondary); line-height: 1.6; margin: 0;">
+                ${isCleanMode 
+                  ? 'المنظومة مهيأة حالياً لوضع العمل الحقيقي. جميع السجلات التي يتم قيدها بواسطة شؤون الطلاب، مسؤول التطوير، والمعلمين هي سجلات فعلية معتمدة.'
+                  : 'المنظومة تحتوي حالياً على حزمة بيانات تجريبية (طلاب افتراضيين، عهدة تابلت تجريبية، تقييمات نموذجية) لغايات العرض والتدريب. يمكنك تصفيرها للبدء الحقيقي في أي وقت.'}
+              </p>
+            </div>
+          </div>
+
+          <!-- Three Column Action Cards -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4);">
+            <!-- Danger Action: Purge to Clean -->
+            <div class="panel" style="border: 1px solid rgba(239, 68, 68, 0.3); background: var(--bg-surface);">
+              <div class="panel-header" style="background: rgba(239, 68, 68, 0.05);">
+                <h3 class="panel-title" style="color: #ef4444; margin: 0;">🗑️ تصفير السجلات والبدء الحقيقي</h3>
+              </div>
+              <div class="panel-body" style="display: flex; flex-direction: column; justify-content: space-between; gap: var(--space-4);">
+                <p style="font-size: var(--text-xs); color: var(--text-muted); line-height: 1.6; margin: 0;">
+                  يقوم هذا الإجراء بمسح كافة سجلات الطلاب التجريبية، وعهد التابلت، والدرجات، والتصاريح التجريبية، لتصبح المنظومة نظيفة تماماً للعام الدراسي الفعلي. 
+                  <br><strong style="color: var(--color-primary-950);">ملاحظة هامة:</strong> تظل حسابات هيئة التدريس والإدارة المدرسية محفوظة بالكامل.
+                </p>
+                <div>
+                  <button type="button" id="btn-purge-demo-data" class="btn btn-danger btn-md" style="width: 100%; font-weight: 700; background: #dc2626; color: #fff; border: none;">
+                    تصفير السجلات والبدء بالبيانات الحقيقية ⚠️
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Restore Action: Seed Demo -->
+            <div class="panel" style="border: 1px solid var(--border-light); background: var(--bg-surface);">
+              <div class="panel-header" style="background: var(--bg-surface-subtle);">
+                <h3 class="panel-title" style="margin: 0;">🔄 استعادة البيانات التجريبية (Demo)</h3>
+              </div>
+              <div class="panel-body" style="display: flex; flex-direction: column; justify-content: space-between; gap: var(--space-4);">
+                <p style="font-size: var(--text-xs); color: var(--text-muted); line-height: 1.6; margin: 0;">
+                  في حال رغبتكم في تجربة المنظومة أو تدريب الكوادر المدرسية عليها بنماذج افتراضية كاملة (عائلة المنشاوي، أجهزة التابلت، التقييمات، والجداول)، يمكنك استعادة حزمة الاختبار بضغطة زر واحدة.
+                </p>
+                <div>
+                  <button type="button" id="btn-restore-demo-data" class="btn btn-outline btn-md" style="width: 100%; font-weight: 700;">
+                    إعادة تحميل البيانات التجريبية للاختبار 🔄
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Backup & Restore Action -->
+            <div class="panel" style="border: 1px solid rgba(59, 130, 246, 0.3); background: var(--bg-surface);">
+              <div class="panel-header" style="background: rgba(59, 130, 246, 0.05);">
+                <h3 class="panel-title" style="color: #2563eb; margin: 0;">💾 النسخ الاحتياطي واسترجاع البيانات</h3>
+              </div>
+              <div class="panel-body" style="display: flex; flex-direction: column; justify-content: space-between; gap: var(--space-4);">
+                <p style="font-size: var(--text-xs); color: var(--text-muted); line-height: 1.6; margin: 0;">
+                  يمكنك تصدير نسخة احتياطية مشفرة وشاملة لكافة بيانات المدرسة (ملفات الطلاب، عهد التابلت، الهوية الرسمية، والمحتوى) كملف JSON وحفظه على جهازك، أو استرجاعه في ثوانٍ.
+                </p>
+                <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+                  <button type="button" id="btn-backup-system-data" class="btn btn-primary btn-md" style="width: 100%; font-weight: 700;">
+                    📥 تصدير نسخة احتياطية كاملة (JSON)
+                  </button>
+                  <input type="file" id="input-restore-backup-file" accept=".json" style="display: none;">
+                  <button type="button" id="btn-restore-from-backup" class="btn btn-outline btn-md" style="width: 100%; font-weight: 700;">
+                    📤 استرجاع قاعدة البيانات من ملف
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Wire Purge button
+      document.getElementById('btn-purge-demo-data')?.addEventListener('click', async () => {
+        const ok = await showConfirmModal({
+          title: 'تصفير وحذف البيانات التجريبية',
+          message: 'هل أنت متأكد من رغبتك في تصفير البيانات التجريبية وبدء التشغيل الحقيقي للمدرسة؟ سيتم تفريغ قوائم الطلاب وأجهزة التابلت لتسجيل طلابكم الحقيقيين.',
+          confirmText: 'نعم، تصفير والبدء الحقيقي',
+          danger: true,
+        });
+        if (!ok) return;
+
+        await purgeDemoData();
+        showToast('✓ تم تصفير البيانات بنجاح! المنظومة الآن في وضع العمل الحقيقي (Clean Mode).');
+        setTimeout(() => window.location.reload(), 800);
+      });
+
+      // Wire Restore button
+      document.getElementById('btn-restore-demo-data')?.addEventListener('click', async () => {
+        const ok = await showConfirmModal({
+          title: 'استعادة البيانات التجريبية',
+          message: 'هل ترغب في إعادة تحميل حزمة البيانات التجريبية النموذجية (الطلاب، الأجهزة، والتقييمات للاختبار)؟',
+          confirmText: 'استعادة البيانات التجريبية',
+        });
+        if (!ok) return;
+
+        await restoreDemoData();
+        showToast('✓ تمت استعادة البيانات التجريبية النموذجية بنجاح!');
+        setTimeout(() => window.location.reload(), 800);
+      });
+
+      // Wire Backup Download (JSON)
+      document.getElementById('btn-backup-system-data')?.addEventListener('click', () => {
+        const backupData = {
+          dse_version: '2.0_vanilla',
+          exportedAt: new Date().toISOString(),
+          schoolId: 'sch_cairo_sec_01',
+          data: {},
+        };
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('dse_')) {
+            backupData.data[key] = localStorage.getItem(key);
+          }
+        }
+        const jsonStr = JSON.stringify(backupData, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const dateTag = new Date().toISOString().split('T')[0];
+        a.href = url;
+        a.download = `نسخة_احتياطية_المدرسة_الرقمية_${dateTag}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('✓ تم إنشاء وتنزيل ملف النسخة الاحتياطية بنجاح.');
+      });
+
+      // Wire Backup Restore from file
+      const restoreFileInput = document.getElementById('input-restore-backup-file');
+      document.getElementById('btn-restore-from-backup')?.addEventListener('click', () => {
+        restoreFileInput?.click();
+      });
+
+      restoreFileInput?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+          try {
+            const parsed = JSON.parse(evt.target.result);
+            if (!parsed.data || typeof parsed.data !== 'object') {
+              showToast('ملف النسخة الاحتياطية غير صالح.', 'error');
+              return;
+            }
+            const ok = await showConfirmModal({
+              title: 'استرجاع النسخة الاحتياطية',
+              message: `هل أنت متأكد من استرجاع النسخة الاحتياطية المؤرخة (${parsed.exportedAt || 'سابقاً'})؟ سيتم استبدال البيانات الحالية ببيانات الملف.`,
+              confirmText: 'نعم، استرجاع الآن',
+              danger: true,
+            });
+            if (!ok) return;
+
+            Object.keys(parsed.data).forEach((key) => {
+              localStorage.setItem(key, parsed.data[key]);
+            });
+            showToast('✓ تم استرجاع قاعدة بيانات المنظومة بنجاح!');
+            setTimeout(() => window.location.reload(), 1000);
+          } catch (err) {
+            showToast('فشل قراءة ملف النسخة الاحتياطية: ' + err.message, 'error');
+          }
+        };
+        reader.readAsText(file, 'UTF-8');
+      });
     }
 
     window.addEventListener('hashchange', () => {
@@ -1488,12 +1699,19 @@
     });
 
     async function loadCmsHubSection() {
-      await Promise.all([
+      if (cmsHubLoadPromise) return cmsHubLoadPromise;
+      cmsHubLoadPromise = Promise.all([
         loadCmsLeaders(),
         loadCmsNews(),
         loadCmsActivities(),
         loadCmsCalendar(),
       ]);
+      try {
+        await cmsHubLoadPromise;
+      } catch (error) {
+        cmsHubLoadPromise = null;
+        throw error;
+      }
     }
 
     // CMS 1: Leadership
@@ -1504,16 +1722,29 @@
     const ldrPhotoPreview = document.getElementById('ldr-photo-preview');
 
     ldrPhotoBtn.addEventListener('click', () => ldrPhotoFile.click());
-    ldrPhotoFile.addEventListener('change', () => {
+    ldrPhotoFile.addEventListener('change', async () => {
       const file = ldrPhotoFile.files[0];
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        ldrPhotoUrl.value = e.target.result;
-        ldrPhotoPreview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+      ldrPhotoBtn.disabled = true;
+      ldrPhotoUrl.value = '';
+      try {
+        ldrPhotoBtn.textContent = 'جارٍ ضغط الصورة...';
+        const compressedFile = await compressMediaImage(file);
+        const uploaded = await uploadMediaImage(compressedFile, {
+          assetType: 'leadership',
+          onStatus: (status) => { ldrPhotoBtn.textContent = status; },
+          onProgress: (progress) => { ldrPhotoBtn.textContent = `جارٍ الرفع إلى Cloudinary ${progress}%`; },
+        });
+        ldrPhotoUrl.value = uploaded.secureUrl;
+        ldrPhotoPreview.innerHTML = `<img src="${uploaded.secureUrl}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
         ldrPhotoClearBtn.style.display = 'inline-flex';
-      };
-      reader.readAsDataURL(file);
+      } catch (error) {
+        ldrPhotoFile.value = '';
+        showToast(error.message, 'error');
+      } finally {
+        ldrPhotoBtn.disabled = false;
+        ldrPhotoBtn.textContent = ldrPhotoUrl.value ? '✓ تم رفع الصورة' : '📸 رفع صورة';
+      }
     });
     ldrPhotoClearBtn.addEventListener('click', () => {
       ldrPhotoFile.value = '';
@@ -1524,23 +1755,52 @@
 
     document.getElementById('cms-leader-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      await createCmsItem({
-        category: 'leadership',
-        title: document.getElementById('ldr-name').value.trim(),
-        summary: document.getElementById('ldr-title').value.trim(),
-        content: document.getElementById('ldr-bio').value.trim(),
-        sortOrder: Number(document.getElementById('ldr-order').value) || 1,
-        imageUrl: ldrPhotoUrl.value.trim(),
-        authorName: currentUser.displayName,
-      });
-      document.getElementById('cms-leader-form').reset();
-      ldrPhotoClearBtn.click();
-      await loadCmsLeaders();
+      const sortOrder = Number(document.getElementById('ldr-order').value);
+      if (!Number.isInteger(sortOrder) || sortOrder < 1 || sortOrder > 99) {
+        showToast('أدخل رقم ترتيب صحيحًا من 1 إلى 99.', 'error');
+        return;
+      }
+
+      const leaders = await getCmsItems('leadership', 'all');
+      if (leaders.some(leader => Number(leader.sortOrder) === sortOrder)) {
+        showToast(`الترتيب رقم ${sortOrder} مستخدم بالفعل. اختر رقمًا آخر.`, 'error');
+        document.getElementById('ldr-order').focus();
+        return;
+      }
+
+      const submitButton = document.getElementById('cms-leader-submit-btn');
+      submitButton.disabled = true;
+      submitButton.textContent = 'جارٍ حفظ بيانات القيادي...';
+      try {
+        await createCmsItem({
+          category: 'leadership',
+          title: document.getElementById('ldr-name').value.trim(),
+          summary: document.getElementById('ldr-title').value.trim(),
+          content: document.getElementById('ldr-bio').value.trim(),
+          sortOrder,
+          imageUrl: ldrPhotoUrl.value.trim(),
+          authorName: currentUser.displayName,
+          requireRemote: true,
+        });
+        document.getElementById('cms-leader-form').reset();
+        ldrPhotoClearBtn.click();
+        await loadCmsLeaders();
+        showToast('تم حفظ بيانات القيادي بنجاح.');
+      } catch (error) {
+        showToast(error.message || 'تعذر حفظ بيانات القيادي.', 'error');
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = '➕ إضافة واعتماد القيادي';
+      }
     });
 
     async function loadCmsLeaders() {
       const leaders = await getCmsItems('leadership', 'all');
       leaders.sort((a, b) => (Number(a.sortOrder) || 99) - (Number(b.sortOrder) || 99));
+      const usedOrders = new Set(leaders.map(leader => Number(leader.sortOrder)).filter(Number.isInteger));
+      let nextOrder = 1;
+      while (usedOrders.has(nextOrder)) nextOrder += 1;
+      document.getElementById('ldr-order').value = String(nextOrder);
       const tbody = document.getElementById('cms-leaders-tbody');
       if (leaders.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:var(--space-6);color:var(--text-muted);">لم يتم إضافة قيادات مدرسية بعد.</td></tr>`;
@@ -2189,10 +2449,15 @@
 
         tbody.querySelectorAll('.delete-overview-cms-btn').forEach((btn) => {
           btn.addEventListener('click', async () => {
-            if (confirm('هل أنت متأكد من رغبتك في حذف هذا المحتوى من الموقع العام؟')) {
+            const ok = await showConfirmModal({
+              title: 'حذف المحتوى من الموقع',
+              message: 'هل أنت متأكد من رغبتك في حذف هذا المحتوى من الموقع العام؟',
+              danger: true,
+            });
+            if (ok) {
               await deleteCmsItem(btn.dataset.cmsId);
+              showToast('تم حذف المحتوى بنجاح');
               await loadOverviewCms();
-              await loadOverviewAuditTrail();
               await loadOverviewAuditTrail();
             }
           });
@@ -2227,10 +2492,11 @@
               await createCmsItem({ title, category, status, summary, authorName: currentUser.displayName });
               form.reset();
               if (formPanel) formPanel.style.display = 'none';
+              showToast('✓ تم نشر المحتوى بنجاح بالموقع العام.');
               await loadOverviewCms();
               await loadOverviewAuditTrail();
             } catch (err) {
-              alert('خطأ أثناء حفظ المحتوى: ' + err.message);
+              showToast('خطأ أثناء حفظ المحتوى: ' + err.message, 'error');
             }
           });
         }

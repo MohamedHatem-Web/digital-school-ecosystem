@@ -26,10 +26,7 @@
 ---
 
 ## 3. بيانات حسابات الاختبار المعتمدة (QA Accounts Credentials)
-جميع الحسابات مفعلة على خوادم **Firebase Authentication** وتستخدم كلمة المرور الموحدة:
-```text
-Password@2026
-```
+حسابات الاختبار تُدار عبر **Firebase Authentication**. لا توجد كلمة مرور موحدة آمنة؛ استخدم بيانات اعتماد اختبار مخصصة خارج المستودع، ودوّر أي كلمة مرور ظهرت في مستندات أو محادثات.
 
 | الدور الوظيفي | البريد الإلكتروني | مسار اللوحة المباشر |
 |---|---|---|
@@ -74,11 +71,7 @@ Password@2026
   firebase deploy --only firestore:rules
   ```
   (باستخدام ملف [`firestore.rules`](firestore.rules)).
-- لنشر قواعد Storage:
-  ```bash
-  firebase deploy --only storage
-  ```
-  (باستخدام ملف [`storage.rules`](storage.rules)).
+صور الموقع تعتمد على Cloudinary عبر Cloudflare Worker؛ مستندات PDF غير متاحة حتى يُعتمد مزود تخزين ملفات آمن.
 
 ---
 

@@ -181,3 +181,67 @@ export function applySchoolBranding(profile) {
     }
   });
 }
+
+/**
+ * Purge all demo/mock records from localStorage and cache, leaving system fresh for real production entry.
+ */
+export async function purgeDemoData(schoolId = DEFAULT_SCHOOL_ID) {
+  // Purge all operational caches
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const k = localStorage.key(i);
+    if (k && (
+      k.startsWith('dse_students_') ||
+      k.startsWith('dse_devices_') ||
+      k.startsWith('dse_batches_') ||
+      k.startsWith('dse_grades_') ||
+      k.startsWith('dse_assessments_') ||
+      k.startsWith('dse_attendance_') ||
+      k.startsWith('dse_cms_') ||
+      k.startsWith('dse_gate_passes_') ||
+      k.startsWith('dse_social_') ||
+      k.startsWith('dse_messages_')
+    )) {
+      localStorage.removeItem(k);
+    }
+  }
+
+  // Set clean mode so services return empty sets and do not auto-inject mocks
+  localStorage.setItem(`dse_clean_mode_${schoolId}`, 'true');
+
+  await recordAuditEvent({
+    action: 'تهيئة وتصفير السجلات والبيانات التجريبية',
+    target: 'قاعدة بيانات المنظومة المركزية',
+    details: 'تم تفريغ كافة السجلات التجريبية استعداداً لبدء العمل الحقيقي للمدرسة',
+    operatorRole: 'director',
+    schoolId,
+  });
+
+  return true;
+}
+
+/**
+ * Restore seed demo records for presentation/testing
+ */
+export async function restoreDemoData(schoolId = DEFAULT_SCHOOL_ID) {
+  localStorage.removeItem(`dse_clean_mode_${schoolId}`);
+
+  // Purge caches to trigger fresh seeding
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('dse_')) {
+      if (!k.includes('user_session') && !k.includes('school_')) {
+        localStorage.removeItem(k);
+      }
+    }
+  }
+
+  await recordAuditEvent({
+    action: 'استعادة السجلات والبيانات التجريبية (Demo Seed)',
+    target: 'قاعدة بيانات المنظومة المركزية',
+    details: 'تمت استعادة حزمة البيانات التجريبية لغايات العرض والتدريب',
+    operatorRole: 'director',
+    schoolId,
+  });
+
+  return true;
+}

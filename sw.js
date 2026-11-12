@@ -3,7 +3,7 @@
 // Full Offline & Cross-Page Install Engine with Offline Fallback
 // ==========================================================================
 
-const CACHE_NAME = 'dse-pwa-v11.0-prod';
+const CACHE_NAME = 'dse-pwa-v12.0-prod';
 const CORE_ASSETS = [
   '/',
   '/index.html',

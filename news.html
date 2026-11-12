@@ -76,7 +76,25 @@
   <main style="padding-block: var(--space-16);">
     <div class="container">
       <div id="news-grid-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-6);">
-        <!-- Dynamically populated or empty state -->
+        <!-- Skeleton Loading Placeholders -->
+        <article class="panel skeleton-panel" style="padding: 0; overflow: hidden;">
+          <div class="skeleton" style="width: 100%; height: 160px; border-radius: 0;"></div>
+          <div style="padding: var(--space-5);">
+            <div class="skeleton skeleton-badge" style="width: 100px; margin-bottom: var(--space-3);"></div>
+            <div class="skeleton skeleton-text w-3-4" style="height: 18px; margin-bottom: var(--space-2);"></div>
+            <div class="skeleton skeleton-text w-full" style="height: 12px; margin-bottom: 6px;"></div>
+            <div class="skeleton skeleton-text w-half" style="height: 12px;"></div>
+          </div>
+        </article>
+        <article class="panel skeleton-panel" style="padding: 0; overflow: hidden;">
+          <div class="skeleton" style="width: 100%; height: 160px; border-radius: 0;"></div>
+          <div style="padding: var(--space-5);">
+            <div class="skeleton skeleton-badge" style="width: 100px; margin-bottom: var(--space-3);"></div>
+            <div class="skeleton skeleton-text w-3-4" style="height: 18px; margin-bottom: var(--space-2);"></div>
+            <div class="skeleton skeleton-text w-full" style="height: 12px; margin-bottom: 6px;"></div>
+            <div class="skeleton skeleton-text w-half" style="height: 12px;"></div>
+          </div>
+        </article>
       </div>
       <div class="empty-state" id="news-empty-state" style="display: none;">
         <div class="empty-state-icon">📢</div>

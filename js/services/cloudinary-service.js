@@ -33,6 +33,52 @@ export function validateMediaFile(file) {
   return { valid: true };
 }
 
+export async function compressMediaImage(file, maxDimension = 1000, quality = 0.82) {
+  if (!file || !file.type.startsWith('image/')) return file;
+
+  const image = await createImageBitmap(file);
+  const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('تعذر تجهيز الصورة للرفع.');
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  image.close();
+
+  const blob = await new Promise((resolve, reject) => {
+    canvas.toBlob((result) => result ? resolve(result) : reject(new Error('تعذر ضغط الصورة.')), 'image/jpeg', quality);
+  });
+  return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
+}
+
+function uploadToCloudinary(uploadUrl, formData, onProgress) {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open('POST', uploadUrl);
+    request.timeout = 60000;
+    request.upload.onprogress = (event) => {
+      if (event.lengthComputable && typeof onProgress === 'function') {
+        onProgress(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+    request.onload = () => {
+      let payload;
+      try {
+        payload = JSON.parse(request.responseText);
+      } catch {
+        reject(new Error('استجابة Cloudinary غير مفهومة.'));
+        return;
+      }
+      if (request.status >= 200 && request.status < 300) resolve(payload);
+      else reject(new Error(payload.error?.message || 'فشل رفع الصورة إلى Cloudinary.'));
+    };
+    request.onerror = () => reject(new Error('تعذر الاتصال بخدمة رفع الصور.'));
+    request.ontimeout = () => reject(new Error('انتهت مهلة رفع الصورة. تحقق من الاتصال ثم أعد المحاولة.'));
+    request.send(formData);
+  });
+}
+
 /**
  * Uploads an image using Cloudflare Worker signed payload directly to Cloudinary.
  * @param {File} file - The image file to upload.
@@ -56,96 +102,51 @@ export async function uploadMediaImage(file, options = {}) {
     throw new Error('غير مصرح لك برفع الوسائط. هذه الصلاحية مقتصرة على الإدارة ومسؤول التطوير التكنولوجي.');
   }
 
+  const workerUrl = MEDIA_CONFIG.workerGatewayUrl;
+  if (!workerUrl) {
+    throw new Error('رفع الصور متوقف مؤقتًا حتى نشر بوابة الرفع الآمنة وتدوير بيانات Cloudinary.');
+  }
+
   const schoolId = options.schoolId || currentUser.schoolId || 'sch_cairo_sec_01';
   const albumId = options.albumId || 'general';
   const assetType = options.assetType || 'album';
 
-  // Retrieve Firebase ID Token
-  let idToken = null;
-  if (auth && auth.currentUser) {
-    try {
-      idToken = await auth.currentUser.getIdToken(true);
-    } catch (err) {
-      console.warn('Could not fetch fresh Firebase ID Token', err);
-    }
+  if (!auth?.currentUser) {
+    throw new Error('تعذر التحقق من جلسة Firebase. سجل الدخول مرة أخرى ثم أعد المحاولة.');
   }
 
-  // Fallback token if simulated session
-  if (!idToken) {
-    idToken = `dummy-jwt-token-role-${currentUser.role}-${currentUser.uid}`;
+  options.onStatus?.('جارٍ التحقق من الصلاحية...');
+  const idToken = await auth.currentUser.getIdToken(false);
+  options.onStatus?.('جارٍ تجهيز طلب الرفع الآمن...');
+  const signResponse = await fetch(`${workerUrl.replace(/\/$/, '')}/api/media/sign-upload`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${idToken}`
+    },
+    body: JSON.stringify({
+      schoolId,
+      albumId,
+      assetType,
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: file.size
+    })
+  });
+  const signData = await signResponse.json().catch(() => ({}));
+  if (!signResponse.ok) {
+    throw new Error(signData.error || 'تعذر بدء الرفع الآمن.');
   }
 
-  let uploadSuccess = false;
-  let resultData = null;
-
-  // 1. Attempt Signed Upload via Cloudflare Worker Gateway
-  try {
-    const signResponse = await fetch(`${MEDIA_CONFIG.workerGatewayUrl}/api/media/sign-upload`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${idToken}`
-      },
-      body: JSON.stringify({
-        schoolId,
-        albumId,
-        assetType,
-        fileName: file.name,
-        fileType: file.type,
-        fileSize: file.size,
-        role: currentUser.role
-      })
-    });
-
-    if (signResponse.ok) {
-      const signData = await signResponse.json();
-      
-      // Upload directly to Cloudinary using signed parameters
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('api_key', signData.apiKey);
-      formData.append('timestamp', signData.timestamp);
-      formData.append('signature', signData.signature);
-      formData.append('folder', signData.folder);
-
-      const cloudRes = await fetch(signData.uploadUrl, {
-        method: 'POST',
-        body: formData
-      });
-
-      if (cloudRes.ok) {
-        resultData = await cloudRes.json();
-        uploadSuccess = true;
-      }
-    }
-  } catch (workerErr) {
-    console.info('Worker gateway not reachable, utilizing resilient local storage fallback for demonstration', workerErr);
-  }
-
-  // 2. Resilient Fallback for Local / Staging Environments
-  if (!uploadSuccess) {
-    const reader = new FileReader();
-    const dataUrl = await new Promise((resolve, reject) => {
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-
-    const timestamp = Date.now();
-    const uniqueId = `img_${timestamp}_${Math.random().toString(36).substring(2, 7)}`;
-    const publicId = `schools/${schoolId}/albums/${albumId}/${uniqueId}`;
-
-    resultData = {
-      public_id: publicId,
-      secure_url: dataUrl,
-      width: 1200,
-      height: 800,
-      format: file.type.split('/')[1] || 'jpg',
-      bytes: file.size,
-      original_filename: file.name.replace(/\.[^/.]+$/, ""),
-      created_at: new Date().toISOString()
-    };
-  }
+  options.onStatus?.('جارٍ الرفع إلى Cloudinary...');
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('api_key', signData.apiKey);
+  formData.append('timestamp', signData.timestamp);
+  formData.append('signature', signData.signature);
+  formData.append('folder', signData.folder);
+  const resultData = await uploadToCloudinary(signData.uploadUrl, formData, options.onProgress);
+  options.onStatus?.('اكتمل رفع الصورة.');
 
   // Return standardized media metadata object
   return {
@@ -177,30 +178,21 @@ export async function deleteMediaImage(publicId, schoolId) {
     throw new Error('Unauthorized');
   }
 
-  let idToken = null;
-  if (auth && auth.currentUser) {
-    idToken = await auth.currentUser.getIdToken(false);
-  }
-  if (!idToken) idToken = `dummy-jwt-token-role-${currentUser.role}-${currentUser.uid}`;
+  if (!MEDIA_CONFIG.workerGatewayUrl) throw new Error('حذف الصور متوقف حتى نشر بوابة الرفع الآمنة.');
+  if (!auth?.currentUser) throw new Error('تعذر التحقق من جلسة Firebase.');
 
-  try {
-    const res = await fetch(`${MEDIA_CONFIG.workerGatewayUrl}/api/media/delete`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${idToken}`
-      },
-      body: JSON.stringify({
-        publicId,
-        schoolId: schoolId || currentUser.schoolId,
-        role: currentUser.role
-      })
-    });
-    return res.ok;
-  } catch (err) {
-    console.warn('Worker delete call failed:', err);
-    return true; // Return true so metadata can be removed from Firestore
-  }
+  const idToken = await auth.currentUser.getIdToken(false);
+  const res = await fetch(`${MEDIA_CONFIG.workerGatewayUrl.replace(/\/$/, '')}/api/media/delete`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${idToken}`
+    },
+    body: JSON.stringify({ publicId, schoolId: schoolId || currentUser.schoolId })
+  });
+  const result = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(result.error || 'فشل حذف الصورة من Cloudinary.');
+  return result.success === true;
 }
 
 /**

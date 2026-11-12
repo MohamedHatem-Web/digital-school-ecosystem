@@ -264,7 +264,8 @@ export function initComponents() {
         // Update hero CTA button if exists on homepage
         document.querySelectorAll('.hero-actions-bar a[href*="login"]').forEach((btn) => {
           btn.href = dest;
-          btn.innerHTML = `🚀 الدخول إلى لوحة التحكم (${userName})`;
+          btn.innerHTML = '<span aria-hidden="true">🚀</span> الدخول إلى لوحة التحكم';
+          btn.title = `لوحة تحكم ${userName}`;
         });
 
         // Update footer portal links
@@ -373,5 +374,162 @@ export function initComponents() {
   } else {
     setup();
   }
+}
+
+/**
+ * Global In-Page Toast Notification (Chic card alert inside the page)
+ */
+export function showToast(message, type = 'success', duration = 3800) {
+  let container = document.getElementById('dse-toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'dse-toast-container';
+    container.style.cssText = 'position: fixed; top: 24px; left: 50%; transform: translateX(-50%); z-index: 9999999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; direction: rtl; max-width: 90vw; width: 440px;';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    pointer-events: auto;
+    padding: 12px 18px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    font-weight: 700;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 1px solid;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  `;
+
+  let icon = '✓';
+  let bg = '#0f172a';
+  let border = '#22c55e';
+  let color = '#f8fafc';
+  let iconColor = '#22c55e';
+
+  const lower = String(message).toLowerCase();
+  if (type === 'success' || message.startsWith('✓') || message.includes('بنجاح')) {
+    icon = '✓';
+    bg = 'linear-gradient(135deg, #064e3b 0%, #022c22 100%)';
+    border = '#10b981';
+    iconColor = '#34d399';
+  } else if (type === 'error' || type === 'danger' || message.includes('خطأ') || message.includes('فشل')) {
+    icon = '✕';
+    bg = 'linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%)';
+    border = '#ef4444';
+    iconColor = '#f87171';
+  } else if (type === 'warning' || message.includes('تنبيه') || message.includes('تحذير')) {
+    icon = '⚠️';
+    bg = 'linear-gradient(135deg, #78350f 0%, #451a03 100%)';
+    border = '#f59e0b';
+    iconColor = '#fbbf24';
+  } else {
+    icon = 'ℹ️';
+    bg = 'linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)';
+    border = '#3b82f6';
+    iconColor = '#60a5fa';
+  }
+
+  toast.style.background = bg;
+  toast.style.borderColor = border;
+  toast.style.color = color;
+
+  const cleanMsg = String(message).replace(/^[✓✕⚠️ℹ️]\s*/, '');
+  toast.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,0.18); color: ${iconColor}; font-weight: 800; font-size: 13px;">${icon}</span>
+      <span>${cleanMsg}</span>
+    </div>
+    <button type="button" style="background: none; border: none; color: rgba(255,255,255,0.7); cursor: pointer; font-size: 14px; padding: 2px 6px;">✕</button>
+  `;
+
+  const closeBtn = toast.querySelector('button');
+  const removeToast = () => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-10px)';
+    setTimeout(() => { toast.remove(); }, 250);
+  };
+  closeBtn.addEventListener('click', removeToast);
+
+  container.appendChild(toast);
+  setTimeout(removeToast, duration);
+}
+
+/**
+ * Global In-Page Confirmation Modal (Replaces native browser confirm)
+ */
+export function showConfirmModal({ title = 'تأكيد الإجراء المطلوب', message = 'هل أنت متأكد من رغبتك في المتابعة؟', confirmText = 'تأكيد', cancelText = 'إلغاء', danger = false } = {}) {
+  return new Promise((resolve) => {
+    const existing = document.getElementById('dse-confirm-modal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'dse-confirm-modal';
+    overlay.style.cssText = `
+      position: fixed; inset: 0; z-index: 99999999;
+      background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px; direction: rtl;
+    `;
+
+    overlay.innerHTML = `
+      <div style="
+        background: var(--bg-surface, #0f172a);
+        color: var(--text-primary, #ffffff);
+        border: 1px solid var(--border-subtle, #334155);
+        border-radius: 14px;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+        max-width: 440px; width: 100%;
+        padding: 24px;
+      ">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+          <div style="width: 40px; height: 40px; border-radius: 50%; background: ${danger ? 'rgba(239, 68, 68, 0.15)' : 'rgba(59, 130, 246, 0.15)'}; color: ${danger ? '#ef4444' : '#3b82f6'}; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
+            ${danger ? '⚠️' : '❓'}
+          </div>
+          <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--color-primary-950, #f8fafc);">${title}</h3>
+        </div>
+        <p style="margin: 0 0 22px 0; font-size: 13.5px; color: var(--text-muted, #94a3b8); line-height: 1.6;">${message || ''}</p>
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" id="dse-modal-cancel" class="btn btn-outline btn-sm" style="min-width: 80px;">${cancelText}</button>
+          <button type="button" id="dse-modal-confirm" class="btn ${danger ? 'btn-danger' : 'btn-primary'} btn-sm" style="min-width: 95px; font-weight: 700; ${danger ? 'background: #dc2626; color: #fff; border: none;' : ''}">${confirmText}</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const cleanup = (val) => {
+      overlay.style.opacity = '0';
+      overlay.style.transition = 'opacity 0.2s ease';
+      setTimeout(() => overlay.remove(), 200);
+      resolve(val);
+    };
+
+    overlay.querySelector('#dse-modal-confirm').addEventListener('click', () => cleanup(true));
+    overlay.querySelector('#dse-modal-cancel').addEventListener('click', () => cleanup(false));
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) cleanup(false);
+    });
+    const keyHandler = (e) => {
+      if (e.key === 'Escape') {
+        window.removeEventListener('keydown', keyHandler);
+        cleanup(false);
+      }
+    };
+    window.addEventListener('keydown', keyHandler);
+  });
+}
+
+// Bind to window for global access across all pages & views
+if (typeof window !== 'undefined') {
+  window.showToast = showToast;
+  window.showConfirmModal = showConfirmModal;
+  // Override browser native alert with chic in-page toast
+  window.alert = function(msg) {
+    showToast(msg);
+  };
 }
 

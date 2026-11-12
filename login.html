@@ -309,9 +309,9 @@
             </div>
 
             <div style="display: flex; justify-content: flex-end; margin-bottom: var(--space-4);">
-              <a href="reset-password.html" style="font-size: var(--text-xs); color: var(--color-accent-400); font-weight: 600;">
-                نسيت كلمة المرور؟
-              </a>
+              <p style="font-size: var(--text-xs); color: var(--text-muted); margin: 0;">
+                لتغيير كلمة المرور، تواصل مع مسؤول التطوير التكنولوجي في المدرسة.
+              </p>
             </div>
 
             <button type="submit" id="submit-login-btn" class="login-submit-btn">
@@ -342,54 +342,8 @@
           يرجى تحديد صفة الدخول التي ترغب في المتابعة بها الآن:
         </p>
 
-        <div style="display: flex; flex-direction: column; gap: var(--space-3);">
-          <!-- Choice 1: Student Youssef -->
-          <button type="button" id="choose-student-btn" style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--bg-surface-subtle); border: 2px solid var(--border-light); border-radius: var(--radius-md); cursor: pointer; text-align: start; transition: all 0.2s ease; width: 100%;">
-            <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--color-primary-900); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
-              🎓
-            </div>
-            <div style="flex: 1;">
-              <div style="font-size: var(--text-sm); font-weight: 800; color: var(--color-primary-950);">
-                أنا الطالب: يوسف أحمد المنشاوي
-              </div>
-              <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">
-                كود: <code>2026101</code> — الصف الأول الثانوي (فصل 1/1)
-              </div>
-            </div>
-            <div style="font-size: 1.1rem; color: var(--color-primary-900);">←</div>
-          </button>
-
-          <!-- Choice 2: Student Mariam -->
-          <button type="button" id="choose-mariam-btn" style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--bg-surface-subtle); border: 2px solid var(--border-light); border-radius: var(--radius-md); cursor: pointer; text-align: start; transition: all 0.2s ease; width: 100%;">
-            <div style="width: 44px; height: 44px; border-radius: 50%; background: #0f766e; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
-              🎓
-            </div>
-            <div style="flex: 1;">
-              <div style="font-size: var(--text-sm); font-weight: 800; color: var(--color-primary-950);">
-                أنا الطالبة: مريم أحمد المنشاوي
-              </div>
-              <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">
-                كود: <code>2026102</code> — الصف الأول الثانوي (فصل 1/2)
-              </div>
-            </div>
-            <div style="font-size: 1.1rem; color: #0f766e;">←</div>
-          </button>
-
-          <!-- Choice 3: Parent -->
-          <button type="button" id="choose-parent-btn" style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--bg-surface-subtle); border: 2px solid var(--border-light); border-radius: var(--radius-md); cursor: pointer; text-align: start; transition: all 0.2s ease; width: 100%;">
-            <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--color-accent-700); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
-              👨‍👧‍👦
-            </div>
-            <div style="flex: 1;">
-              <div style="font-size: var(--text-sm); font-weight: 800; color: var(--color-primary-950);">
-                أنا ولي الأمر: أ. أحمد المنشاوي
-              </div>
-              <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">
-                متابعة الأبناء معاً (يوسف ومريم) والغياب والدرجات وإشعارات الانصراف
-              </div>
-            </div>
-            <div style="font-size: 1.1rem; color: var(--color-accent-700);">←</div>
-          </button>
+        <div id="portal-choices-container" style="display: flex; flex-direction: column; gap: var(--space-3);">
+          <!-- Dynamic Family & Student Choices Injected by JS -->
         </div>
       </div>
     </div>
@@ -399,6 +353,7 @@
   <script type="module">
     import { loginWithEmailPassword, getRoleDashboardUrl, translateAuthError, getCurrentUser, logout, setFamilySessionRole } from './js/auth.js?v=11.0';
     import { initComponents, toggleTheme } from './js/components.js?v=11.0';
+    import { getStudents } from './js/services/student-service.js';
 
     initComponents();
 
@@ -495,35 +450,97 @@
         if (isFamily) {
           setLoading(false);
           const choiceModal = document.getElementById('portal-choice-modal');
-          const chooseStudentBtn = document.getElementById('choose-student-btn');
-          const chooseMariamBtn = document.getElementById('choose-mariam-btn');
-          const chooseParentBtn = document.getElementById('choose-parent-btn');
+          const choicesContainer = document.getElementById('portal-choices-container');
+
+          // Dynamically fetch and match all students / siblings in this family
+          const allStudents = await getStudents();
+          const enteredCode = (/^\d+$/).test(email) ? email : null;
+          let myStudent = enteredCode ? allStudents.find(s => s.code === enteredCode) : allStudents.find(s => s.email === profile.email);
+
+          let familyStudents = [];
+          if (myStudent) {
+            familyStudents = allStudents.filter(s => {
+              if (s.code === myStudent.code) return true;
+              if (myStudent.siblingCodes && myStudent.siblingCodes.includes(s.code)) return true;
+              if (s.siblingCodes && s.siblingCodes.includes(myStudent.code)) return true;
+              if (myStudent.familyId && s.familyId && s.familyId === myStudent.familyId) return true;
+              if (myStudent.parentInfo?.parentPhone && s.parentInfo?.parentPhone && s.parentInfo.parentPhone === myStudent.parentInfo.parentPhone) return true;
+              return false;
+            });
+          } else if (profile.role === 'parent' || profile.email === 'parent@dse.edu.eg') {
+            familyStudents = allStudents.filter(s => {
+              if (s.parentInfo?.parentEmail === profile.email) return true;
+              if (profile.email === 'parent@dse.edu.eg' && ['2026101', '2026102'].includes(s.code)) return true;
+              return false;
+            });
+          }
+
+          if (familyStudents.length === 0) {
+            familyStudents = allStudents.filter(s => ['2026101', '2026102'].includes(s.code));
+          }
+
+          const parentName = familyStudents[0]?.parentInfo?.parentName || 'ولي الأمر';
+
+          choicesContainer.innerHTML = `
+            ${familyStudents.map((s, idx) => `
+              <button type="button" class="family-student-choice-btn" data-code="${s.code}" style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--bg-surface-subtle); border: 2px solid var(--border-light); border-radius: var(--radius-md); cursor: pointer; text-align: start; transition: all 0.2s ease; width: 100%;">
+                <div style="width: 44px; height: 44px; border-radius: 50%; background: ${idx === 0 ? 'var(--color-primary-900)' : '#0f766e'}; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
+                  🎓
+                </div>
+                <div style="flex: 1;">
+                  <div style="font-size: var(--text-sm); font-weight: 800; color: var(--color-primary-950);">
+                    أنا الطالب: ${s.name}
+                  </div>
+                  <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">
+                    كود: <code>${s.code}</code> — ${s.grade || 'مرحلة ثانوية'}
+                  </div>
+                </div>
+                <div style="font-size: 1.1rem; color: var(--color-primary-900);">←</div>
+              </button>
+            `).join('')}
+
+            <button type="button" id="choose-parent-btn" style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--bg-surface-subtle); border: 2px solid var(--border-light); border-radius: var(--radius-md); cursor: pointer; text-align: start; transition: all 0.2s ease; width: 100%;">
+              <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--color-accent-700); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
+                👨‍👧‍👦
+              </div>
+              <div style="flex: 1;">
+                <div style="font-size: var(--text-sm); font-weight: 800; color: var(--color-primary-950);">
+                  أنا ولي الأمر: ${parentName}
+                </div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">
+                  متابعة الأبناء معاً (${familyStudents.map(s => s.name.split(' ')[0]).join(' و')}) والغياب والدرجات وإشعارات الانصراف
+                </div>
+              </div>
+              <div style="font-size: 1.1rem; color: var(--color-accent-700);">←</div>
+            </button>
+          `;
 
           choiceModal.style.display = 'flex';
 
-          chooseStudentBtn.onclick = () => {
-            chooseStudentBtn.disabled = true;
-            setFamilySessionRole('student');
-            localStorage.setItem('dse_active_student_code', '2026101');
-            document.cookie = 'dse_active_student_code=2026101; path=/; max-age=2592000';
-            window.location.href = 'dashboard/student-portal.html';
-          };
-
-          if (chooseMariamBtn) {
-            chooseMariamBtn.onclick = () => {
-              chooseMariamBtn.disabled = true;
+          // Attach listeners to student buttons
+          choicesContainer.querySelectorAll('.family-student-choice-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              btn.disabled = true;
+              const code = btn.dataset.code;
               setFamilySessionRole('student');
-              localStorage.setItem('dse_active_student_code', '2026102');
-              document.cookie = 'dse_active_student_code=2026102; path=/; max-age=2592000';
+              localStorage.setItem('dse_active_student_code', code);
+              document.cookie = `dse_active_student_code=${code}; path=/; max-age=2592000`;
               window.location.href = 'dashboard/student-portal.html';
+            });
+          });
+
+          // Attach listener to parent button
+          const chooseParentBtn = document.getElementById('choose-parent-btn');
+          if (chooseParentBtn) {
+            chooseParentBtn.onclick = () => {
+              chooseParentBtn.disabled = true;
+              setFamilySessionRole('parent');
+              const familyCodes = familyStudents.map(s => s.code);
+              localStorage.setItem('dse_parent_children_codes', JSON.stringify(familyCodes));
+              document.cookie = `dse_parent_children_codes=${encodeURIComponent(JSON.stringify(familyCodes))}; path=/; max-age=2592000`;
+              window.location.href = 'dashboard/parent-portal.html';
             };
           }
-
-          chooseParentBtn.onclick = () => {
-            chooseParentBtn.disabled = true;
-            setFamilySessionRole('parent');
-            window.location.href = 'dashboard/parent-portal.html';
-          };
         } else {
           window.location.href = getRoleDashboardUrl(profile.role);
         }

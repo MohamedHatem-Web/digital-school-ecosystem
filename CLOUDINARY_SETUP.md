@@ -27,7 +27,7 @@ schools/
 ---
 
 ### 3. إعدادات التحويل التلقائي (Delivery Transformations)
-يتم طلب الصور من المتصفح عبر دالة `buildOptimizedImageUrl` في [`js/services/cloudinary-service.js`](file:///c:/Users/600g5/OneDrive/Desktop/digital-school-ecosystem/js/services/cloudinary-service.js) مع تطبيق التوليفات التالية:
+يتم طلب الصور من المتصفح عبر دالة `getOptimizedImageUrl` في [js/services/cloudinary-service.js](js/services/cloudinary-service.js) مع تطبيق التوليفات التالية:
 - **`f_auto`**: اختيار الامتداد الأنسب للمتصفح تلقائياً (WebP أو AVIF لتوفير 70% من حجم الباندويث).
 - **`q_auto`**: ضبط ذكاء جودة الصورة للحفاظ على نقاء الألوان وتخفيض الحجم.
 - **`c_fill,g_auto`**: القص الموجه بالذكاء الاصطناعي على العناصر البصرية والوجوه لمنع تشويه الصور.
@@ -62,4 +62,6 @@ sequenceDiagram
 1. **صلاحية الرفع**: محصورة حصرًا بمدير المدرسة (`director`) ومسؤول التطوير التكنولوجي (`tech_specialist`).
 2. **أنواع الملفات المسموحة**: `image/jpeg`, `image/png`, `image/webp`.
 3. **الحد الأقصى لحجم الصورة**: 10 ميجابايت كحد أقصى.
+4. **اعتماد الرفع**: لا يوجد حفظ محلي بديل عند فشل Cloudinary؛ لا تظهر رسالة نجاح إلا بعد رجوع رابط `secure_url` من Cloudinary.
+5. **حالة مؤقتة**: رابط الـWorker متوقف افتراضيًا بسبب كشف API Secret سابقًا. دوّر السر وأعد نشر الـWorker حسب [دليل إعداد Cloudflare Worker](CLOUDFLARE_WORKER_SETUP.md) قبل إعادة تفعيل الرفع.
 

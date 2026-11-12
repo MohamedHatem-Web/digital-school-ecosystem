@@ -394,6 +394,7 @@
     import { DEFAULT_SCHOOL_ID } from '../js/services/school-service.js';
     import { getStudents } from '../js/services/student-service.js';
     import { recordAuditEvent } from '../js/services/audit-service.js';
+    import { getAssessments, createAssessment, getStudentGrades, recordStudentGrade } from '../js/services/grade-service.js';
     import { getMessages, sendMessage, markMessageAsRead, getAllowedRecipients, getUnreadCount } from '../js/services/messaging-service.js';
 
     checkRouteAccess(['teacher', 'director', 'super_admin']);
@@ -448,9 +449,35 @@
       recipientSelect.innerHTML = allowed.map(r => `<option value="${r.id}" data-role="${r.role}">${r.name}</option>`).join('');
     }
 
+    // --------------------------------------------------------------------------
+    // Class Filtering & Attendance Roster
+    // --------------------------------------------------------------------------
+    let selectedClassFilter = 'all';
+
+    // Wire up class filter pills
+    const classFilterBtns = document.querySelectorAll('.teacher-class-filter');
+    classFilterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        classFilterBtns.forEach(b => {
+          b.classList.remove('active', 'btn-primary');
+          b.classList.add('btn-outline');
+        });
+        btn.classList.add('active', 'btn-primary');
+        btn.classList.remove('btn-outline');
+
+        selectedClassFilter = btn.dataset.class || 'all';
+        renderTeacherRoster();
+        loadTeacherGradesRoster();
+      });
+    });
+
     // Attendance Roster
     async function renderTeacherRoster() {
-      const students = await getStudents(schoolId);
+      const allStudents = await getStudents(schoolId);
+      const students = allStudents.filter(s => {
+        if (selectedClassFilter === 'all') return true;
+        return (s.grade || '').includes(selectedClassFilter);
+      });
 
       if (students.length === 0) {
         container.innerHTML = `
@@ -505,7 +532,7 @@
       document.getElementById('save-attendance-btn').addEventListener('click', async () => {
         await recordAuditEvent({
           action: 'رصد واعتماد حضور وغياب الفصل',
-          target: `عدد ${students.length} طالب`,
+          target: `عدد ${students.length} طالب (${selectedClassFilter === 'all' ? 'كافة الفصول' : selectedClassFilter})`,
           details: 'تم الحفظ والاعتماد في دفتر الحضور الرسمي',
           operatorRole: 'teacher',
           schoolId,
@@ -514,7 +541,203 @@
       });
     }
 
+    // --------------------------------------------------------------------------
+    // Assessments & Grades Management
+    // --------------------------------------------------------------------------
+    const toggleAsmBtn = document.getElementById('toggle-assessment-form-btn');
+    const asmPanel = document.getElementById('assessment-form-panel');
+    const cancelAsmBtn = document.getElementById('cancel-asm-btn');
+    const newAsmForm = document.getElementById('new-assessment-form');
+    const gradesRosterContainer = document.getElementById('grades-roster-container');
+
+    if (toggleAsmBtn && asmPanel) {
+      toggleAsmBtn.addEventListener('click', () => {
+        const isHidden = asmPanel.style.display === 'none';
+        asmPanel.style.display = isHidden ? 'block' : 'none';
+        toggleAsmBtn.textContent = isHidden ? 'إغلاق نموذج التقييم' : '+ إنشاء تقييم جديد';
+      });
+    }
+
+    if (cancelAsmBtn && asmPanel) {
+      cancelAsmBtn.addEventListener('click', () => {
+        asmPanel.style.display = 'none';
+        if (toggleAsmBtn) toggleAsmBtn.textContent = '+ إنشاء تقييم جديد';
+      });
+    }
+
+    if (newAsmForm) {
+      newAsmForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const title = document.getElementById('asm-title').value.trim();
+        const subject = document.getElementById('asm-subject').value.trim();
+        const maxGrade = Number(document.getElementById('asm-max').value) || 20;
+        const deadline = document.getElementById('asm-date').value;
+
+        try {
+          await createAssessment({
+            title,
+            subject,
+            maxGrade,
+            deadline,
+            teacherName: currentUser.displayName || 'أ. إبراهيم فؤاد القاضي'
+          }, schoolId);
+
+          alert('تم إنشاء التقييم بنجاح وإدراجه في سجلات الطلاب.');
+          newAsmForm.reset();
+          if (asmPanel) asmPanel.style.display = 'none';
+          if (toggleAsmBtn) toggleAsmBtn.textContent = '+ إنشاء تقييم جديد';
+          loadTeacherGradesRoster();
+        } catch (err) {
+          alert(err.message || 'فشل حفظ التقييم');
+        }
+      });
+    }
+
+    async function loadTeacherGradesRoster() {
+      if (!gradesRosterContainer) return;
+
+      const [allStudents, assessments, allGrades] = await Promise.all([
+        getStudents(schoolId),
+        getAssessments(schoolId),
+        getStudentGrades(null, schoolId),
+      ]);
+
+      const students = allStudents.filter(s => {
+        if (selectedClassFilter === 'all') return true;
+        return (s.grade || '').includes(selectedClassFilter);
+      });
+
+      // If no assessments exist in DB, create initial default assessments list
+      let activeAssessments = assessments;
+      if (activeAssessments.length === 0) {
+        activeAssessments = [
+          { id: 'asm_01', title: 'تقييم الشهر الأول — قراءة ونصوص وبلاغة', subject: 'اللغة العربية', maxGrade: 20 },
+          { id: 'asm_02', title: 'اختبار الهندسة التحليلية والجبر', subject: 'الرياضيات', maxGrade: 20 },
+        ];
+      }
+
+      gradesRosterContainer.innerHTML = `
+        <div style="margin-bottom: var(--space-4); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-3); background: var(--bg-surface-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+          <div style="display: flex; align-items: center; gap: var(--space-2);">
+            <label style="font-weight: 700; font-size: var(--text-sm);">اختر التقييم للرصد:</label>
+            <select id="active-assessment-select" class="form-control" style="min-width: 260px; padding: 4px 8px; font-size: var(--text-sm);">
+              ${activeAssessments.map(a => `<option value="${a.id}" data-title="${a.title}" data-subject="${a.subject}" data-max="${a.maxGrade || 20}">${a.title} (${a.subject} — ${a.maxGrade || 20} درجة)</option>`).join('')}
+            </select>
+          </div>
+          <span class="badge badge-accent">طلاب الفصل: ${students.length}</span>
+        </div>
+
+        <div class="table-wrap" style="border: none;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>كود الطالب</th>
+                <th>اسم الطالب</th>
+                <th>الفصل</th>
+                <th style="width: 140px;">الدرجة المرصودة</th>
+                <th>الملاحظات والتغذية الراجعة</th>
+                <th style="text-align: center; width: 110px;">إجراء</th>
+              </tr>
+            </thead>
+            <tbody id="grades-table-body">
+              <!-- Rendered per selected assessment -->
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      const asmSelect = document.getElementById('active-assessment-select');
+      const tableBody = document.getElementById('grades-table-body');
+
+      function updateGradesTable() {
+        const selectedOpt = asmSelect.options[asmSelect.selectedIndex];
+        const asmId = asmSelect.value;
+        const asmTitle = selectedOpt.dataset.title;
+        const asmSubject = selectedOpt.dataset.subject;
+        const maxScore = Number(selectedOpt.dataset.max) || 20;
+
+        tableBody.innerHTML = students.map(s => {
+          const studentGrade = allGrades.find(g => g.studentCode === s.code && (g.assessmentId === asmId || g.assessmentTitle === asmTitle));
+          const currentScore = studentGrade ? studentGrade.score : '';
+          const currentFeedback = studentGrade ? studentGrade.feedback : '';
+
+          return `
+            <tr>
+              <td><code>${s.code}</code></td>
+              <td><strong>${s.name}</strong></td>
+              <td><span class="badge badge-outline" style="font-size:11px;">${s.grade}</span></td>
+              <td>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                  <input type="number" class="form-control score-input" data-code="${s.code}" min="0" max="${maxScore}" value="${currentScore}" placeholder="0" style="width: 70px; text-align: center; padding: 4px;">
+                  <span style="color: var(--text-muted); font-size: var(--text-xs);">/ ${maxScore}</span>
+                </div>
+              </td>
+              <td>
+                <input type="text" class="form-control feedback-input" data-code="${s.code}" value="${currentFeedback}" placeholder="ملاحظة المعلم (اختياري)..." style="padding: 4px 8px; font-size: var(--text-xs);">
+              </td>
+              <td style="text-align: center;">
+                <button type="button" class="btn btn-sm btn-primary save-grade-row-btn" data-code="${s.code}" data-name="${s.name}" style="padding: 3px 8px; font-size: 11px;">
+                  حفظ
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        // Wire save buttons
+        tableBody.querySelectorAll('.save-grade-row-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const code = btn.dataset.code;
+            const name = btn.dataset.name;
+            const row = btn.closest('tr');
+            const scoreVal = row.querySelector('.score-input').value;
+            const feedbackVal = row.querySelector('.feedback-input').value;
+
+            if (scoreVal === '' || isNaN(Number(scoreVal))) {
+              alert('يرجى إدخال درجة صالحة');
+              return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '...';
+
+            try {
+              await recordStudentGrade({
+                studentCode: code,
+                studentName: name,
+                assessmentId: asmId,
+                assessmentTitle: asmTitle,
+                subject: asmSubject,
+                score: Number(scoreVal),
+                maxScore: maxScore,
+                feedback: feedbackVal,
+                teacherName: currentUser.displayName || 'أ. إبراهيم فؤاد القاضي',
+              }, schoolId);
+
+              btn.className = 'btn btn-sm btn-success';
+              btn.textContent = 'تم ✓';
+              setTimeout(() => {
+                btn.className = 'btn btn-sm btn-primary save-grade-row-btn';
+                btn.textContent = 'حفظ';
+                btn.disabled = false;
+              }, 1500);
+            } catch (err) {
+              alert(err.message || 'فشل حفظ الدرجة');
+              btn.disabled = false;
+              btn.textContent = 'حفظ';
+            }
+          });
+        });
+      }
+
+      if (asmSelect) {
+        asmSelect.addEventListener('change', updateGradesTable);
+        updateGradesTable();
+      }
+    }
+
     renderTeacherRoster();
+    loadTeacherGradesRoster();
 
     // --------------------------------------------------------------------------
     // Teacher Messaging System

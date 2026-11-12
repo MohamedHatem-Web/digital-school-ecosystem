@@ -3,11 +3,13 @@ main = "worker.js"
 compatibility_date = "2024-04-01"
 
 [vars]
-CORS_ORIGIN = "*"
+# Set this to the exact deployed website origin before publishing the Worker.
+# CORS_ORIGIN = "https://your-school-domain.example"
 CLOUDINARY_CLOUD_NAME = "arjlacyo"
 FIREBASE_PROJECT_ID = "digital-school-ecosystem"
 
-# Secrets to be configured via wrangler secret put:
-# - CLOUDINARY_API_KEY (368124889164394)
-# - CLOUDINARY_API_SECRET (5poQWi-NFYlweTDh4FTYuxoFOJo)
+# Configure encrypted secrets only after rotating the previously exposed credentials:
+# npx wrangler secret put CLOUDINARY_API_KEY
+# npx wrangler secret put CLOUDINARY_API_SECRET
+# npx wrangler secret put FIREBASE_ADMIN_SERVICE_ACCOUNT
 

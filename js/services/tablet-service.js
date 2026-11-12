@@ -203,6 +203,12 @@ export async function getTabletDevices(schoolId = DEFAULT_SCHOOL_ID) {
     }
   }
 
+  // If clean mode is enabled for real school operation, return clean empty list
+  if (localStorage.getItem(`dse_clean_mode_${schoolId}`) === 'true') {
+    localStorage.setItem(cacheKey, JSON.stringify([]));
+    return [];
+  }
+
   const initialDevices = DEFAULT_DEVICES.map(d => ({ ...d, schoolId }));
   localStorage.setItem(cacheKey, JSON.stringify(initialDevices));
 

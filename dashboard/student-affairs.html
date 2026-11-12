@@ -103,21 +103,7 @@
         <div id="view-students-container"></div>
         <div id="view-gate-pass-container" style="display: none;"></div>
         <div id="view-audit-container" style="display: none;"></div>
-        <div id="view-messages-container" style="display: none;">
-          <div class="panel">
-            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
-              <div>
-                <h3 class="panel-title" style="margin: 0;">✉️ نظام المراسلات والبريد الداخلي لشؤون الطلاب</h3>
-                <p style="font-size: var(--text-xs); color: var(--text-muted); margin: 2px 0 0;">تواصل مباشر مع الإدارة والمعلمين وأولياء الأمور</p>
-              </div>
-            </div>
-            <div class="panel-body">
-              <div id="sa-messages-box">
-                <p style="color: var(--text-muted); text-align: center; padding: 20px;">جارٍ تحميل صندوق الرسائل...</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <div id="view-messages-container" style="display: none;"></div>
       </main>
     </div>
   </div>
@@ -127,11 +113,12 @@
     import { initComponents } from '../js/components.js?v=11.0';
     import { renderStudentsView } from '../js/views/students-view.js';
     import { renderGatePassView } from '../js/views/gate-pass-view.js';
+    import { renderMessagesView } from '../js/views/messages-view.js';
     import { getAuditLogs } from '../js/services/audit-service.js';
-    import { getMessagesForUser } from '../js/services/messaging-service.js';
     import { getCurrentUser } from '../js/auth.js';
+    import { skeletonTable } from '../js/utils/skeleton-utils.js';
 
-    checkRouteAccess(['student_affairs', 'director', 'super_admin']);
+    checkRouteAccess(['student_affairs', 'director', 'tech_specialist', 'super_admin']);
     initComponents();
 
     const navLinks = {
@@ -170,13 +157,13 @@
       } else if (activeKey === 'audit-logs') {
         await loadAuditLogsView();
       } else if (activeKey === 'messages') {
-        await loadMessagesView();
+        await renderMessagesView(containers.messages);
       }
     }
 
     async function loadAuditLogsView() {
       const c = containers['audit-logs'];
-      c.innerHTML = '<p style="text-align:center; padding: 20px;">جارٍ تحميل سجل النشاطات...</p>';
+      c.innerHTML = skeletonTable(5, 5);
       const logs = (await getAuditLogs()) || [];
       const studentLogs = logs.filter(l => (l.operatorRole || '').includes('student_affairs') || (l.action || '').includes('طالب') || (l.action || '').includes('قيد'));
       const displayLogs = studentLogs.length > 0 ? studentLogs : logs;

@@ -27,7 +27,6 @@
 | `js/services/notification-service.js` | فحص الصياغة البرمجية وتكامل ES Modules | **✓ PASS** | منظومة إشعارات انصراف اليوم الدراسي |
 | `js/services/school-service.js` | فحص الصياغة البرمجية وتكامل ES Modules | **✓ PASS** | هوية المدرسة والألوان المتعددة |
 | `js/services/social-service.js` | فحص الصياغة البرمجية وتكامل ES Modules | **✓ PASS** | الحالات الاجتماعية والإنذارات السرية |
-| `js/services/storage-service.js` | فحص الصياغة البرمجية وتكامل ES Modules | **✓ PASS** | رفع مستندات الطلاب وشهادات الميلاد PDF |
 | `js/services/student-service.js` | فحص الصياغة البرمجية وتكامل ES Modules | **✓ PASS** | شؤون الطلاب، فحص الأرقام القومية، وربط أولياء الأمور |
 | `js/services/tablet-service.js` | فحص الصياغة البرمجية وتكامل ES Modules | **✓ PASS** | حصر أجهزة التابلت وتفرد الـ IMEI وتسليم العهدة |
 | `js/utils/export-utils.js` | فحص الصياغة البرمجية وتكامل ES Modules | **✓ PASS** | تصدير CSV وطباعة إفادات القيد ومحاضر التسليم |
@@ -48,7 +47,6 @@
 | `/calendar.html` | التقويم الأكاديمي وجداول الحصص | `200 OK` | **✓ PASS** |
 | `/contact.html` | بيانات الاتصال والموقع الجغرافي | `200 OK` | **✓ PASS** |
 | `/login.html` | بوابة الدخول الموحدة | `200 OK` | **✓ PASS** |
-| `/reset-password.html` | استعادة كلمة المرور | `200 OK` | **✓ PASS** |
 | `/dashboard/admin-overview.html` | لوحة القيادة المركزية لمكتب المدير | `200 OK` | **✓ PASS** |
 | `/dashboard/media-gallery.html` | لوحة إدارة ألبومات ووسائط المدرسة | `200 OK` | **✓ PASS** |
 | `/dashboard/tech-devices.html` | لوحة حصر أجهزة التابلت والـ IMEI | `200 OK` | **✓ PASS** |

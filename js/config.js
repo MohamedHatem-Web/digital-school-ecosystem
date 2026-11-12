@@ -15,7 +15,6 @@ export const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBD4WFrHSJB5EjpFwsOnlPzNCxf91vEyQw",
   authDomain: "digital-school-ecosystem.firebaseapp.com",
   projectId: "digital-school-ecosystem",
-  storageBucket: "digital-school-ecosystem.firebasestorage.app",
   messagingSenderId: "436764188612",
   appId: "1:436764188612:web:ed3e7e5c111cdc59010e91",
   measurementId: "G-V9Z6SPMCQJ"
@@ -28,7 +27,7 @@ export const MEDIA_CONFIG = {
   
   // Cloudflare Worker gateway for cryptographically signed upload requests
   // Defaults to production worker URL, or reads custom override if configured
-  workerGatewayUrl: localStorage.getItem('dse_worker_gateway_url') || "https://dse-cloudinary-gateway.hatmm462.workers.dev",
+  workerGatewayUrl: localStorage.getItem('dse_worker_gateway_url') || '',
 
   // Allowed media upload mime types & sizes
   allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],

@@ -32,13 +32,30 @@ service cloud.firestore {
       );
     }
 
+    function isLinkedStudentOrParent(schoolId) {
+      return isAuthenticated() && belongsToSchool(schoolId) && (
+        (('email' in request.auth.token) &&
+         ('email' in resource.data) &&
+         resource.data.email == request.auth.token.email) ||
+        (('email' in request.auth.token) &&
+         ('parentInfo' in resource.data) &&
+         ('parentEmail' in resource.data.parentInfo) &&
+         resource.data.parentInfo.parentEmail == request.auth.token.email) ||
+        (('parentInfo' in resource.data) &&
+         ('parentUid' in resource.data.parentInfo) &&
+         resource.data.parentInfo.parentUid == request.auth.uid) ||
+        (('linkedParentUid' in resource.data) &&
+         resource.data.linkedParentUid == request.auth.uid)
+      );
+    }
+
     // 1. User Profiles Collection
     match /users/{userId} {
       allow read: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin());
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (
-        isSuperAdmin() ||
-        (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'schoolId']))
+      allow create: if false;
+      allow update: if isSuperAdmin() || (
+        isAuthenticated() && request.auth.uid == userId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'updatedAt'])
       );
       allow delete: if isSuperAdmin();
     }
@@ -62,7 +79,7 @@ service cloud.firestore {
 
       // B. Students Registry & Digital Records
       match /students/{studentId} {
-        allow read: if belongsToSchool(schoolId);
+        allow read: if hasRole(schoolId, ['director', 'student_affairs', 'teacher', 'social_affairs']) || isLinkedStudentOrParent(schoolId);
         allow write: if hasRole(schoolId, ['student_affairs', 'director', 'super_admin']);
       }
 

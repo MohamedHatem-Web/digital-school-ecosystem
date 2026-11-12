@@ -88,6 +88,12 @@
             <span class="sidebar-icon">✉️</span>
             <span>الرسائل والبريد الداخلي</span>
           </a>
+
+          <div class="sidebar-section-title">🔐 دعم الحسابات</div>
+          <a href="#passwords" class="sidebar-link" id="tech-nav-passwords" style="display: none;">
+            <span class="sidebar-icon">🔑</span>
+            <span>تغيير كلمة مرور مستخدم</span>
+          </a>
         </div>
       </nav>
 
@@ -112,10 +118,10 @@
 
         <div class="topbar-end">
           <div class="user-profile-widget">
-            <div class="user-avatar" id="tech-user-avatar">ت</div>
+            <div class="user-avatar" id="tech-user-avatar">ح</div>
             <div class="user-text-info">
-              <span class="user-name" id="tech-user-name">مسؤول التطوير التكنولوجي</span>
-              <span class="user-role-title">Technical Support & Admin</span>
+              <span class="user-name" id="tech-user-name">م. حسام الدين عبد العزيز</span>
+              <span class="user-role-title">مسؤول التطوير التكنولوجي</span>
             </div>
             <a href="#" class="logout-action-btn logout-btn" title="تسجيل الخروج">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -139,6 +145,38 @@
         <div id="view-social" style="display: none;"></div>
         <div id="view-gate-pass" style="display: none;"></div>
         <div id="view-messages" style="display: none;"></div>
+        <div id="view-passwords" style="display: none;">
+          <div style="display: flex; flex-direction: column; gap: var(--space-4); max-width: 760px;">
+            <div>
+              <h1 style="font-size: var(--text-2xl); font-weight: 800; color: var(--color-primary-950);">إدارة كلمة مرور حساب</h1>
+              <p style="font-size: var(--text-sm); color: var(--text-muted);">هذه الخدمة مخصصة لمسؤول التطوير التكنولوجي لتجهيز كلمة مرور مؤقتة لمستخدم في نفس المدرسة.</p>
+            </div>
+            <div class="panel">
+              <div class="panel-body">
+                <form id="tech-password-form" style="display: flex; flex-direction: column; gap: var(--space-3);">
+                  <div class="form-group">
+                    <label class="form-label" for="password-target-account">البريد الإلكتروني أو كود الطالب</label>
+                    <input id="password-target-account" class="form-control" type="text" autocomplete="off" required placeholder="user@school.edu أو كود الطالب">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="password-new-value">كلمة المرور المؤقتة الجديدة</label>
+                    <input id="password-new-value" class="form-control" type="password" autocomplete="new-password" minlength="12" required>
+                    <small style="color: var(--text-muted);">12 حرفًا على الأقل، مع حرف كبير وصغير ورقم ورمز.</small>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="password-confirm-value">تأكيد كلمة المرور</label>
+                    <input id="password-confirm-value" class="form-control" type="password" autocomplete="new-password" minlength="12" required>
+                  </div>
+                  <p id="tech-password-status" role="status" aria-live="polite" style="font-size: var(--text-sm); min-height: 1.5em;"></p>
+                  <div style="display: flex; justify-content: flex-end;">
+                    <button id="tech-password-submit" type="submit" class="btn btn-primary btn-md">تغيير كلمة المرور</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+            <p style="font-size: var(--text-xs); color: var(--text-muted);">تُلغى جلسات الحساب بعد التغيير. لا تُرسل كلمة المرور عبر البريد أو تحفظها في سجل النظام.</p>
+          </div>
+        </div>
       </main>
     </div>
   </div>
@@ -146,6 +184,9 @@
   <script type="module">
     import { checkRouteAccess } from '../js/router-guard.js';
     import { initComponents } from '../js/components.js?v=11.0';
+    import { getCurrentUser } from '../js/auth.js';
+    import { auth } from '../js/firebase.js';
+    import { MEDIA_CONFIG } from '../js/config.js';
     import { renderTabletsView } from '../js/views/tablets-view.js';
     import { renderAuditView } from '../js/views/audit-view.js';
     import { renderCmsView } from '../js/views/cms-view.js';
@@ -160,6 +201,18 @@
     checkRouteAccess(['tech_specialist', 'director', 'super_admin']);
     initComponents();
 
+    const currentUser = getCurrentUser();
+    if (currentUser?.displayName) {
+      const nameEl = document.getElementById('tech-user-name');
+      const avatarEl = document.getElementById('tech-user-avatar');
+      if (nameEl) nameEl.textContent = currentUser.displayName;
+      if (avatarEl) avatarEl.textContent = currentUser.displayName.trim().charAt(0);
+    }
+    const passwordNavLink = document.getElementById('tech-nav-passwords');
+    if (passwordNavLink && currentUser?.role === 'tech_specialist') {
+      passwordNavLink.style.display = 'flex';
+    }
+
     const views = {
       tablets: document.getElementById('view-tablets'),
       batches: document.getElementById('view-batches'),
@@ -170,6 +223,7 @@
       social: document.getElementById('view-social'),
       'gate-pass': document.getElementById('view-gate-pass'),
       messages: document.getElementById('view-messages'),
+      passwords: document.getElementById('view-passwords'),
     };
 
     const navLinks = {
@@ -182,10 +236,15 @@
       social: document.getElementById('tech-nav-social'),
       'gate-pass': document.getElementById('tech-nav-gate'),
       messages: document.getElementById('tech-nav-messages'),
+      passwords: passwordNavLink,
     };
+    const initializedViews = new Set();
 
     async function switchTab(tabKey) {
-      const activeKey = views[tabKey] ? tabKey : 'tablets';
+      const requestedKey = views[tabKey] ? tabKey : 'tablets';
+      const activeKey = requestedKey === 'passwords' && currentUser?.role !== 'tech_specialist'
+        ? 'tablets'
+        : requestedKey;
 
       // Update sidebar active class
       Object.keys(navLinks).forEach((k) => {
@@ -200,6 +259,8 @@
           views[k].style.display = k === activeKey ? 'block' : 'none';
         }
       });
+
+      if (initializedViews.has(activeKey)) return;
 
       // Render corresponding modular view
       if (activeKey === 'tablets') {
@@ -221,7 +282,60 @@
       } else if (activeKey === 'messages') {
         await renderMessagesView(views.messages);
       }
+      initializedViews.add(activeKey);
     }
+
+    const passwordForm = document.getElementById('tech-password-form');
+    const passwordStatus = document.getElementById('tech-password-status');
+    const passwordSubmit = document.getElementById('tech-password-submit');
+    passwordForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (currentUser?.role !== 'tech_specialist') return;
+
+      const rawTarget = document.getElementById('password-target-account').value.trim();
+      const targetEmail = /^\d+$/.test(rawTarget)
+        ? (rawTarget === '2026101' ? 'student@dse.edu.eg' : `${rawTarget}@dse.edu.eg`)
+        : rawTarget.toLowerCase();
+      const newPassword = document.getElementById('password-new-value').value;
+      const confirmation = document.getElementById('password-confirm-value').value;
+      if (newPassword !== confirmation) {
+        passwordStatus.textContent = 'كلمتا المرور غير متطابقتين.';
+        passwordStatus.style.color = 'var(--color-danger-text)';
+        return;
+      }
+      if (!MEDIA_CONFIG.workerGatewayUrl || !auth.currentUser) {
+        passwordStatus.textContent = 'خدمة إدارة الحسابات غير مفعلة. يلزم نشر Worker الآمن وتسجيل الدخول مجددًا.';
+        passwordStatus.style.color = 'var(--color-warning-text)';
+        return;
+      }
+
+      passwordSubmit.disabled = true;
+      passwordSubmit.textContent = 'جارٍ التحقق والتحديث...';
+      passwordStatus.textContent = 'جارٍ التحقق من الحساب والصلاحية لدى الخدمة الآمنة.';
+      passwordStatus.style.color = 'var(--text-muted)';
+      try {
+        const idToken = await auth.currentUser.getIdToken(false);
+        const response = await fetch(`${MEDIA_CONFIG.workerGatewayUrl.replace(/\/$/, '')}/api/admin/change-password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({ targetEmail, newPassword }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'تعذر تغيير كلمة المرور.');
+        passwordForm.reset();
+        passwordStatus.textContent = 'تم تغيير كلمة المرور وإلغاء الجلسات السابقة. سلّم كلمة المرور المؤقتة للمستخدم مباشرة.';
+        passwordStatus.style.color = 'var(--color-success-text)';
+      } catch (error) {
+        passwordStatus.textContent = error.message || 'تعذر الاتصال بخدمة إدارة الحسابات.';
+        passwordStatus.style.color = 'var(--color-danger-text)';
+      } finally {
+        passwordSubmit.disabled = false;
+        passwordSubmit.textContent = 'تغيير كلمة المرور';
+      }
+    });
 
     async function renderBatchesSubView(container) {
       container.innerHTML = '<p style="text-align:center; padding: 20px;">جارٍ تحميل الدفعات الوزارية...</p>';

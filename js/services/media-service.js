@@ -3,8 +3,20 @@
 // Albums, Images Metadata, Categories & School Branding Media
 // ==========================================================================
 
-import { db, isFirebaseAvailable } from '../firebase.js';
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy } from 'https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js';
+import {
+  db,
+  isFirebaseAvailable,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+} from '../firebase.js';
 import { getCurrentUser } from '../auth.js';
 import { recordAuditEvent } from './audit-service.js';
 import { deleteMediaImage } from './cloudinary-service.js';

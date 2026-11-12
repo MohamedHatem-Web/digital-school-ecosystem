@@ -4,7 +4,7 @@
    ========================================================================== */
 
 :root {
-  /* 1. Primary Luxury Palette (Imperial Midnight & Deep Slate) */
+  /* Refined school navy, paired with the existing gold identity accent. */
   --color-primary-950: #060b14;
   --color-primary-900: #0a1120;
   --color-primary-850: #0f1a30;
@@ -25,7 +25,7 @@
   --color-accent-100: #fef3c7;
   --color-accent-50:  #fffbeb;
 
-  /* Primary Button Tokens (Light) - Sophisticated Deep Royal Navy */
+  /* Primary Button Tokens (Light) */
   --btn-primary-bg: #1e3a8a;
   --btn-primary-text: #ffffff;
   --btn-primary-hover: #1e40af;
@@ -163,9 +163,9 @@ html[data-theme="dark"] body {
   --color-primary-700: #3b82f6;
   --color-primary-200: #243b5e;
   --color-primary-100: #1a2a44;
-  --color-primary-50:  #131f33;
+  --color-primary-50: #131f33;
 
-  /* Primary Button Tokens (Dark) - Vibrant Royal Blue with Pristine White Text */
+  /* Primary Button Tokens (Dark) */
   --btn-primary-bg: #2563eb;
   --btn-primary-text: #ffffff;
   --btn-primary-hover: #1d4ed8;
