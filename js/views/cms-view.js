@@ -500,7 +500,7 @@ async function renderLeadershipSub(container) {
       });
       if (!ok) return;
       try {
-        await deleteCmsContent(b.getAttribute('data-id'), 'leadership');
+        await deleteCmsContent(b.getAttribute('data-id'));
         showToast('تم حذف السجل بنجاح');
         await renderLeadershipSub(container);
       } catch (err) {
@@ -699,7 +699,12 @@ async function renderNewsSub(container) {
         danger: true,
       });
       if (!ok) return;
-      await deleteCmsContent(b.getAttribute('data-id'), 'news');
+      try {
+        await deleteCmsContent(b.getAttribute('data-id'));
+      } catch (err) {
+        showToast('خطأ: ' + err.message, 'error');
+        return;
+      }
       showToast('تم حذف الخبر بنجاح');
       renderNewsSub(container);
     });
@@ -866,7 +871,12 @@ async function renderActivitiesSub(container) {
         danger: true,
       });
       if (!ok) return;
-      await deleteCmsContent(b.getAttribute('data-id'), 'activities');
+      try {
+        await deleteCmsContent(b.getAttribute('data-id'));
+      } catch (err) {
+        showToast('خطأ: ' + err.message, 'error');
+        return;
+      }
       showToast('تم حذف النشاط بنجاح');
       renderActivitiesSub(container);
     });
@@ -1014,7 +1024,12 @@ async function renderCalendarSub(container) {
         danger: true,
       });
       if (!ok) return;
-      await deleteCmsContent(b.getAttribute('data-id'), 'calendar');
+      try {
+        await deleteCmsContent(b.getAttribute('data-id'));
+      } catch (err) {
+        showToast('خطأ: ' + err.message, 'error');
+        return;
+      }
       showToast('تم حذف الموعد بنجاح');
       renderCalendarSub(container);
     });

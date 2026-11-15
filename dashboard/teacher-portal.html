@@ -551,7 +551,8 @@
       const today = new Date().toISOString().split('T')[0];
       const lessonId = lessonSelect?.value || '1';
       const firstPlacement = String(students[0].grade || '').split(/\s*[—–-]\s*/);
-      const classKey = String(students[0].className || students[0].classId || firstPlacement.slice(1).join(' — ') || selectedClassFilter).trim();
+      const classKey = String(students[0].classId || students[0].className || firstPlacement.slice(1).join(' — ') || selectedClassFilter).trim();
+      const className = String(students[0].className || firstPlacement.slice(1).join(' — ') || classKey).trim();
       const attendanceData = await getClassAttendance(classKey, today, schoolId, 'lesson', lessonId).catch(() => []);
       const statusMap = Object.fromEntries((attendanceData || []).map((entry) => [String(entry.studentCode), entry.status || 'present']));
 
@@ -604,9 +605,10 @@
           return {
             studentCode: student.code,
             studentName: student.name,
-            grade: student.grade || 'غير محدد',
+            grade: firstPlacement[0] || student.grade || 'غير محدد',
             status: finalStatus,
             classId: classKey,
+            className,
             date: today,
             phase: 'lesson',
             lessonId,
@@ -622,6 +624,7 @@
           const saveResult = await saveClassAttendance({
             grade: firstPlacement[0] || selectedClassFilter,
             classId: classKey,
+            className,
             date: today,
             phase: 'lesson',
             lessonId,

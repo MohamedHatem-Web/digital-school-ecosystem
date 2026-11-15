@@ -1,4 +1,5 @@
 import { getEscapeAttendanceCases, reviewEscapeAttendance } from '../services/attendance-service.js';
+import { getSchoolClasses } from '../services/academic-service.js';
 import { getCurrentUser } from '../auth.js';
 import { showToast } from '../components.js';
 
@@ -8,12 +9,27 @@ function escapeHtml(value) {
   })[char]);
 }
 
+function getClassPlacement(item, classesById) {
+  const grade = String(item.grade || '').trim();
+  const fullClassName = String(item.className || classesById.get(item.classId) || '').trim();
+  const className = grade && fullClassName.startsWith(grade)
+    ? fullClassName.slice(grade.length).replace(/^[—–-]\s*/, '').trim()
+    : fullClassName;
+  if (grade && className) return grade.includes(className) ? grade : `${grade} — ${className}`;
+  return grade || className || item.classId;
+}
+
 export async function renderAttendanceAlerts(container, role) {
   if (!container) return;
   try {
     const canReview = ['teacher', 'student_affairs', 'director', 'super_admin'].includes(role);
     const user = getCurrentUser();
-    const cases = (await getEscapeAttendanceCases(user?.schoolId)).filter((item) => item.escapeReview === 'pending');
+    const [allCases, classes] = await Promise.all([
+      getEscapeAttendanceCases(user?.schoolId),
+      getSchoolClasses(user?.schoolId),
+    ]);
+    const classesById = new Map(classes.map((item) => [item.id, item.name]));
+    const cases = allCases.filter((item) => item.escapeReview === 'pending');
     if (!cases.length) {
       container.replaceChildren();
       return;
@@ -26,7 +42,7 @@ export async function renderAttendanceAlerts(container, role) {
           ${cases.map((item) => `
             <article style="padding:var(--space-3);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);display:grid;gap:var(--space-2);">
               <strong>${escapeHtml(item.studentName)} <code>${escapeHtml(item.studentCode)}</code></strong>
-              <p style="margin:0;color:var(--text-secondary);">${escapeHtml(item.grade)} — ${escapeHtml(item.classId)} — الحصة ${escapeHtml(item.lessonId)} — ${escapeHtml(item.date)}</p>
+              <p style="margin:0;color:var(--text-secondary);">${escapeHtml(getClassPlacement(item, classesById))} — الحصة ${escapeHtml(item.lessonId)} — ${escapeHtml(item.date)}</p>
               <p style="margin:0;color:var(--text-secondary);">البوابة: ${escapeHtml(item.arrivalStatus || 'لا يوجد')} — سجلها: ${escapeHtml(item.arrivalRecordedBy)} · الحصة: ${escapeHtml(item.classStatus || 'غائب')} — رصدها: ${escapeHtml(item.recordedBy || 'غير محدد')}</p>
               ${canReview ? `
                 <label class="form-group" style="margin:0;">

@@ -51,10 +51,6 @@
             <span class="sidebar-icon">✉️</span>
             <span>مراسلة المعلمين والإدارة</span>
           </a>
-          <a href="student-portal.html" class="sidebar-link">
-            <span class="sidebar-icon">🎓</span>
-            <span>بوابة الطالب (الملف والتابلت)</span>
-          </a>
         </div>
       </nav>
 
@@ -78,9 +74,6 @@
         </div>
 
         <div class="topbar-end" style="display: flex; align-items: center; gap: var(--space-2);">
-          <a href="student-portal.html" class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-size: 11px; padding: 4px 10px;" title="التبديل إلى بوابة الطالب لاستعراض كود القيد والتابلت">
-            🎓 التبديل لبوابة الطالب
-          </a>
           <div class="user-profile-widget" style="cursor: default;" title="حساب رسمي معتمد — للعرض والمتابعة فقط">
             <div class="user-avatar" id="topbar-user-avatar">أ</div>
             <div class="user-text-info">
@@ -558,7 +551,7 @@
     }
     window.addEventListener('beforeunload', () => stopParentNotifications());
 
-    // 2. Load linked children — filter by parent relationship
+    // 2. Load children already scoped to this verified parent by the Worker
     async function loadParentChildren() {
       try {
         const students = await getStudents(schoolId);
@@ -566,17 +559,7 @@
         const weeklyContainer = document.getElementById('parent-weekly-report-container');
         const countBadge = document.getElementById('children-count-badge');
 
-        // Filter: match by parent email, uid, or parentInfo
-        const parentEmail = currentUser?.email || '';
-        const parentUid = currentUser?.uid || '';
-
-        // The student service returns only records linked to this authenticated parent.
-        const linkedStudents = students.filter((s) => {
-          if (parentUid && s.parentInfo?.parentUid === parentUid) return true;
-          if (parentEmail && s.parentInfo?.parentEmail === parentEmail) return true;
-          if (parentUid && s.linkedParentUid === parentUid) return true;
-          return false;
-        });
+        const linkedStudents = students;
         loadParentNotifications(linkedStudents.map((student) => student.code));
 
         if (linkedStudents.length > 0) {

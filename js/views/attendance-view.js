@@ -32,7 +32,8 @@ function getPlacement(student) {
   const parts = raw.split(/\s*[—–-]\s*/);
   return {
     grade: String(student.gradeName || student.stage || (parts.length > 1 ? parts[0] : raw)).trim(),
-    className: String(student.className || student.classId || parts.slice(1).join(' — ')).trim(),
+    className: String(student.className || parts.slice(1).join(' — ') || student.classId || '').trim(),
+    classId: String(student.classId || student.className || parts.slice(1).join(' — ') || '').trim(),
   };
 }
 
@@ -97,7 +98,7 @@ export async function renderAttendanceView(container) {
                   <label class="form-label" for="attendance-excuse-student">الطالب *</label>
                   <select class="form-control" id="attendance-excuse-student" required>
                     <option value="">اختر الطالب</option>
-                    ${enrolled.map((student) => `<option value="${escapeHtml(student.code)}" data-name="${escapeHtml(student.name)}" data-grade="${escapeHtml(getPlacement(student).grade)}" data-class="${escapeHtml(getPlacement(student).className)}">${escapeHtml(student.name)} (${escapeHtml(student.code)})</option>`).join('')}
+                    ${enrolled.map((student) => `<option value="${escapeHtml(student.code)}" data-name="${escapeHtml(student.name)}" data-grade="${escapeHtml(getPlacement(student).grade)}" data-class="${escapeHtml(getPlacement(student).classId)}" data-class-name="${escapeHtml(getPlacement(student).className)}">${escapeHtml(student.name)} (${escapeHtml(student.code)})</option>`).join('')}
                   </select>
                 </div>
                 <div class="form-group">
@@ -189,6 +190,7 @@ export async function renderAttendanceView(container) {
         studentName: studentOption.dataset.name,
         grade: studentOption.dataset.grade,
         classId: studentOption.dataset.class,
+        className: studentOption.dataset.className,
         startDate: container.querySelector('#attendance-excuse-start').value,
         endDate: container.querySelector('#attendance-excuse-end').value,
         reason: container.querySelector('#attendance-excuse-reason').value,
@@ -220,13 +222,14 @@ export async function renderAttendanceView(container) {
 
   async function loadRoster() {
     const grade = gradeSelect.value;
-    const className = classSelect.value;
+    const classId = classSelect.value;
+    const className = placements.find((entry) => entry.grade === grade && entry.classId === classId)?.className || classId;
     const date = dateInput.value;
     const year = yearSelect.value;
-    if (!grade || !className || !date) return;
+    if (!grade || !classId || !date) return;
 
     const classStudents = placements
-      .filter((entry) => entry.grade === grade && entry.className === className && belongsToYear(entry.student, year))
+      .filter((entry) => entry.grade === grade && entry.classId === classId && belongsToYear(entry.student, year))
       .map((entry) => entry.student);
     if (!classStudents.length) {
       roster.innerHTML = '<div class="empty-state" style="padding:var(--space-8);"><h3 class="empty-state-title">لا يوجد طلاب مسجلون في هذا الفصل</h3></div>';
@@ -234,7 +237,7 @@ export async function renderAttendanceView(container) {
     }
 
     const phase = 'arrival';
-    const records = await getClassAttendance(className, date, schoolId, phase);
+    const records = await getClassAttendance(classId, date, schoolId, phase);
     const savedByCode = new Map((records || []).map((record) => [String(record.studentCode), record.status]));
     roster.innerHTML = `
       <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-3);flex-wrap:wrap;">
@@ -258,7 +261,8 @@ export async function renderAttendanceView(container) {
         studentCode: student.code,
         studentName: student.name,
         grade,
-        classId: className,
+        classId,
+        className,
         date,
         academicYear: year,
           phase,
@@ -267,7 +271,8 @@ export async function renderAttendanceView(container) {
       try {
         const result = await saveClassAttendance({
           grade,
-          classId: className,
+          classId,
+          className,
           date,
           academicYear: year,
           phase,
@@ -292,9 +297,11 @@ export async function renderAttendanceView(container) {
   gradeSelect.addEventListener('change', () => {
     const grade = gradeSelect.value;
     const year = yearSelect.value;
-    const classes = [...new Set(placements.filter((entry) => entry.grade === grade && belongsToYear(entry.student, year)).map((entry) => entry.className))];
+    const classes = [...new Map(placements
+      .filter((entry) => entry.grade === grade && belongsToYear(entry.student, year))
+      .map((entry) => [entry.classId, entry.className])).entries()];
     classSelect.innerHTML = classes.length
-      ? '<option value="">اختر الفصل</option>' + classes.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('')
+      ? '<option value="">اختر الفصل</option>' + classes.map(([id, name]) => `<option value="${escapeHtml(id)}">${escapeHtml(name)}</option>`).join('')
       : '<option value="">لا توجد فصول مسجلة</option>';
     classSelect.disabled = classes.length === 0;
     loadRoster();

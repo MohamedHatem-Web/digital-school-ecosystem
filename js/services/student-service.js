@@ -24,7 +24,7 @@ import { getFamilyStudentRecords, linkStudentToFamilyAccount } from './account-s
 import { getSchoolClasses } from './academic-service.js';
 
 const CACHE_KEY_PREFIX = 'dse_students_';
-const CACHE_VERSION = 'v8';
+const CACHE_VERSION = 'v9';
 const ALLOWED_SECOND_LANGUAGES = new Set(['فرنساوي', 'ألماني', 'إيطالي']);
 const getCacheKey = (schoolId, user = getCurrentUser()) => {
   const identity = user?.role === 'teacher'
@@ -64,7 +64,15 @@ export function sanitizeStudentRecord(student, schoolId = DEFAULT_SCHOOL_ID) {
   student.id = student.id || `stu_${String(student.code || '').trim()}`;
   student.code = String(student.code || '').trim() || (student.id ? student.id.replace(/\D/g, '') : '');
   student.name = String(student.name || '').trim() || 'طالب غير مسجل';
-  student.grade = student.grade || 'غير محدد';
+  const rawGrade = String(student.grade || student.stage || '').trim();
+  const placementParts = rawGrade.split(/\s*[—–-]\s*/);
+  student.grade = rawGrade || 'غير محدد';
+  if (!student.gradeName && placementParts.length > 1) {
+    student.gradeName = placementParts[0];
+  }
+  if (!student.className && placementParts.length > 1) {
+    student.className = placementParts.slice(1).join(' — ');
+  }
   student.email = student.email || generateOfficialStudentEmail(student.code) || (student.code ? `${student.code}@dse.edu.eg` : '');
   student.status = student.status || 'enrolled';
   student.nationalId = student.nationalId || '';

@@ -115,6 +115,7 @@ export async function createAttendanceExcuse({
   studentName,
   grade = '',
   classId = '',
+  className = '',
   startDate,
   endDate,
   reason,
@@ -141,6 +142,7 @@ export async function createAttendanceExcuse({
     studentName: String(studentName).trim(),
     grade,
     classId,
+    className,
     startDate,
     endDate,
     reason: String(reason).trim(),
@@ -209,6 +211,7 @@ async function applySavedAttendanceExcuse(excuse, schoolId) {
 export async function saveClassAttendance({
   grade,
   classId,
+  className = '',
   academicYear = '2026/2027',
   phase = 'lesson',
   lessonId = '1',
@@ -221,7 +224,15 @@ export async function saveClassAttendance({
     throw new Error('لا توجد سجلات طلاب لحفظها.');
   }
 
-  let finalRecords = records.map((record) => ({ ...record, phase, lessonId: phase === 'lesson' ? String(lessonId) : '', date, classId, academicYear }));
+  let finalRecords = records.map((record) => ({
+    ...record,
+    phase,
+    lessonId: phase === 'lesson' ? String(lessonId) : '',
+    date,
+    classId,
+    className: record.className || className,
+    academicYear,
+  }));
   if (phase === 'arrival' && finalRecords.some((record) => ABSENT_STATUSES.has(record.status))) {
     const excuses = await getAttendanceExcuses(schoolId, academicYear);
     finalRecords = applyAbsenceExcuses(finalRecords, excuses, date, academicYear);
@@ -254,6 +265,7 @@ export async function saveClassAttendance({
     id: attendanceBatchId,
     grade,
     classId,
+    className,
     academicYear,
     phase,
     lessonId: phase === 'lesson' ? String(lessonId) : '',
@@ -456,6 +468,7 @@ export async function getEscapeAttendanceCases(schoolId = DEFAULT_SCHOOL_ID) {
             batchId: batchDoc.id,
             grade: record.grade || batch.grade || '',
             classId: record.classId || batch.classId || '',
+            className: record.className || batch.className || '',
             lessonId: record.lessonId || batch.lessonId || '1',
             date: record.date || batch.date || '',
             recordedBy: batch.recordedBy || '',
