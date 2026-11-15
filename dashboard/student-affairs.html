@@ -4,10 +4,11 @@
   <meta charset="UTF-8">
   <script>(function(){try{var t=localStorage.getItem('dse_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
   <title>شؤون الطلاب وسجلات القيد — منظومة المدرسة الرقمية</title>
   <link rel="stylesheet" href="../css/tokens.css?v=11.0">
-  <link rel="stylesheet" href="../css/base.css?v=11.0">
-  <link rel="stylesheet" href="../css/components.css?v=11.0">
+  <link rel="stylesheet" href="../css/base.css?v=11.1">
+  <link rel="stylesheet" href="../css/components.css?v=17.2">
   <link rel="stylesheet" href="../css/dashboard.css?v=11.0">
   <link rel="manifest" href="../manifest.webmanifest">
   <meta name="theme-color" content="#0a1628">
@@ -44,6 +45,18 @@
           <a href="#students" class="sidebar-link active" id="sa-nav-students">
             <span class="sidebar-icon">🎓</span>
             <span>سجل الطلاب وقيد الإفادات</span>
+          </a>
+          <a href="#student-inquiry" class="sidebar-link" id="sa-nav-student-inquiry">
+            <span class="sidebar-icon">🔎</span>
+            <span>ملف الطالب والاستعلام</span>
+          </a>
+          <a href="#attendance" class="sidebar-link" id="sa-nav-attendance">
+            <span class="sidebar-icon">📋</span>
+            <span>الحضور والغياب اليومي</span>
+          </a>
+          <a href="#class-allocation" class="sidebar-link" id="sa-nav-class-allocation">
+            <span class="sidebar-icon">🧩</span>
+            <span>توزيع الفصول السنوي</span>
           </a>
           <a href="#gate-pass" class="sidebar-link" id="sa-nav-gate">
             <span class="sidebar-icon">🚪</span>
@@ -101,6 +114,9 @@
 
       <main class="dashboard-workspace" id="sa-workspace" style="padding: var(--space-6);">
         <div id="view-students-container"></div>
+        <div id="view-student-inquiry-container" style="display: none;"></div>
+        <div id="view-attendance-container" style="display: none;"></div>
+        <div id="view-class-allocation-container" style="display: none;"></div>
         <div id="view-gate-pass-container" style="display: none;"></div>
         <div id="view-audit-container" style="display: none;"></div>
         <div id="view-messages-container" style="display: none;"></div>
@@ -112,6 +128,9 @@
     import { checkRouteAccess } from '../js/router-guard.js';
     import { initComponents } from '../js/components.js?v=11.0';
     import { renderStudentsView } from '../js/views/students-view.js';
+    import { renderStudentInquiryView } from '../js/views/student-inquiry-view.js';
+    import { renderAttendanceView } from '../js/views/attendance-view.js';
+    import { renderClassAllocationView } from '../js/views/class-allocation-view.js';
     import { renderGatePassView } from '../js/views/gate-pass-view.js';
     import { renderMessagesView } from '../js/views/messages-view.js';
     import { getAuditLogs } from '../js/services/audit-service.js';
@@ -123,6 +142,9 @@
 
     const navLinks = {
       students: document.getElementById('sa-nav-students'),
+      'student-inquiry': document.getElementById('sa-nav-student-inquiry'),
+      attendance: document.getElementById('sa-nav-attendance'),
+      'class-allocation': document.getElementById('sa-nav-class-allocation'),
       'gate-pass': document.getElementById('sa-nav-gate'),
       'audit-logs': document.getElementById('sa-nav-audit'),
       messages: document.getElementById('sa-nav-messages'),
@@ -130,6 +152,9 @@
 
     const containers = {
       students: document.getElementById('view-students-container'),
+      'student-inquiry': document.getElementById('view-student-inquiry-container'),
+      attendance: document.getElementById('view-attendance-container'),
+      'class-allocation': document.getElementById('view-class-allocation-container'),
       'gate-pass': document.getElementById('view-gate-pass-container'),
       'audit-logs': document.getElementById('view-audit-container'),
       messages: document.getElementById('view-messages-container'),
@@ -152,6 +177,12 @@
 
       if (activeKey === 'students') {
         await renderStudentsView(containers.students);
+      } else if (activeKey === 'student-inquiry') {
+        await renderStudentInquiryView(containers['student-inquiry']);
+      } else if (activeKey === 'attendance') {
+        await renderAttendanceView(containers.attendance);
+      } else if (activeKey === 'class-allocation') {
+        await renderClassAllocationView(containers['class-allocation']);
       } else if (activeKey === 'gate-pass') {
         await renderGatePassView(containers['gate-pass']);
       } else if (activeKey === 'audit-logs') {

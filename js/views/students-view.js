@@ -10,7 +10,9 @@ import {
   deleteStudent,
   bulkImportStudents,
   extractStudentDetailsFromNID,
+  generateOfficialStudentEmail,
 } from '../services/student-service.js';
+import { getSchoolClasses } from '../services/academic-service.js';
 import {
   printEnrollmentCertificate,
   printStudentIdCard,
@@ -25,6 +27,28 @@ import { showToast, showConfirmModal } from '../components.js';
 let isInitialized = false;
 let studentList = [];
 let editingStudentCode = null;
+let activeLedger = '31';
+
+function showStudentAccountPending(container, account) {
+  const result = container.querySelector('#stu-account-result');
+  const emailInput = result?.querySelector('#stu-account-email');
+  const familyLinkStatus = result?.querySelector('#student-account-family-link-status');
+  if (!result || !emailInput) return;
+
+  emailInput.value = account.accountEmail || account.email || '';
+  if (familyLinkStatus) {
+    familyLinkStatus.style.display = account.familyLinkPending ? 'block' : 'none';
+    familyLinkStatus.textContent = account.familyLinkPending
+      ? 'تعذر تحديث ربط ولي الأمر الآن. تم حفظ القيد؛ أعد المحاولة أو راجع مسؤول النظام قبل التفعيل.'
+      : '';
+  }
+  result.style.display = 'block';
+  result.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  result.querySelector('#stu-close-account-result').onclick = () => {
+    emailInput.value = '';
+    result.style.display = 'none';
+  };
+}
 
 export async function renderStudentsView(container) {
   if (!isInitialized) {
@@ -54,6 +78,13 @@ export async function renderStudentsView(container) {
               + تسجيل قيد طالب جديد
             </button>
           </div>
+        </div>
+
+        <div class="segmented-control" role="tablist" aria-label="دفاتر شؤون الطلاب" style="display:flex;gap:var(--space-2);flex-wrap:wrap;">
+          <button type="button" class="btn btn-primary btn-sm ledger-tab active" data-ledger-view="31" aria-selected="true">سجل القيد 31</button>
+          <button type="button" class="btn btn-outline btn-sm ledger-tab" data-ledger-view="46" aria-selected="false">سجل التحويلات 46</button>
+          <button type="button" class="btn btn-outline btn-sm ledger-tab" data-ledger-view="41" aria-selected="false">كشف المستجدين 41</button>
+          <a class="btn btn-outline btn-sm" href="#attendance">دفتر 5 سلوك</a>
         </div>
 
         <!-- Bulk Import Panel (Collapsible) -->
@@ -115,8 +146,12 @@ export async function renderStudentsView(container) {
                   <input type="text" id="new-stu-name" class="form-control" required placeholder="مثال: يوسف أحمد محمود المنشاوي">
                 </div>
                 <div class="form-group">
-                  <label class="form-label" for="new-stu-code">كود الطالب بالوزارة (يدوي رسمي) *</label>
-                  <input type="text" id="new-stu-code" class="form-control" required maxlength="12" placeholder="الكود المعتمد من وزارة التربية والتعليم">
+                  <label class="form-label" for="new-stu-code">كود الطالب *</label>
+                  <input type="text" id="new-stu-code" class="form-control" required maxlength="12" placeholder="كود الطالب المعتمد">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="new-stu-email">البريد الوزاري الموحد</label>
+                  <input type="email" id="new-stu-email" class="form-control" readonly placeholder="يُنشأ تلقائياً من كود الطالب">
                 </div>
                 <div class="form-group">
                   <label class="form-label" for="new-stu-nid">الرقم القومي للطالب (14 رقم) *</label>
@@ -145,14 +180,22 @@ export async function renderStudentsView(container) {
                   </select>
                 </div>
                 <div class="form-group">
+                  <label class="form-label" for="new-stu-second-language">اللغة الأجنبية الثانية *</label>
+                  <select id="new-stu-second-language" class="form-control" required>
+                    <option value="">اختر اللغة الثانية</option>
+                    <option value="فرنساوي">فرنساوي</option>
+                    <option value="ألماني">ألماني</option>
+                    <option value="إيطالي">إيطالي</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="new-stu-nationality">الجنسية</label>
+                  <input type="text" id="new-stu-nationality" class="form-control" value="مصري">
+                </div>
+                <div class="form-group">
                   <label class="form-label" for="new-stu-grade">المرحلة والفصل *</label>
                   <select id="new-stu-grade" class="form-control" required>
-                    <option value="الصف الأول الثانوي — فصل 1/1">الصف الأول الثانوي — فصل 1/1</option>
-                    <option value="الصف الأول الثانوي — فصل 1/2">الصف الأول الثانوي — فصل 1/2</option>
-                    <option value="الصف الثاني الثانوي — علمي">الصف الثاني الثانوي — علمي</option>
-                    <option value="الصف الثاني الثانوي — أدبي">الصف الثاني الثانوي — أدبي</option>
-                    <option value="الصف الثالث الثانوي — علمي علوم">الصف الثالث الثانوي — علمي علوم</option>
-                    <option value="الصف الثالث الثانوي — علمي رياضة">الصف الثالث الثانوي — علمي رياضة</option>
+                    <option value="">تحميل الفصول المعتمدة...</option>
                   </select>
                 </div>
                 <div class="form-group">
@@ -160,9 +203,47 @@ export async function renderStudentsView(container) {
                   <select id="new-stu-status" class="form-control">
                     <option value="enrolled">مقيد منتظم</option>
                     <option value="transferred">محول من مدرسة أخرى</option>
+                    <option value="transferred_out">محول إلى مدرسة أخرى</option>
                     <option value="integration">دمج تعليمي</option>
                     <option value="homeschooled">منازل</option>
                   </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="new-stu-registered-date">تاريخ الالتحاق</label>
+                  <input type="date" id="new-stu-registered-date" class="form-control" value="${new Date().toISOString().slice(0, 10)}">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="new-stu-academic-year">العام الدراسي</label>
+                  <input type="text" id="new-stu-academic-year" class="form-control" value="2026/2027">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="new-stu-tuition-status">حالة سداد المصروفات</label>
+                  <select id="new-stu-tuition-status" class="form-control">
+                    <option value="unrecorded">غير مسجلة</option>
+                    <option value="paid">مسددة</option>
+                    <option value="partial">مسددة جزئياً</option>
+                    <option value="unpaid">غير مسددة</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="new-stu-tuition-amount">قيمة المصروفات المسجلة</label>
+                  <input type="number" id="new-stu-tuition-amount" class="form-control" min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="new-stu-receipt-number">رقم القسيمة</label>
+                  <input type="text" id="new-stu-receipt-number" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="new-stu-previous-school">المدرسة السابقة (للتحويل الوارد)</label>
+                  <input type="text" id="new-stu-previous-school" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="new-stu-transfer-destination">المدرسة المحول إليها</label>
+                  <input type="text" id="new-stu-transfer-destination" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="new-stu-transfer-date">تاريخ التحويل</label>
+                  <input type="date" id="new-stu-transfer-date" class="form-control">
                 </div>
                 <div class="form-group">
                   <label class="form-label" for="new-stu-phone">هاتف الطالب (إن وُجد)</label>
@@ -200,8 +281,16 @@ export async function renderStudentsView(container) {
                   <input type="tel" id="new-stu-parent-phone" class="form-control" required placeholder="010XXXXXXXX">
                 </div>
                 <div class="form-group">
+                  <label class="form-label" for="new-stu-parent-email">البريد الإلكتروني لولي الأمر (لتفعيل الحساب)</label>
+                  <input type="email" id="new-stu-parent-email" class="form-control" autocomplete="email" placeholder="يُستخدم لتفعيل حساب ولي الأمر">
+                </div>
+                <div class="form-group">
                   <label class="form-label" for="new-stu-parent-job">الوظيفة / جهة العمل</label>
                   <input type="text" id="new-stu-parent-job" class="form-control" placeholder="مهنة ولي الأمر">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="new-stu-parent-address">عنوان ولي الأمر</label>
+                  <input type="text" id="new-stu-parent-address" class="form-control">
                 </div>
               </div>
 
@@ -235,6 +324,17 @@ export async function renderStudentsView(container) {
           </div>
         </div>
 
+        <section id="stu-account-result" class="panel" aria-live="polite" style="display:none;border-inline-start:4px solid var(--color-success-solid);">
+          <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-3);">
+            <div><h3 class="panel-title" style="margin:0;">تم حفظ القيد</h3><p style="margin:4px 0 0;color:var(--text-muted);font-size:var(--text-xs);">حساب الطالب ينتظر موافقة ولي الأمر. بعد الموافقة، يختار الطالب كلمة مروره بنفسه.</p></div>
+            <button type="button" class="btn btn-outline btn-sm" id="stu-close-account-result">إغلاق</button>
+          </div>
+          <div class="panel-body" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--space-3);">
+            <div class="form-group"><label class="form-label" for="stu-account-email">البريد الموحد</label><input id="stu-account-email" class="form-control" readonly autocomplete="off"></div>
+            <p id="student-account-family-link-status" role="status" style="display:none;color:var(--color-danger-text);font-size:var(--text-xs);grid-column:1/-1;margin:0;"></p>
+          </div>
+        </section>
+
         <!-- Filter Bar -->
         <div class="panel" style="padding: var(--space-3) var(--space-4);">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
@@ -242,10 +342,6 @@ export async function renderStudentsView(container) {
               <input type="text" id="stu-search-input" class="form-control" placeholder="بحث باسم الطالب، الكود الوزاري، أو الرقم القومي..." style="max-width: 320px; font-size: var(--text-xs);">
               <select id="stu-grade-filter" class="form-control" style="max-width: 220px; font-size: var(--text-xs);">
                 <option value="all">كافة الفصول والمراحل</option>
-                <option value="فصل 1/1">فصل 1/1</option>
-                <option value="فصل 1/2">فصل 1/2</option>
-                <option value="الثاني الثانوي">الصف الثاني الثانوي</option>
-                <option value="الثالث الثانوي">الصف الثالث الثانوي</option>
               </select>
             </div>
             <div>
@@ -262,7 +358,7 @@ export async function renderStudentsView(container) {
                 <tr>
                   <th style="width: 40px; text-align: center;">م</th>
                   <th>اسم الطالب الرباعي</th>
-                  <th>كود الوزارة</th>
+                  <th>كود الطالب</th>
                   <th>الرقم القومي</th>
                   <th>الميلاد والسن في 1/10</th>
                   <th>المرحلة والفصل</th>
@@ -286,11 +382,37 @@ export async function renderStudentsView(container) {
     isInitialized = true;
   }
 
+  await populateStudentClasses();
   await loadStudentsData();
+}
+
+async function populateStudentClasses(selectedValue = '') {
+  const gradeSelect = document.getElementById('new-stu-grade');
+  if (!gradeSelect) return;
+  const requestedValue = selectedValue || gradeSelect.value;
+  const classes = (await getSchoolClasses()).filter((item) => item?.name);
+  gradeSelect.innerHTML = classes.length
+    ? '<option value="">اختر صفاً وفصلاً معتمداً</option>' + classes.map((item) => {
+      const placement = item.grade && !String(item.name).includes(item.grade) ? `${item.grade} — ${item.name}` : item.name;
+      return `<option value="${placement}">${placement}</option>`;
+    }).join('')
+    : '<option value="">لا توجد فصول معتمدة متاحة</option>';
+  if (requestedValue) {
+    const option = [...gradeSelect.options].find((item) => item.value === requestedValue);
+    if (option) gradeSelect.value = requestedValue;
+  }
 }
 
 async function loadStudentsData() {
   studentList = (await getStudents()) || [];
+  const gradeFilter = document.getElementById('stu-grade-filter');
+  if (gradeFilter) {
+    const previousValue = gradeFilter.value;
+    const grades = [...new Set(studentList.map((student) => String(student.grade || '').trim()).filter(Boolean))];
+    gradeFilter.replaceChildren(new Option('كافة الفصول والمراحل', 'all'));
+    grades.forEach((value) => gradeFilter.add(new Option(value, value)));
+    gradeFilter.value = grades.includes(previousValue) ? previousValue : 'all';
+  }
   const badge = document.getElementById('stu-total-badge');
   if (badge) badge.textContent = `${studentList.length} طالب مقيد رسمياً`;
   renderStudentsTable();
@@ -303,7 +425,12 @@ function renderStudentsTable() {
   const grade = document.getElementById('stu-grade-filter')?.value || 'all';
   if (!tbody) return;
 
-  const filtered = studentList.filter((s) => {
+  const ledgerRecords = studentList.filter((student) => {
+    if (activeLedger === '46') return ['transfer_in', 'transfer_out'].includes(student.admissionType) || ['transferred', 'transferred_out'].includes(student.status) || Boolean(student.transferDate || student.previousSchool || student.transferDestinationSchool);
+    if (activeLedger === '41') return student.admissionType === 'new';
+    return student.status !== 'transferred_out' && student.status !== 'archived';
+  });
+  const filtered = ledgerRecords.filter((s) => {
     if (grade !== 'all' && !(s.grade || '').includes(grade)) return false;
     if (q) {
       const match = (s.name || '').toLowerCase().includes(q) ||
@@ -318,10 +445,16 @@ function renderStudentsTable() {
   if (filtered.length === 0) {
     tbody.innerHTML = '';
     emptyState.style.display = 'flex';
+    const emptyTitle = emptyState.querySelector('.empty-state-title');
+    if (emptyTitle) emptyTitle.textContent = activeLedger === '46' ? 'لا توجد تحويلات مسجلة' : activeLedger === '41' ? 'لا توجد قيود مستجدين مسجلة' : 'لا توجد سجلات طلاب مطابقة';
+    const badge = document.getElementById('stu-total-badge');
+    if (badge) badge.textContent = `0 ${activeLedger === '46' ? 'تحويلات' : activeLedger === '41' ? 'مستجدين' : 'طلاب'}`;
     return;
   }
 
   emptyState.style.display = 'none';
+  const badge = document.getElementById('stu-total-badge');
+  if (badge) badge.textContent = `${filtered.length} ${activeLedger === '46' ? 'تحويلات' : activeLedger === '41' ? 'مستجدين' : 'طلاب مقيدين'}`;
   tbody.innerHTML = filtered.map((s, idx) => `
     <tr>
       <td style="text-align: center; font-weight: 700; color: var(--text-muted);">${idx + 1}</td>
@@ -335,7 +468,7 @@ function renderStudentsTable() {
         <div>${s.birthDate || '—'}</div>
         <small style="color: var(--text-muted);">${s.ageOct1 || ''}</small>
       </td>
-      <td><span class="badge badge-primary" style="font-size: 11px;">${s.grade || 'أولى ثانوي'}</span></td>
+      <td><span class="badge badge-primary" style="font-size: 11px;">${s.grade || '—'}</span>${activeLedger === '46' ? `<small style="display:block;color:var(--text-muted);">${s.admissionType === 'transfer_out' || s.status === 'transferred_out' ? `صادر إلى: ${s.transferDestinationSchool || 'غير مسجل'}` : `وارد من: ${s.previousSchool || 'غير مسجل'}`}</small>` : ''}</td>
       <td>
         <div style="font-size: var(--text-xs); font-weight: 600;">${s.parentInfo?.parentName || 'غير مسجل'}</div>
         <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">${s.parentInfo?.parentPhone || s.parentInfo?.phone || '—'}</div>
@@ -457,15 +590,28 @@ function enterEditMode(student) {
   document.getElementById('new-stu-age-oct1').value = student.ageOct1 || '';
   document.getElementById('new-stu-gender').value = student.gender || 'ذكر';
   document.getElementById('new-stu-religion').value = student.religion || 'مسلم';
-  document.getElementById('new-stu-grade').value = student.grade || 'الصف الأول الثانوي — فصل 1/1';
+  document.getElementById('new-stu-second-language').value = student.secondLanguage || '';
+  document.getElementById('new-stu-email').value = student.email || generateOfficialStudentEmail(student.code);
+  document.getElementById('new-stu-nationality').value = student.nationality || '';
+  document.getElementById('new-stu-grade').value = student.grade || '';
   document.getElementById('new-stu-status').value = student.status || 'enrolled';
+  document.getElementById('new-stu-registered-date').value = student.registeredDate || '';
+  document.getElementById('new-stu-academic-year').value = student.academicYear || '2026/2027';
+  document.getElementById('new-stu-tuition-status').value = student.tuitionStatus || 'unrecorded';
+  document.getElementById('new-stu-tuition-amount').value = student.tuitionAmount || '';
+  document.getElementById('new-stu-receipt-number').value = student.tuitionReceiptNumber || '';
+  document.getElementById('new-stu-previous-school').value = student.previousSchool || '';
+  document.getElementById('new-stu-transfer-destination').value = student.transferDestinationSchool || '';
+  document.getElementById('new-stu-transfer-date').value = student.transferDate || '';
   document.getElementById('new-stu-phone').value = student.studentPhone || '';
   document.getElementById('new-stu-address').value = student.address || '';
   document.getElementById('new-stu-parent-name').value = student.parentInfo?.parentName || '';
   document.getElementById('new-stu-parent-relation').value = student.parentInfo?.parentRelation || 'أب';
   document.getElementById('new-stu-parent-nid').value = student.parentInfo?.parentNationalId || '';
   document.getElementById('new-stu-parent-phone').value = student.parentInfo?.parentPhone || student.parentInfo?.phone || '';
+  document.getElementById('new-stu-parent-email').value = student.parentInfo?.parentEmail || '';
   document.getElementById('new-stu-parent-job').value = student.parentInfo?.parentJob || '';
+  document.getElementById('new-stu-parent-address').value = student.parentInfo?.parentAddress || '';
 
   panel.scrollIntoView({ behavior: 'smooth' });
 }
@@ -495,6 +641,26 @@ function bindStudentsEvents(container) {
   const birthInput = document.getElementById('new-stu-birthdate');
   const ageInput = document.getElementById('new-stu-age-oct1');
   const genderInput = document.getElementById('new-stu-gender');
+  const codeInput = document.getElementById('new-stu-code');
+  const emailInput = document.getElementById('new-stu-email');
+
+  codeInput?.addEventListener('input', () => {
+    if (emailInput) emailInput.value = generateOfficialStudentEmail(codeInput.value);
+  });
+
+  container.querySelectorAll('.ledger-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      activeLedger = tab.dataset.ledgerView;
+      container.querySelectorAll('.ledger-tab').forEach((item) => {
+        const active = item === tab;
+        item.classList.toggle('active', active);
+        item.classList.toggle('btn-primary', active);
+        item.classList.toggle('btn-outline', !active);
+        item.setAttribute('aria-selected', String(active));
+      });
+      renderStudentsTable();
+    });
+  });
 
   // Auto extract birth date, gender, and age on Oct 1 from 14-digit National ID
   if (nidInput) {
@@ -518,6 +684,7 @@ function bindStudentsEvents(container) {
   const siblingLinkInfo = document.getElementById('sibling-link-info');
   const parentNameInput = document.getElementById('new-stu-parent-name');
   const parentPhoneInput = document.getElementById('new-stu-parent-phone');
+  const parentEmailInput = document.getElementById('new-stu-parent-email');
 
   if (hasSiblingCheck && siblingPicker) {
     hasSiblingCheck.addEventListener('change', () => {
@@ -546,6 +713,9 @@ function bindStudentsEvents(container) {
         if (parentPhoneInput && (sibling.parentInfo.parentPhone || sibling.parentInfo.phone)) {
           parentPhoneInput.value = sibling.parentInfo.parentPhone || sibling.parentInfo.phone;
         }
+        if (parentEmailInput && sibling.parentInfo.parentEmail) {
+          parentEmailInput.value = sibling.parentInfo.parentEmail;
+        }
         if (siblingLinkInfo) {
           siblingLinkInfo.style.display = 'block';
           siblingLinkInfo.innerHTML = `✓ تم استيراد بيانات ولي الأمر: <strong>${sibling.parentInfo.parentName || 'مسجل'}</strong> وسيتم ربط ملف الطالب مباشرة بالشقيق/ة <strong>(${sibling.name})</strong> لتوحيد حساب العائلة.`;
@@ -570,17 +740,40 @@ function bindStudentsEvents(container) {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const siblingCode = (hasSiblingCheck && hasSiblingCheck.checked) ? siblingSelect.value : null;
+    const parentEmail = parentEmailInput ? parentEmailInput.value.trim().toLowerCase() : '';
+    if (!editingStudentCode && hasSiblingCheck?.checked && !siblingCode) {
+      showToast('اختر الأخ أو الأخت المسجل/ة لربط ملفات الأسرة.', 'error');
+      return;
+    }
+    if (!editingStudentCode && !parentEmail) {
+      showToast('أدخل بريد ولي الأمر الصحيح قبل قيد الطالب لتفعيل حساب الأسرة.', 'error');
+      return;
+    }
 
     const studentData = {
       name: document.getElementById('new-stu-name').value.trim(),
       code: document.getElementById('new-stu-code').value.trim(),
+      email: generateOfficialStudentEmail(document.getElementById('new-stu-code').value),
       nationalId: document.getElementById('new-stu-nid').value.trim(),
       birthDate: document.getElementById('new-stu-birthdate').value,
       ageOct1: document.getElementById('new-stu-age-oct1').value.trim(),
       gender: document.getElementById('new-stu-gender').value,
       religion: document.getElementById('new-stu-religion').value,
+      secondLanguage: document.getElementById('new-stu-second-language').value,
+      nationality: document.getElementById('new-stu-nationality').value.trim(),
       grade: document.getElementById('new-stu-grade').value,
       status: document.getElementById('new-stu-status').value,
+      admissionType: document.getElementById('new-stu-status').value === 'transferred'
+        ? 'transfer_in'
+        : document.getElementById('new-stu-status').value === 'transferred_out' ? 'transfer_out' : 'new',
+      academicYear: document.getElementById('new-stu-academic-year').value.trim(),
+      registeredDate: document.getElementById('new-stu-registered-date').value,
+      tuitionStatus: document.getElementById('new-stu-tuition-status').value,
+      tuitionAmount: document.getElementById('new-stu-tuition-amount').value,
+      tuitionReceiptNumber: document.getElementById('new-stu-receipt-number').value.trim(),
+      previousSchool: document.getElementById('new-stu-previous-school').value.trim(),
+      transferDestinationSchool: document.getElementById('new-stu-transfer-destination').value.trim(),
+      transferDate: document.getElementById('new-stu-transfer-date').value,
       studentPhone: document.getElementById('new-stu-phone').value.trim(),
       address: document.getElementById('new-stu-address').value.trim(),
       siblingCode,
@@ -589,7 +782,9 @@ function bindStudentsEvents(container) {
         parentRelation: document.getElementById('new-stu-parent-relation').value,
         parentNationalId: document.getElementById('new-stu-parent-nid').value.trim(),
         parentPhone: parentPhoneInput ? parentPhoneInput.value.trim() : '',
+        parentEmail,
         parentJob: document.getElementById('new-stu-parent-job').value.trim(),
+        parentAddress: document.getElementById('new-stu-parent-address').value.trim(),
       },
     };
 
@@ -598,8 +793,9 @@ function bindStudentsEvents(container) {
         await updateStudent(studentData);
         showToast('✓ تم حفظ التعديلات الرسمية على ملف الطالب بنجاح.');
       } else {
-        await createStudent(studentData);
-        showToast('✓ تم قيد الطالب بنجاح في سجلات المدرسة والوزارة وتوثيقه في المنظومة.');
+        const registeredStudent = await createStudent(studentData);
+        showStudentAccountPending(container, registeredStudent);
+        showToast('✓ تم قيد الطالب. حسابه ينتظر موافقة ولي الأمر وتفعيله.');
       }
 
       exitEditMode();
@@ -633,17 +829,21 @@ function bindStudentsEvents(container) {
   // Download Empty Template CSV
   templateBtn?.addEventListener('click', () => {
     const templateHeaders = [
-      'كود الطالب بالوزارة',
+      'كود الطالب',
       'الاسم الرباعي',
       'الرقم القومي (14 رقم)',
       'الفصل والمرحلة',
       'اسم ولي الأمر',
       'هاتف ولي الأمر',
-      'العنوان ومحل السكن'
+      'العنوان ومحل السكن',
+      'النوع',
+      'الديانة',
+      'اللغة الأجنبية الثانية',
+      'العام الدراسي',
     ];
     const sampleRows = [
-      ['2026105', 'علي محمد إبراهيم حسن', '30809150102345', 'الصف الأول الثانوي — فصل 1/1', 'محمد إبراهيم حسن', '01011223344', 'القاهرة الجديدة - التجمع الخامس'],
-      ['2026106', 'سارة أحمد كمال السيد', '30810200104567', 'الصف الأول الثانوي — فصل 1/2', 'أحمد كمال السيد', '01233445566', 'مدينة نصر - الحي السابع']
+      ['2026105', 'علي محمد إبراهيم حسن', '30809150102345', 'الصف الأول الثانوي — فصل 1/1', 'محمد إبراهيم حسن', '01011223344', 'القاهرة الجديدة - التجمع الخامس', 'ذكر', 'مسلم', 'فرنساوي', '2026/2027'],
+      ['2026106', 'سارة أحمد كمال السيد', '30810200104567', 'الصف الأول الثانوي — فصل 1/2', 'أحمد كمال السيد', '01233445566', 'مدينة نصر - الحي السابع', 'أنثى', 'مسيحي', 'ألماني', '2026/2027']
     ];
     exportToCsv('نموذج_كشف_قيد_طلاب_مدرسي', templateHeaders, sampleRows);
   });
@@ -677,6 +877,10 @@ function bindStudentsEvents(container) {
               parentName: cols[4] || 'ولي الأمر',
               parentPhone: cols[5] || '',
               address: cols[6] || 'القاهرة',
+              gender: cols[7] || '',
+              religion: cols[8] || '',
+              secondLanguage: cols[9] || '',
+              academicYear: cols[10] || '2026/2027',
             });
           }
         }

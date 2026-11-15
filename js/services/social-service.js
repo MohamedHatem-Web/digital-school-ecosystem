@@ -19,38 +19,9 @@ const CACHE_CASES_KEY = 'dse_social_cases_';
 const CACHE_MEETINGS_KEY = 'dse_parent_meetings_';
 const CACHE_DISCIPLINE_KEY = 'dse_social_discipline_';
 
-export const DEFAULT_DISCIPLINARY_ACTIONS = [
-  {
-    id: 'disc_2026_01',
-    studentCode: '2026103',
-    studentName: 'زياد محمود عبد الرحمن',
-    grade: 'الصف الأول الثانوي — فصل 1/1',
-    actionType: 'إنذار غياب أول (5 أيام)',
-    reason: 'انقطاع عن الحضور لمدة 5 أيام متتالية دون تقديم عذر طبي مقبول لإدارة المدرسة',
-    date: '2026-10-25',
-    status: 'delivered', // delivered | pending | resolved
-    parentName: 'أ. محمود عبد الرحمن سالم',
-    parentPhone: '01234567890',
-    smsSent: true,
-    specialistName: 'أ. نادية مصطفى الشريف',
-    schoolId: DEFAULT_SCHOOL_ID,
-  }
-];
+export const DEFAULT_DISCIPLINARY_ACTIONS = [];
 
-export const DEFAULT_PARENT_MEETINGS = [
-  {
-    id: 'meet_2026_01',
-    studentCode: '2026103',
-    studentName: 'زياد محمود عبد الرحمن',
-    parentName: 'أ. محمود عبد الرحمن سالم',
-    parentPhone: '01234567890',
-    reason: 'مناقشة انضباط الطالب ونسبة الحضور الصفي ولائحة الانضباط المدرسي',
-    appointmentDate: '2026-11-12',
-    status: 'scheduled',
-    schoolId: DEFAULT_SCHOOL_ID,
-    createdAt: '2026-11-05',
-  }
-];
+export const DEFAULT_PARENT_MEETINGS = [];
 
 /**
  * Alias helpers for social view backwards compatibility
@@ -77,67 +48,91 @@ export async function getDisciplinaryActions(schoolId = DEFAULT_SCHOOL_ID) {
       return list;
     }
   } catch (e) {
-    console.warn('Firestore getDisciplinaryActions notice:', e);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (cacheError) {
+        console.warn('Social discipline cache read notice:', cacheError);
+      }
+    }
+    throw new Error(`تعذر تحميل سجل الإنذارات: ${e.message || 'تحقق من الاتصال والصلاحيات.'}`);
   }
 
-  const initial = DEFAULT_DISCIPLINARY_ACTIONS.map(d => ({ ...d, schoolId }));
+  const initial = [];
   localStorage.setItem(cacheKey, JSON.stringify(initial));
   return initial;
 }
 
 /**
  * Record and issue a formal disciplinary action (Warning, Suspension, Pledge)
- * Dispatches live notification and simulated SMS alert to the parent
+ * Persists the formal action and sends an in-app notification to the parent
  */
 export async function createDisciplinaryAction({
   studentCode,
   studentName,
   grade,
   actionType,
+  actionTaken,
+  severityLevel,
   reason,
   durationDays = null,
   parentName = '',
   parentPhone = '',
   specialistName = 'الأخصائي الاجتماعي',
+  specialistRole = 'social_affairs',
+  academicYear = '2026/2027',
+  className = '',
 }, schoolId = DEFAULT_SCHOOL_ID) {
   const cleanName = String(studentName).trim();
   if (!cleanName) throw new Error('يرجى تحديد الطالب المعني بالإجراء.');
 
   const actionId = `disc_${Date.now()}`;
+  const normalizedAction = actionType || actionTaken || 'warning_first';
+  const normalizedActionLabel = actionTaken || normalizedAction;
+  const normalizedSeverity = severityLevel || 'level_1';
   const actionData = {
     id: actionId,
     studentCode: studentCode || '—',
     studentName: cleanName,
     grade: grade || 'المرحلة الثانوية',
-    actionType: actionType || 'إنذار رسمي',
+    actionType: normalizedAction,
+    actionTaken: normalizedActionLabel,
+    severityLevel: normalizedSeverity,
+    level: normalizedSeverity,
     reason: reason || 'مخالفة لائحة الانضباط المدرسي المعتمدة',
     durationDays: durationDays ? Number(durationDays) : null,
     date: new Date().toISOString().split('T')[0],
-    status: 'delivered',
+    academicYear,
+    className,
+    status: 'issued',
     parentName: parentName || 'ولي الأمر',
     parentPhone: parentPhone || '—',
-    smsSent: true,
     specialistName,
     schoolId,
     createdAt: new Date().toISOString(),
   };
 
+  const docRef = doc(db, 'schools', schoolId, 'disciplinaryActions', actionId);
   try {
-    const docRef = doc(db, 'schools', schoolId, 'disciplinaryActions', actionId);
     await setDoc(docRef, { ...actionData, serverCreatedAt: serverTimestamp() });
-  } catch (e) {
-    console.warn('Firestore createDisciplinaryAction notice:', e);
+  } catch (error) {
+    throw new Error(`تعذر حفظ الإنذار على خادم المدرسة: ${error.message || 'تحقق من الاتصال والصلاحيات.'}`);
   }
 
-  // Create notifications for parent and student
+  // Notify the linked parent account in the school portal.
   try {
     await createNotification({
-      title: `⚠️ إشعار رسمي من الأخصائي الاجتماعي: ${actionData.actionType}`,
+      title: `⚠️ إشعار رسمي من المدرسة: ${actionData.actionTaken}`,
       body: `بشأن الطالب: ${actionData.studentName} — ${actionData.reason}`,
       category: 'warning',
       targetRole: 'parent',
+      targetStudentCode: actionData.studentCode,
+      requirePersistence: true,
     }, schoolId);
-  } catch (e) {}
+  } catch (error) {
+    throw new Error(`تم حفظ الإنذار، لكن تعذر إرسال إشعار ولي الأمر: ${error.message}`);
+  }
 
   const existing = await getDisciplinaryActions(schoolId);
   const updated = [actionData, ...existing.filter(x => x.id !== actionId)];
@@ -147,11 +142,80 @@ export async function createDisciplinaryAction({
     action: `إصدار قرار أو إنذار انضباطي (${actionData.actionType})`,
     target: `طالب: ${cleanName} (كود: ${actionData.studentCode})`,
     details: `السبب: ${actionData.reason} | ولي الأمر: ${actionData.parentName}`,
-    operatorRole: 'social_affairs',
+    operatorName: specialistName,
+    operatorRole: specialistRole,
     schoolId,
   });
 
   return actionData;
+}
+
+export async function getSocialIncidents(schoolId = DEFAULT_SCHOOL_ID) {
+  try {
+    const snapshot = await getDocs(collection(db, 'schools', schoolId, 'socialIncidents'));
+    return snapshot.docs
+      .map((incidentDoc) => ({ id: incidentDoc.id, ...incidentDoc.data() }))
+      .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+  } catch (error) {
+    throw new Error(`تعذر تحميل سجل المواقف اليومية: ${error.message || 'تحقق من الاتصال والصلاحيات.'}`);
+  }
+}
+
+export async function createSocialIncident({
+  studentCode,
+  studentName,
+  grade = '',
+  className = '',
+  incidentType,
+  date = new Date().toISOString().slice(0, 10),
+  description,
+  regulation = '',
+  academicYear = '2026/2027',
+  recordedBy = 'الأخصائي الاجتماعي',
+  recordedByRole = 'social_affairs',
+}, schoolId = DEFAULT_SCHOOL_ID) {
+  if (!String(studentCode || '').trim() || !String(studentName || '').trim()) {
+    throw new Error('يرجى اختيار طالب من السجل الرسمي.');
+  }
+  if (!String(description || '').trim()) throw new Error('يرجى كتابة تفاصيل الموقف.');
+  if (!String(incidentType || '').trim()) throw new Error('يرجى تحديد نوع الموقف.');
+
+  const incidentId = `incident_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const incident = {
+    id: incidentId,
+    studentCode: String(studentCode).trim(),
+    studentName: String(studentName).trim(),
+    grade,
+    className,
+    incidentType,
+    date,
+    description: String(description).trim(),
+    regulation,
+    academicYear,
+    recordedBy,
+    recordedByRole,
+    schoolId,
+    createdAt: new Date().toISOString(),
+  };
+  try {
+    await setDoc(doc(db, 'schools', schoolId, 'socialIncidents', incidentId), {
+      ...incident,
+      serverCreatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    throw new Error(`تعذر حفظ الموقف على خادم المدرسة: ${error.message || 'تحقق من الاتصال والصلاحيات.'}`);
+  }
+
+  await recordAuditEvent({
+    action: 'تسجيل موقف يومي في سجل الخدمة الاجتماعية',
+    target: `${incident.studentName} (${incident.studentCode})`,
+    details: `${incident.incidentType} — ${incident.regulation || 'دون تصنيف لائحي'} — ${incident.description}`,
+    operatorName: recordedBy,
+    operatorRole: recordedByRole,
+    category: 'social',
+    schoolId,
+  });
+  return incident;
 }
 
 /**
@@ -180,7 +244,7 @@ export async function getParentMeetings(schoolId = DEFAULT_SCHOOL_ID) {
     console.warn('Firestore getParentMeetings notice:', e);
   }
 
-  const initial = DEFAULT_PARENT_MEETINGS.map(m => ({ ...m, schoolId }));
+  const initial = [];
   localStorage.setItem(cacheKey, JSON.stringify(initial));
   return initial;
 }

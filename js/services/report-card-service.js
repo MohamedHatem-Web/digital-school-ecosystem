@@ -5,7 +5,8 @@
 
 import { getSchoolProfile } from './school-service.js';
 import { getStudentGrades } from './grade-service.js';
-import { generateQRCodeUrl, generateVerificationToken, buildVerificationUrl } from './qr-service.js';
+import { getStudentAttendanceHistory } from './attendance-service.js';
+import { generateQRCodeUrl, generateVerificationToken, buildVerificationUrl, registerVerifiedDocument } from './qr-service.js';
 
 /**
  * Subject metadata with maximum and passing scores
@@ -39,28 +40,57 @@ export function getGradeEstimate(percent) {
  * @param {string} options.schoolId School tenant identifier
  */
 export async function printStudentReportCard({ student, schoolId = 'sch_cairo_sec_01' }) {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    alert('يرجى السماح بالنوافذ المنبثقة لعرض شهادة التقرير الأكاديمي.');
+    return;
+  }
   const profile = await getSchoolProfile(schoolId);
   const schoolName = profile?.nameAr || 'المدرسة الثانوية الرسمية الرقمية';
   const adminName = profile?.administration || 'إدارة القاهرة الجديدة التعليمية';
   const directorName = profile?.directorName || 'د. طارق محمود المنشاوي';
 
-  const sCode = String(student.code || (student.name?.includes('مريم') ? '2026102' : '2026101')).trim();
+  const sCode = String(student.code || '').trim();
+  if (!sCode) throw new Error('لا يمكن إصدار بيان درجات دون كود طالب مسجل.');
   const gradesList = await getStudentGrades(sCode, schoolId);
 
-  // Map grades to official subjects
   const subjectScores = OFFICIAL_SUBJECTS.map((subj) => {
-    const matched = gradesList.find((g) => g.subject?.includes(subj.name.split(' ')[0]) || subj.name.includes(g.subject || ''));
-    let score = matched ? matched.score : (student.name?.includes('مريم') ? Math.round(subj.maxScore * 0.95) : Math.round(subj.maxScore * 0.9));
-    const percent = Math.round((score / subj.maxScore) * 100);
+    const matched = gradesList.find((grade) => {
+      const recordedSubject = String(grade.subject || '').trim();
+      return recordedSubject && (
+        recordedSubject.includes(subj.name.split(' ')[0]) || subj.name.includes(recordedSubject)
+      );
+    });
+    if (!matched) return null;
+    const score = Number(matched.score);
+    const maxScore = Number(matched.maxScore || subj.maxScore);
+    if (!Number.isFinite(score) || !Number.isFinite(maxScore) || maxScore <= 0) return null;
+    const percent = Math.round((score / maxScore) * 100);
     const estimate = getGradeEstimate(percent);
     return {
-      name: subj.name,
-      maxScore: subj.maxScore,
+      name: matched.subject || subj.name,
+      maxScore,
       score,
       percent,
       estimate,
     };
-  });
+  }).filter(Boolean);
+
+  if (!subjectScores.length) {
+    printWindow.close();
+    throw new Error('لا توجد درجات مسجلة لهذا الطالب؛ لم يتم إنشاء بيان درجات ببيانات افتراضية.');
+  }
+
+  const attendanceHistory = await getStudentAttendanceHistory(sCode, schoolId);
+  const arrivalRecords = attendanceHistory.filter((record) => record.phase === 'arrival');
+  const dailyRecords = arrivalRecords.length
+    ? arrivalRecords
+    : attendanceHistory.filter((record) => record.phase === 'class');
+  const presentDays = dailyRecords.filter((record) => record.status === 'present').length;
+  const absentDays = dailyRecords.filter((record) => ['absent', 'absent_unexcused', 'absent_excused'].includes(record.status)).length;
+  const attendanceSummary = dailyRecords.length
+    ? `أيام الرصد: ${dailyRecords.length} | الحضور: ${presentDays} | الغياب: ${absentDays}`
+    : 'لا توجد سجلات حضور يومية لهذا الطالب.';
 
   const totalMax = subjectScores.reduce((acc, s) => acc + s.maxScore, 0);
   const totalScore = subjectScores.reduce((acc, s) => acc + s.score, 0);
@@ -71,11 +101,20 @@ export async function printStudentReportCard({ student, schoolId = 'sch_cairo_se
   const token = generateVerificationToken('RC', sCode);
   const verifyUrl = buildVerificationUrl('report_card', token);
   const qrUrl = generateQRCodeUrl(verifyUrl, 130);
-
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    alert('يرجى السماح بالنوافذ المنبثقة لعرض شهادة التقرير الأكاديمي.');
-    return;
+  try {
+    await registerVerifiedDocument({
+      token,
+      documentType: 'report_card',
+      studentName: student.name,
+      studentCode: sCode,
+      grade: student.grade,
+      className: student.className || student.classId,
+      schoolName,
+      academicYear: profile?.academicYear || '2026/2027',
+    }, schoolId);
+  } catch (error) {
+    printWindow.close();
+    throw error;
   }
 
   const dateStr = new Intl.DateTimeFormat('ar-EG', { dateStyle: 'full' }).format(new Date());
@@ -176,7 +215,7 @@ export async function printStudentReportCard({ student, schoolId = 'sch_cairo_se
         
         .eval-section {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: 1fr;
           gap: 10px;
           margin-bottom: 16px;
           font-size: 12px;
@@ -191,8 +230,8 @@ export async function printStudentReportCard({ student, schoolId = 'sch_cairo_se
         
         .signatures-qr {
           display: flex;
-          justify-content: space-between;
-          align-items: flex-end;
+          justify-content: center;
+          align-items: center;
           border-top: 2px solid #e2e8f0;
           padding-top: 16px;
           margin-top: 20px;
@@ -299,42 +338,16 @@ export async function printStudentReportCard({ student, schoolId = 'sch_cairo_se
 
         <div class="eval-section">
           <div class="eval-card">
-            <strong>📋 الحضور والانتظام المدرسي:</strong>
-            نسبة الحضور: <strong>98.5%</strong> (منتظم تماماً)<br>
-            الغياب بعذر: 1 يوم | التأخير: 0 يوم
-          </div>
-          <div class="eval-card">
-            <strong>🤝 السلوك والمواظبة:</strong>
-            التقييم: <strong style="color: #15803d;">منضبط ومتميز للغاية</strong><br>
-            المشاركة في الأنشطة الطلابية: نعم
-          </div>
-          <div class="eval-card">
-            <strong>📱 تسليم العهدة التكنولوجية:</strong>
-            حالة تابلت الوزارة: <strong>مسلم ومفعل بنجاح</strong><br>
-            التأمين والمنصة: مفعل ومسجل
+            <strong>📋 الحضور اليومي المسجل:</strong>
+            ${attendanceSummary}
           </div>
         </div>
 
         <div class="signatures-qr">
-          <div class="sig-block">
-            رائد الفصل ومسؤول الرصد<br>
-            أ. هاني مصطفى
-            <div class="sig-line"></div>
-          </div>
-          <div class="sig-block">
-            مسؤول شؤون الطلاب<br>
-            أ. محمود عبد الرحمن
-            <div class="sig-line"></div>
-          </div>
           <div class="qr-box">
             <img src="${qrUrl}" alt="QR Code">
             <span class="qr-label">التحقق الرقمي الفوري</span>
             <span class="qr-token">${token}</span>
-          </div>
-          <div class="sig-block">
-            يعتمد، مدير عام المدرسة<br>
-            ${directorName}
-            <div class="sig-line"></div>
           </div>
         </div>
 

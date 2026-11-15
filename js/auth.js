@@ -5,6 +5,7 @@
 
 import {
   auth,
+  authPersistenceReady,
   db,
   signInWithEmailAndPassword,
   signOut,
@@ -68,14 +69,17 @@ export function translateAuthError(errorCode) {
  * Supports logging in with Email OR Student Code (e.g. 2026101 -> student@dse.edu.eg)
  */
 export async function loginWithEmailPassword(emailOrCode, password) {
-  let email = emailOrCode.trim();
-  
-  // If user entered a numeric student code (e.g. 2026101), map to their unified educational email
+  await authPersistenceReady;
+  let email = String(emailOrCode || '').trim();
+
+  // If user entered a numeric student code, map it to the official school-education email format.
   if (/^\d+$/.test(email)) {
-    if (email === '2026101') {
-      email = 'student@dse.edu.eg';
-    } else {
-      email = `${email}@dse.edu.eg`;
+    email = `${email}@cairo7.moe.edu.eg`;
+  } else if (email.includes('@') && !/cairo7\.moe\.edu\.eg$/.test(email.toLowerCase())) {
+    // Preserve direct staff logins while allowing ministry student emails to login with the same identity pattern.
+    const normalized = email.toLowerCase();
+    if (/^\d+@/.test(normalized)) {
+      email = normalized.replace(/@.*$/, '@cairo7.moe.edu.eg');
     }
   }
 
@@ -144,7 +148,6 @@ export async function loginWithEmailPassword(emailOrCode, password) {
   try {
     const maxAge = 60 * 60 * 24 * 30; // 30 days
     document.cookie = `dse_user_session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=${maxAge}; SameSite=Lax`;
-    document.cookie = `dse_role=${encodeURIComponent(profile.role)}; path=/; max-age=${maxAge}; SameSite=Lax`;
     document.cookie = `dse_user_name=${encodeURIComponent(profile.displayName || '')}; path=/; max-age=${maxAge}; SameSite=Lax`;
   } catch (e) {
     // ignore
@@ -185,6 +188,9 @@ export function getCurrentUser() {
   if (!sessionStr) return null;
   try {
     const user = JSON.parse(sessionStr);
+    if (/^\d+@cairo7\.moe\.edu\.eg$/i.test(user?.email || '')) {
+      user.role = 'student';
+    }
     const knownStaffNames = {
       'director@dse.edu.eg': 'د. طارق محمود المنشاوي',
       'tech@dse.edu.eg': 'م. حسام الدين عبد العزيز',
@@ -200,15 +206,6 @@ export function getCurrentUser() {
         user.displayName = knownStaffNames[user.email];
         localStorage.setItem('dse_user_session', JSON.stringify(user));
         sessionStorage.setItem('dse_user_session', JSON.stringify(user));
-      }
-    }
-
-    // Check if a cookie override exists for family role (Student vs. Parent)
-    if (typeof document !== 'undefined' && document.cookie) {
-      const matchRole = document.cookie.match(/dse_role=([^;]+)/);
-      if (matchRole && matchRole[1] && (user.role === 'student' || user.role === 'parent' || user.email === 'student@dse.edu.eg' || user.email === 'parent@dse.edu.eg')) {
-        user.role = matchRole[1].trim();
-        user.displayName = user.role === 'parent' ? 'أ. أحمد المنشاوي' : 'يوسف أحمد المنشاوي';
       }
     }
 
@@ -231,29 +228,6 @@ function clearCachedUserSession() {
  * Switch active role and identity for family accounts (Student vs. Parent)
  * Stores preference in localStorage and browser cookies
  */
-export function setFamilySessionRole(targetRole = 'student') {
-  const sessionStr = localStorage.getItem('dse_user_session') || sessionStorage.getItem('dse_user_session');
-  if (!sessionStr) return null;
-  try {
-    const user = JSON.parse(sessionStr);
-    user.role = targetRole;
-    if (targetRole === 'parent') {
-      user.displayName = 'أ. أحمد المنشاوي';
-    } else {
-      user.displayName = 'يوسف أحمد المنشاوي';
-    }
-    localStorage.setItem('dse_user_session', JSON.stringify(user));
-    sessionStorage.setItem('dse_user_session', JSON.stringify(user));
-
-    const maxAge = 60 * 60 * 24 * 30; // 30 days
-    document.cookie = `dse_role=${targetRole}; path=/; max-age=${maxAge}; SameSite=Lax`;
-    document.cookie = `dse_user_name=${encodeURIComponent(user.displayName)}; path=/; max-age=${maxAge}; SameSite=Lax`;
-    return user;
-  } catch (e) {
-    return null;
-  }
-}
-
 /**
  * Get current user role
  */
@@ -287,6 +261,23 @@ export async function logout() {
   } finally {
     localStorage.removeItem('dse_user_session');
     sessionStorage.removeItem('dse_user_session');
+    for (const prefix of [
+      'dse_students_',
+      'dse_grades_',
+      'dse_attendance_',
+      'dse_tablet_devices_',
+      'dse_tablet_batches_',
+      'dse_notifications_',
+      'dse_dismissals_',
+    ]) {
+      for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+        const key = localStorage.key(index);
+        if (key?.startsWith(prefix)) localStorage.removeItem(key);
+      }
+    }
+    localStorage.removeItem('dse_parent_children_codes');
+    localStorage.removeItem('dse_active_student_code');
+    localStorage.removeItem('dse_parent_active_child_code');
     // Clear all session cookies
     try {
       document.cookie.split(';').forEach((c) => {

@@ -8,6 +8,8 @@ import {
   collection,
   doc,
   getDocs,
+  query,
+  where,
   setDoc,
   deleteDoc,
   serverTimestamp,
@@ -16,6 +18,50 @@ import { DEFAULT_SCHOOL_ID } from './school-service.js';
 import { recordAuditEvent } from './audit-service.js';
 
 const CACHE_CMS_KEY = 'dse_cms_content_';
+const PENDING_CMS_KEY = 'dse_cms_pending_writes_';
+
+function readPendingCmsWrites(schoolId) {
+  try {
+    const queued = JSON.parse(localStorage.getItem(`${PENDING_CMS_KEY}${schoolId}`) || '[]');
+    return Array.isArray(queued) ? queued : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function queueCmsWrite(schoolId, itemId, data) {
+  const queued = readPendingCmsWrites(schoolId).filter((entry) => entry.itemId !== itemId);
+  queued.push({ itemId, data, queuedAt: new Date().toISOString() });
+  localStorage.setItem(`${PENDING_CMS_KEY}${schoolId}`, JSON.stringify(queued));
+}
+
+async function flushPendingCmsWrites(schoolId) {
+  const queued = readPendingCmsWrites(schoolId);
+  for (const entry of queued) {
+    try {
+      await withTimeout(setDoc(
+        doc(db, 'schools', schoolId, 'cmsContent', entry.itemId),
+        { ...entry.data, serverUpdatedAt: serverTimestamp() },
+        { merge: true }
+      ), 5000);
+      localStorage.setItem(
+        `${PENDING_CMS_KEY}${schoolId}`,
+        JSON.stringify(readPendingCmsWrites(schoolId).filter((item) => item.itemId !== entry.itemId))
+      );
+    } catch (error) {
+      return;
+    }
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (key?.startsWith(PENDING_CMS_KEY)) flushPendingCmsWrites(key.slice(PENDING_CMS_KEY.length));
+    }
+  });
+}
 
 export const getCmsContent = getCmsItems;
 export const createCmsContent = createCmsItem;
@@ -39,6 +85,7 @@ function withTimeout(promise, ms = 2500) {
  * @param {string} status 'published' | 'draft' | 'all'
  */
 export async function getCmsItems(category = 'all', status = 'published', schoolId = DEFAULT_SCHOOL_ID) {
+  if (navigator.onLine) flushPendingCmsWrites(schoolId);
   let list = [];
 
   // 1. Read immediate local cache
@@ -55,7 +102,8 @@ export async function getCmsItems(category = 'all', status = 'published', school
   if (list.length === 0) {
     try {
       const col = collection(db, 'schools', schoolId, 'cmsContent');
-      const snap = await withTimeout(getDocs(col), 2000);
+      const readQuery = status === 'all' ? col : query(col, where('status', '==', status));
+      const snap = await withTimeout(getDocs(readQuery), 2000);
       const remoteList = [];
       snap.forEach((d) => remoteList.push({ id: d.id, ...d.data() }));
 
@@ -71,16 +119,26 @@ export async function getCmsItems(category = 'all', status = 'published', school
     (async () => {
       try {
         const col = collection(db, 'schools', schoolId, 'cmsContent');
-        const snap = await withTimeout(getDocs(col), 3000);
+        const readQuery = status === 'all' ? col : query(col, where('status', '==', status));
+        const snap = await withTimeout(getDocs(readQuery), 3000);
         const remoteList = [];
         snap.forEach((d) => remoteList.push({ id: d.id, ...d.data() }));
-        if (remoteList.length > 0) {
-          localStorage.setItem(`${CACHE_CMS_KEY}${schoolId}`, JSON.stringify(remoteList));
-        }
+        const pending = readPendingCmsWrites(schoolId).map((entry) => entry.data);
+        const pendingIds = new Set(pending.map((item) => item.id));
+        localStorage.setItem(`${CACHE_CMS_KEY}${schoolId}`, JSON.stringify([
+          ...remoteList.filter((item) => !pendingIds.has(item.id)),
+          ...pending,
+        ]));
       } catch (err) {
         // silent background sync catch
       }
     })();
+  }
+
+  const pending = readPendingCmsWrites(schoolId).map((entry) => entry.data);
+  if (pending.length) {
+    const pendingIds = new Set(pending.map((item) => item.id));
+    list = [...list.filter((item) => !pendingIds.has(item.id)), ...pending];
   }
 
   let filtered = [...list];
@@ -101,7 +159,7 @@ export async function getCmsItems(category = 'all', status = 'published', school
  * Create a new CMS item (News, activity, leadership, or announcement)
  * Instant local cache write + background Firestore persistence
  */
-export async function createCmsItem({ category, title, summary, role, content, imageUrl, status = 'published', authorName, sortOrder = 99, date, requireRemote = false }, schoolId = DEFAULT_SCHOOL_ID) {
+export async function createCmsItem({ category, title, summary, role, content, imageUrl, status = 'published', authorName, sortOrder = 99, date, requireRemote = true }, schoolId = DEFAULT_SCHOOL_ID) {
   const cleanTitle = String(title).trim();
   if (!cleanTitle) throw new Error('يرجى كتابة عنوان للمحتوى.');
 
@@ -171,8 +229,8 @@ export async function createCmsItem({ category, title, summary, role, content, i
  */
 export async function updateCmsItem(itemId, updateData, options = DEFAULT_SCHOOL_ID) {
   if (!itemId) throw new Error('معرف العنصر مطلوب للتعديل.');
-  const requireRemote = typeof options === 'object' && options.requireRemote === true;
-  const schoolId = typeof options === 'string' ? options : DEFAULT_SCHOOL_ID;
+  const requireRemote = typeof options === 'object' ? options.requireRemote !== false : true;
+  const schoolId = typeof options === 'string' ? options : options.schoolId || DEFAULT_SCHOOL_ID;
 
   let existing = [];
   try {
@@ -185,29 +243,41 @@ export async function updateCmsItem(itemId, updateData, options = DEFAULT_SCHOOL
   const index = existing.findIndex(i => i.id === itemId);
   if (index === -1) throw new Error('العنصر المطلوب غير موجود.');
 
+  const previousItem = existing[index];
   const updatedItem = {
-    ...existing[index],
+    ...previousItem,
     ...updateData,
     updatedAt: new Date().toISOString(),
   };
 
-  const docRef = doc(db, 'schools', schoolId, 'cmsContent', itemId);
-  const remoteWrite = setDoc(docRef, { ...updatedItem, serverUpdatedAt: serverTimestamp() }, { merge: true });
-  if (requireRemote) {
-    try {
-      await withTimeout(remoteWrite, 15000);
-    } catch (error) {
-      throw new Error(`تعذر تأكيد حفظ التعديلات على الخادم: ${error.message}`);
-    }
-  }
-
-  // 1. Update the local cache after the required server write succeeds.
   existing[index] = updatedItem;
   localStorage.setItem(`${CACHE_CMS_KEY}${schoolId}`, JSON.stringify(existing));
 
-  // 2. Keep non-leadership updates non-blocking.
-  if (!requireRemote) {
+  const docRef = doc(db, 'schools', schoolId, 'cmsContent', itemId);
+  const remoteWrite = setDoc(docRef, { ...updatedItem, serverUpdatedAt: serverTimestamp() }, { merge: true });
+  remoteWrite.catch((error) => console.warn('Background Firestore CMS update notice:', error));
+  let syncStatus = 'pending';
+
+  if (requireRemote) {
+    try {
+      await withTimeout(remoteWrite, 15000);
+      syncStatus = 'synced';
+    } catch (error) {
+      const transient = navigator.onLine === false ||
+        ['unavailable', 'deadline-exceeded', 'network-request-failed'].includes(error.code) ||
+        error.message?.includes('Network timeout');
+      if (transient) {
+        queueCmsWrite(schoolId, itemId, updatedItem);
+      } else {
+        existing[index] = previousItem;
+        localStorage.setItem(`${CACHE_CMS_KEY}${schoolId}`, JSON.stringify(existing));
+        throw new Error(`تعذر حفظ التعديلات على الخادم: ${error.message}`);
+      }
+    }
+  } else {
+    queueCmsWrite(schoolId, itemId, updatedItem);
     withTimeout(remoteWrite, 3000).catch((e) => {
+      queueCmsWrite(schoolId, itemId, updatedItem);
       console.warn('Background Firestore update notice:', e.message);
     });
   }
@@ -221,7 +291,7 @@ export async function updateCmsItem(itemId, updateData, options = DEFAULT_SCHOOL
     schoolId,
   }).catch(() => {});
 
-  return updatedItem;
+  return { ...updatedItem, syncStatus };
 }
 
 /**
@@ -238,15 +308,15 @@ export async function deleteCmsItem(itemId, schoolId = DEFAULT_SCHOOL_ID) {
   }
 
   const item = existing.find(i => i.id === itemId);
-  const updated = existing.filter((i) => i.id !== itemId);
-  localStorage.setItem(`${CACHE_CMS_KEY}${schoolId}`, JSON.stringify(updated));
-
-  withTimeout((async () => {
+  try {
     const docRef = doc(db, 'schools', schoolId, 'cmsContent', itemId);
     await deleteDoc(docRef);
-  })(), 3000).catch((e) => {
-    console.warn('Background Firestore delete notice:', e.message);
-  });
+  } catch (error) {
+    throw new Error(`تعذر حذف المحتوى من خادم المدرسة: ${error.message || 'تحقق من الاتصال والصلاحيات.'}`);
+  }
+
+  const updated = existing.filter((i) => i.id !== itemId);
+  localStorage.setItem(`${CACHE_CMS_KEY}${schoolId}`, JSON.stringify(updated));
 
   recordAuditEvent({
     action: 'حذف محتوى من الموقع العام',

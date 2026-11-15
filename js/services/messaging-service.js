@@ -9,8 +9,11 @@ import {
   collection,
   doc,
   getDocs,
+  query,
+  where,
   addDoc,
-  setDoc,
+  updateDoc,
+  arrayUnion,
   isFirebaseAvailable
 } from '../firebase.js';
 import { DEFAULT_SCHOOL_ID } from './school-service.js';
@@ -108,66 +111,14 @@ export function getAllowedRecipients(user) {
 /**
  * Initial seed messages for realistic immediate inbox experience
  */
-const SEED_MESSAGES = [
-  {
-    id: 'msg_seed_01',
-    schoolId: 'sch_cairo_sec_01',
-    senderId: 'director_01',
-    senderEmail: 'director@dse.edu.eg',
-    senderName: 'د. طارق محمود المنشاوي',
-    senderRole: 'director',
-    recipientId: 'all_staff',
-    recipientRole: 'staff',
-    recipientName: 'كافة هيئة التدريس والإدارة',
-    subject: 'تعليمات اختبارات شهر نوفمبر والتسليم الإلكتروني للدرجات',
-    body: 'السادة الزملاء الأفاضل، يرجى التكرم ببدء إعداد نماذج الاختبارات الشهرية ومراجعة رصد أعمال السنة عبر البوابة الرقمية في موعد أقصاه الخميس القادم.',
-    priority: 'high',
-    createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
-    formattedDate: 'اليوم، 10:30 ص',
-    readBy: ['affairs_01', 'teacher_01'],
-  },
-  {
-    id: 'msg_seed_02',
-    schoolId: 'sch_cairo_sec_01',
-    senderId: 'teacher_arabic',
-    senderEmail: 'teacher@dse.edu.eg',
-    senderName: 'أ. إبراهيم فؤاد القاضي',
-    senderRole: 'teacher',
-    recipientId: 'parent_01',
-    recipientRole: 'parent',
-    recipientName: 'أ. أحمد المنشاوي (ولي أمر)',
-    subject: 'إشادة بتفوق وتميز الطالب يوسف في حصص اللغة العربية',
-    body: 'تحية طيبة، يسعدني إبلاغكم بالمستوى المتميز والمشاركة الفعالة للطالب يوسف في القراءة والنحو خلال هذا الأسبوع، خالص التقدير لاهتمامكم المستمر.',
-    priority: 'normal',
-    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-    formattedDate: 'أمس، 02:15 م',
-    readBy: [],
-  },
-  {
-    id: 'msg_seed_03',
-    schoolId: 'sch_cairo_sec_01',
-    senderId: 'social_01',
-    senderEmail: 'social@dse.edu.eg',
-    senderName: 'أ. نادية مصطفى الشريف',
-    senderRole: 'social_affairs',
-    recipientId: 'affairs_01',
-    recipientRole: 'student_affairs',
-    recipientName: 'قسم شؤون الطلاب',
-    subject: 'تحديث بيانات إعفاءات الطلاب من المصروفات المدرسية',
-    body: 'تم استلام وتدقيق الأوراق والبحوث الاجتماعية لـ 15 حالة جديدة ومطابقتها وفق القواعد الوزارية المعتمدة، برجاء مراجعة الاعتماد.',
-    priority: 'normal',
-    createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
-    formattedDate: 'منذ يومين',
-    readBy: ['affairs_01'],
-  }
-];
+const SEED_MESSAGES = [];
 
 function getLocalMessages(schoolId) {
   try {
     const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${schoolId}`);
-    return raw ? JSON.parse(raw) : [...SEED_MESSAGES];
+    return raw ? JSON.parse(raw) : [];
   } catch (e) {
-    return [...SEED_MESSAGES];
+    return [];
   }
 }
 
@@ -200,17 +151,16 @@ export async function sendMessage(msgData, schoolId = DEFAULT_SCHOOL_ID) {
     readBy: [],
   };
 
-  if (isFirebaseAvailable()) {
-    try {
-      const colRef = collection(db, 'schools', schoolId, 'messages');
-      const docRef = await addDoc(colRef, newMsg);
-      newMsg.id = docRef.id;
-    } catch (err) {
-      console.warn('Firestore sendMessage failed, using local:', err);
-      newMsg.id = 'msg_' + Date.now();
-    }
-  } else {
-    newMsg.id = 'msg_' + Date.now();
+  if (!isFirebaseAvailable()) {
+    throw new Error('لا يمكن إرسال الرسالة دون اتصال بخادم المدرسة. لم يتم إرسالها.');
+  }
+  try {
+    const colRef = collection(db, 'schools', schoolId, 'messages');
+    const docRef = await addDoc(colRef, newMsg);
+    newMsg.id = docRef.id;
+  } catch (err) {
+    console.warn('Firestore sendMessage failed:', err);
+    throw new Error(`لم يتم إرسال الرسالة إلى خادم المدرسة: ${err.message || 'تحقق من الاتصال والصلاحيات.'}`);
   }
 
   // Update local storage cache
@@ -236,31 +186,77 @@ export async function sendMessage(msgData, schoolId = DEFAULT_SCHOOL_ID) {
 /**
  * Fetch messages strictly filtered for a specific user and role
  */
+function normalizeString(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
 export async function getMessages({ userId = '', userEmail = '', userRole = '', filter = 'inbox' } = {}, schoolId = DEFAULT_SCHOOL_ID) {
   let all = [];
 
   if (isFirebaseAvailable()) {
+    const constraints = new Map();
+    const addConstraint = (field, value) => {
+      if (value) constraints.set(`${field}:${value}`, where(field, '==', value));
+    };
+
+    if (filter === 'sent') {
+      addConstraint('senderId', userId);
+      addConstraint('senderEmail', userEmail);
+    } else {
+      addConstraint('recipientId', userId);
+      addConstraint('recipientEmail', userEmail);
+      addConstraint('recipientId', userRole);
+      addConstraint('recipientRole', userRole);
+      if (['director', 'social_affairs', 'tech_specialist', 'student_affairs', 'teacher'].includes(userRole)) {
+        addConstraint('recipientId', 'all_staff');
+      }
+      if (userRole === 'teacher') addConstraint('recipientId', 'teachers');
+    }
+
     try {
       const colRef = collection(db, 'schools', schoolId, 'messages');
-      const snap = await getDocs(colRef);
-      if (!snap.empty) {
-        all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      }
+      const snapshots = await Promise.all([...constraints.values()].map((constraint) =>
+        getDocs(query(colRef, constraint)).catch((error) => {
+          console.warn('Firestore getMessages scoped query notice:', error);
+          return null;
+        })
+      ));
+      const remoteMessages = new Map();
+      snapshots.filter(Boolean).forEach((snapshot) => snapshot.forEach((messageDoc) => {
+        remoteMessages.set(messageDoc.id, { id: messageDoc.id, ...messageDoc.data() });
+      }));
+      all = [...remoteMessages.values()];
     } catch (err) {
       console.warn('Firestore getMessages failed, falling back to local:', err);
     }
   }
 
-  if (all.length === 0) {
-    all = getLocalMessages(schoolId);
-  }
+  const localMessages = getLocalMessages(schoolId);
+  const mergedMessages = new Map(localMessages.map((message) => [message.id, message]));
+  all.forEach((message) => mergedMessages.set(message.id, message));
+  all = [...mergedMessages.values()];
 
   // Sort newest first
   all.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   const isUserSender = (m) => {
     if (userId && m.senderId === userId) return true;
-    if (userEmail && m.senderEmail && m.senderEmail === userEmail) return true;
+    if (userEmail && m.senderEmail && normalizeString(m.senderEmail) === normalizeString(userEmail)) return true;
+    return false;
+  };
+
+  const matchesRecipient = (m) => {
+    if (userId && m.recipientId === userId) return true;
+    if (userEmail && normalizeString(m.recipientId) === normalizeString(userEmail)) return true;
+    if (userEmail && normalizeString(m.recipientEmail) === normalizeString(userEmail)) return true;
+    if (m.recipientRole === userRole) return true;
+    if (m.recipientId === userRole) return true;
+    const staffRoles = ['director', 'social_affairs', 'tech_specialist', 'student_affairs', 'teacher'];
+    if (userRole && staffRoles.includes(userRole) && (m.recipientRole === 'staff' || m.recipientId === 'all_staff')) return true;
+    if (userRole === 'teacher' && m.recipientId === 'teachers') return true;
+    if (userRole === 'student' && (m.recipientRole === 'student' || m.recipientId === 'student')) return true;
+    if (userRole === 'parent' && (m.recipientRole === 'parent' || m.recipientId === 'parent')) return true;
+    if (userRole === 'teacher' && (m.recipientRole === 'teacher' || m.recipientId === 'teachers')) return true;
     return false;
   };
 
@@ -268,45 +264,9 @@ export async function getMessages({ userId = '', userEmail = '', userRole = '', 
     return all.filter(m => isUserSender(m) || (m.senderRole === userRole && (!m.senderId || m.senderId === 'user')));
   }
 
-  // Inbox filter: user matches recipientId OR user's role matches recipientRole
   return all.filter(m => {
-    if (isUserSender(m)) return false; // Don't show sent messages in inbox
-
-    // Targeted direct message to this user ID or email
-    if (userId && m.recipientId === userId) return true;
-    if (userEmail && (m.recipientId === userEmail || m.recipientEmail === userEmail)) return true;
-
-    // Student specific routing
-    if (userRole === 'student') {
-      return m.recipientId === 'student_01' || m.recipientId === 'class_1_1' || m.recipientRole === 'student';
-    }
-
-    // Parent specific routing
-    if (userRole === 'parent') {
-      return m.recipientId === 'parent_01' || m.recipientId === 'parents_1_1' || m.recipientRole === 'parent';
-    }
-
-    // Teacher specific routing
-    if (userRole === 'teacher') {
-      return m.recipientId === 'teacher_01' || m.recipientId === 'teacher_arabic' || m.recipientRole === 'teacher' || m.recipientId === 'teachers' || m.recipientId === 'all_staff';
-    }
-
-    // Role-level match
-    if (m.recipientRole === userRole) return true;
-    if (m.recipientId === userRole) return true;
-
-    // Staff broadcast
-    const staffRoles = ['director', 'social_affairs', 'tech_specialist', 'student_affairs', 'teacher', 'super_admin'];
-    if (staffRoles.includes(userRole) && (m.recipientId === 'all' || m.recipientId === 'all_staff')) {
-      return true;
-    }
-
-    // Director & Social Affairs oversight on administrative mail
-    if (userRole === 'director' || userRole === 'super_admin' || userRole === 'social_affairs') {
-      if (m.recipientRole === 'staff' || m.recipientId === 'director' || m.recipientId === 'social_affairs') return true;
-    }
-
-    return false;
+    if (isUserSender(m)) return false;
+    return matchesRecipient(m);
   });
 }
 
@@ -329,9 +289,7 @@ export async function markMessageAsRead(messageId, userId, schoolId = DEFAULT_SC
   if (isFirebaseAvailable()) {
     try {
       const docRef = doc(db, 'schools', schoolId, 'messages', messageId);
-      await setDoc(docRef, {
-        readBy: msg?.readBy || [userId]
-      }, { merge: true });
+      await updateDoc(docRef, { readBy: arrayUnion(userId) });
     } catch (err) {
       console.warn('Firestore markMessageAsRead notice:', err?.message || err);
     }
@@ -341,7 +299,7 @@ export async function markMessageAsRead(messageId, userId, schoolId = DEFAULT_SC
 /**
  * Get count of unread messages for badge display
  */
-export async function getUnreadCount(userId, userRole, schoolId = DEFAULT_SCHOOL_ID) {
-  const inbox = await getMessages({ userId, userRole, filter: 'inbox' }, schoolId);
+export async function getUnreadCount(userId, userRole, schoolId = DEFAULT_SCHOOL_ID, userEmail = '') {
+  const inbox = await getMessages({ userId, userEmail, userRole, filter: 'inbox' }, schoolId);
   return inbox.filter(m => !(m.readBy || []).includes(userId)).length;
 }

@@ -6,9 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>تسجيل الدخول — منظومة المدرسة الرقمية</title>
   <link rel="stylesheet" href="css/tokens.css?v=11.0">
-  <link rel="stylesheet" href="css/base.css?v=11.0">
-  <link rel="stylesheet" href="css/components.css?v=11.0">
-  <link rel="stylesheet" href="css/public-site.css?v=11.0">
+  <link rel="stylesheet" href="css/base.css?v=11.1">
+  <link rel="stylesheet" href="css/components.css?v=17.2">
+  <link rel="stylesheet" href="css/public-site.css?v=17.2">
   <style>
     .login-canvas {
       min-height: 100vh;
@@ -255,10 +255,10 @@
               <path d="M6 10h10"></path>
             </svg>
           </div>
-          <h1 class="login-title">
+          <h1 class="login-title" id="login-view-title">
             بوابة الدخول الموحدة للمنظومة
           </h1>
-          <p class="login-subtitle">
+          <p class="login-subtitle" id="login-view-subtitle">
             المصادقة الرسمية الآمنة عبر خدمات Firebase السحابية
           </p>
         </div>
@@ -319,7 +319,76 @@
             </button>
           </form>
 
-          <div style="margin-top: var(--space-6); text-align: center; font-size: var(--text-xs); color: #94a3b8;">
+          <div id="parent-activation-toggle-wrap" style="margin-top: var(--space-4); text-align: center;">
+            <button type="button" id="parent-activation-toggle" class="btn btn-outline btn-sm">تفعيل حساب ولي الأمر لأول مرة</button>
+          </div>
+          <form id="parent-activation-form" style="display:none;margin-top:var(--space-3);">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-4);">
+              <strong>تفعيل حساب ولي الأمر</strong>
+              <button type="button" id="parent-activation-back" class="btn btn-outline btn-sm">رجوع</button>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="parent-activation-email">البريد المسجل عند المدرسة</label>
+              <input type="email" id="parent-activation-email" class="form-control" autocomplete="email" required>
+            </div>
+            <button type="submit" id="parent-activation-submit" class="btn btn-primary btn-md" style="width:100%;">إرسال رابط التفعيل</button>
+            <p id="parent-activation-status" role="status" style="margin:var(--space-2) 0 0;font-size:var(--text-xs);"></p>
+          </form>
+
+          <div id="student-activation-toggle-wrap" style="margin-top:var(--space-3);text-align:center;">
+            <button type="button" id="student-activation-toggle" class="btn btn-outline btn-sm">تفعيل حساب الطالب لأول مرة</button>
+          </div>
+          <p id="student-activation-status" role="status" aria-live="polite" style="display:none;margin:var(--space-2) 0 0;font-size:var(--text-xs);"></p>
+          <form id="student-activation-request-form" style="display:none;margin-top:var(--space-3);">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-4);">
+              <strong>تفعيل حساب الطالب</strong>
+              <button type="button" id="student-activation-back" class="btn btn-outline btn-sm">رجوع</button>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="student-activation-code">كود الطالب</label>
+              <input type="text" inputmode="numeric" id="student-activation-code" class="form-control" maxlength="12" autocomplete="off" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="student-activation-national-id">الرقم القومي للطالب</label>
+              <input type="text" inputmode="numeric" id="student-activation-national-id" class="form-control" maxlength="14" autocomplete="off" required>
+            </div>
+            <button type="submit" id="student-activation-submit" class="btn btn-primary btn-md" style="width:100%;">طلب موافقة ولي الأمر</button>
+          </form>
+          <form id="student-activation-password-form" style="display:none;margin-top:var(--space-3);">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-4);">
+              <strong>اختيار كلمة مرور الطالب</strong>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="student-activation-password">كلمة المرور الجديدة</label>
+              <input type="password" id="student-activation-password" class="form-control" minlength="12" autocomplete="new-password" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="student-activation-password-confirm">تأكيد كلمة المرور</label>
+              <input type="password" id="student-activation-password-confirm" class="form-control" minlength="12" autocomplete="new-password" required>
+            </div>
+            <button type="submit" id="student-activation-password-submit" class="btn btn-primary btn-md" style="width:100%;">إنشاء حساب الطالب</button>
+          </form>
+          <form id="staff-invitation-form" style="display:none;margin-top:var(--space-3);">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-4);">
+              <strong>إكمال دعوة الموظف</strong>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="staff-invitation-email">البريد الذي استقبل الدعوة</label>
+              <input type="email" id="staff-invitation-email" class="form-control" autocomplete="email" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="staff-invitation-password">اختر كلمة المرور</label>
+              <input type="password" id="staff-invitation-password" class="form-control" minlength="12" autocomplete="new-password" required>
+              <small style="color:var(--text-muted);">12 حرفًا على الأقل، مع حرف كبير وصغير ورقم ورمز.</small>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="staff-invitation-password-confirm">تأكيد كلمة المرور</label>
+              <input type="password" id="staff-invitation-password-confirm" class="form-control" minlength="12" autocomplete="new-password" required>
+            </div>
+            <button type="submit" id="staff-invitation-submit" class="btn btn-primary btn-md" style="width:100%;">تفعيل الحساب</button>
+          </form>
+
+          <div id="login-support-text" style="margin-top: var(--space-6); text-align: center; font-size: var(--text-xs); color: #94a3b8;">
             <span>للدعم الفني والاستفسارات: تواصل مع إدارة التطوير التكنولوجي بالمدرسة</span>
           </div>
         </div>
@@ -327,33 +396,50 @@
     </div>
   </div>
 
-  <!-- Family Portal Selection Modal (Pops up AFTER authenticating student/family account) -->
-  <div id="portal-choice-modal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(10, 22, 40, 0.75); backdrop-filter: blur(4px); z-index: 10000; align-items: center; justify-content: center; padding: var(--space-4);">
-    <div class="panel" style="max-width: 520px; width: 100%; box-shadow: var(--shadow-xl); border: 1px solid var(--border-light); overflow: hidden; animation: fadeIn 0.25s ease-out;">
-      <div style="background: linear-gradient(135deg, #0c172d 0%, #172542 100%); color: #ffffff; padding: var(--space-5); text-align: center;">
-        <div style="font-size: 2.2rem; margin-bottom: var(--space-2);">🏫</div>
-        <h3 style="font-size: var(--text-lg); font-weight: 800; color: #ffffff; margin-bottom: 4px;">مرحبًا بك في المنظومة المدرسية الموحدة</h3>
-        <p style="font-size: var(--text-xs); color: #cbd5e1; margin: 0;">
-          تم التحقق بنجاح من بيانات الحساب: <strong style="color: var(--color-accent-400);" id="choice-student-name">يوسف أحمد المنشاوي</strong>
-        </p>
+  <div id="first-login-password-modal" class="modal-backdrop" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,.82);backdrop-filter:blur(4px);z-index:11000;align-items:center;justify-content:center;padding:var(--space-4);">
+    <section class="panel" style="max-width:480px;width:100%;">
+      <div class="panel-header"><h2 class="panel-title" style="margin:0;">أنشئ كلمة مرورك الخاصة</h2></div>
+      <div class="panel-body">
+        <p style="margin-top:0;color:var(--text-secondary);">هذه كلمة مرور ابتدائية لمرة واحدة. اختر كلمة جديدة لا يعرفها غيرك، ولا تستخدم الرقم القومي أو كود الطالب.</p>
+        <form id="first-login-password-form" style="display:grid;gap:var(--space-3);">
+          <div class="form-group"><label class="form-label" for="first-login-password">كلمة المرور الجديدة</label><input id="first-login-password" class="form-control" type="password" minlength="12" autocomplete="new-password" required></div>
+          <div class="form-group"><label class="form-label" for="first-login-password-confirm">تأكيد كلمة المرور</label><input id="first-login-password-confirm" class="form-control" type="password" minlength="12" autocomplete="new-password" required></div>
+          <p id="first-login-password-error" role="alert" style="display:none;color:var(--color-danger-text);margin:0;"></p>
+          <button type="submit" id="first-login-password-submit" class="btn btn-primary btn-md">حفظ كلمة المرور والمتابعة</button>
+        </form>
       </div>
-      <div class="panel-body" style="padding: var(--space-5);">
-        <p style="font-size: var(--text-sm); font-weight: 700; color: var(--color-primary-950); margin-bottom: var(--space-4); text-align: center;">
-          يرجى تحديد صفة الدخول التي ترغب في المتابعة بها الآن:
-        </p>
-
-        <div id="portal-choices-container" style="display: flex; flex-direction: column; gap: var(--space-3);">
-          <!-- Dynamic Family & Student Choices Injected by JS -->
-        </div>
-      </div>
-    </div>
+    </section>
   </div>
+
+  <div id="parent-password-modal" class="modal-backdrop" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,.82);backdrop-filter:blur(4px);z-index:12000;align-items:center;justify-content:center;padding:var(--space-4);">
+    <section class="panel" style="max-width:480px;width:100%;">
+      <div class="panel-header"><h2 class="panel-title" style="margin:0;">أنشئ كلمة مرور ولي الأمر</h2></div>
+      <div class="panel-body">
+        <p style="margin-top:0;color:var(--text-secondary);">تم التأكد من البريد. اختر كلمة مرور خاصة بحساب ولي الأمر.</p>
+        <form id="parent-password-form" style="display:grid;gap:var(--space-3);">
+          <div class="form-group"><label class="form-label" for="parent-password">كلمة المرور</label><input id="parent-password" class="form-control" type="password" minlength="12" autocomplete="new-password" required></div>
+          <div class="form-group"><label class="form-label" for="parent-password-confirm">تأكيد كلمة المرور</label><input id="parent-password-confirm" class="form-control" type="password" minlength="12" autocomplete="new-password" required></div>
+          <p id="parent-password-error" role="alert" style="display:none;color:var(--color-danger-text);margin:0;"></p>
+          <button type="submit" id="parent-password-submit" class="btn btn-primary btn-md">حفظ كلمة المرور والمتابعة</button>
+        </form>
+      </div>
+    </section>
   </div>
 
   <script type="module">
-    import { loginWithEmailPassword, getRoleDashboardUrl, translateAuthError, getCurrentUser, logout, setFamilySessionRole } from './js/auth.js?v=11.0';
+    import { loginWithEmailPassword, getRoleDashboardUrl, translateAuthError, getCurrentUser, logout } from './js/auth.js?v=11.0';
     import { initComponents, toggleTheme } from './js/components.js?v=11.0';
-    import { getStudents } from './js/services/student-service.js';
+    import {
+      activateParentAccount,
+      completeFirstLoginPasswordChange,
+      completeParentEmailLink,
+      completeStudentActivation,
+      getStudentActivationStatus,
+      requestStudentActivation,
+      sendParentActivationLink,
+      setParentAccountPassword,
+    } from './js/services/account-service.js';
+    import { auth, signOut } from './js/firebase.js';
 
     initComponents();
 
@@ -368,32 +454,23 @@
       const switchBtn = document.getElementById('switch-account-btn');
 
       if (banner && nameEl) {
+        if (activeSession.passwordChangeRequired) banner.style.display = 'none';
         nameEl.textContent = `${activeSession.displayName || 'المستخدم'} (${activeSession.email})`;
-        const isFamily = activeSession.role === 'student' || activeSession.role === 'parent' || activeSession.email === 'student@dse.edu.eg' || activeSession.email === 'parent@dse.edu.eg';
-        
-        if (isFamily) {
-          if (studentBtn) {
-            studentBtn.style.display = 'inline-flex';
-            studentBtn.onclick = (e) => {
-              e.preventDefault();
-              setFamilySessionRole('student');
-              window.location.href = 'dashboard/student-portal.html';
-            };
-          }
-          if (parentBtn) {
-            parentBtn.style.display = 'inline-flex';
-            parentBtn.onclick = (e) => {
-              e.preventDefault();
-              setFamilySessionRole('parent');
-              window.location.href = 'dashboard/parent-portal.html';
-            };
-          }
+        if (activeSession.role === 'student') {
+          if (studentBtn) studentBtn.style.display = 'inline-flex';
+          if (parentBtn) parentBtn.style.display = 'none';
+          if (studentBtn) studentBtn.href = 'dashboard/student-portal.html';
+          if (goBtn) goBtn.style.display = 'none';
+        } else if (activeSession.role === 'parent') {
+          if (studentBtn) studentBtn.style.display = 'none';
+          if (parentBtn) parentBtn.style.display = 'inline-flex';
+          if (parentBtn) parentBtn.href = 'dashboard/parent-portal.html';
           if (goBtn) goBtn.style.display = 'none';
         } else if (goBtn) {
           goBtn.href = getRoleDashboardUrl(activeSession.role);
           goBtn.style.display = 'inline-flex';
         }
-        banner.style.display = 'flex';
+        if (!activeSession.passwordChangeRequired) banner.style.display = 'flex';
       }
       if (switchBtn) {
         switchBtn.addEventListener('click', async () => {
@@ -417,6 +494,298 @@
     function showError(msg) {
       errorText.textContent = msg;
       errorAlert.style.display = 'flex';
+    }
+
+    function setAuthMode(mode) {
+      const isLogin = mode === 'login';
+      const isParent = mode === 'parent';
+      const isStudent = mode === 'student';
+      const isStudentPassword = mode === 'student-password';
+      const isStaffInvitation = mode === 'staff-invitation';
+      const title = document.getElementById('login-view-title');
+      const subtitle = document.getElementById('login-view-subtitle');
+      const studentStatus = document.getElementById('student-activation-status');
+      loginForm.style.display = isLogin ? 'block' : 'none';
+      document.getElementById('parent-activation-toggle-wrap').style.display = isLogin ? 'block' : 'none';
+      document.getElementById('student-activation-toggle-wrap').style.display = isLogin ? 'block' : 'none';
+      document.getElementById('parent-activation-form').style.display = isParent ? 'block' : 'none';
+      document.getElementById('student-activation-request-form').style.display = isStudent ? 'block' : 'none';
+      document.getElementById('student-activation-password-form').style.display = isStudentPassword ? 'block' : 'none';
+      document.getElementById('staff-invitation-form').style.display = isStaffInvitation ? 'block' : 'none';
+      studentStatus.style.display = isStudent || isStudentPassword ? (studentStatus.textContent ? 'block' : 'none') : 'none';
+      document.getElementById('login-support-text').style.display = isLogin ? 'block' : 'none';
+      errorAlert.style.display = 'none';
+      title.textContent = isParent ? 'تفعيل حساب ولي الأمر' : isStudent || isStudentPassword ? 'تفعيل حساب الطالب' : isStaffInvitation ? 'إعداد حساب الموظف' : 'بوابة الدخول الموحدة للمنظومة';
+      subtitle.textContent = isParent || isStudent || isStudentPassword || isStaffInvitation
+        ? 'تأكيد آمن للحساب المرتبط بالمدرسة'
+        : 'المصادقة الرسمية الآمنة عبر خدمات Firebase السحابية';
+    }
+
+    document.getElementById('parent-activation-toggle').addEventListener('click', () => {
+      setAuthMode('parent');
+    });
+    document.getElementById('parent-activation-back').addEventListener('click', () => setAuthMode('login'));
+
+    document.getElementById('parent-activation-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const emailInput = document.getElementById('parent-activation-email');
+      const submit = document.getElementById('parent-activation-submit');
+      const status = document.getElementById('parent-activation-status');
+      submit.disabled = true;
+      status.textContent = '';
+      try {
+        await sendParentActivationLink(emailInput.value);
+        status.textContent = 'لو البريد مسجل عند المدرسة، هتوصلك رسالة فيها رابط آمن لإكمال التفعيل.';
+      } catch (error) {
+        status.textContent = error.message || 'تعذر إرسال رابط التفعيل.';
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    let activationPollTimer = null;
+    const activationRequestKey = 'dse_pending_student_activation';
+
+    function setStudentActivationStatus(message) {
+      const status = document.getElementById('student-activation-status');
+      if (status) {
+        status.textContent = message;
+        status.style.display = message ? 'block' : 'none';
+      }
+    }
+
+    function resumeStudentActivationPolling() {
+      let savedRequest;
+      try {
+        savedRequest = JSON.parse(sessionStorage.getItem(activationRequestKey) || 'null');
+      } catch (error) {}
+      if (!savedRequest?.requestId || !savedRequest?.activationSecret) return;
+      setAuthMode('student');
+      setStudentActivationStatus('طلبك قيد المراجعة. سيظهر لك خيار إنشاء كلمة المرور بعد موافقة ولي الأمر.');
+      pollStudentActivation(savedRequest);
+    }
+
+    async function pollStudentActivation(savedRequest) {
+      if (activationPollTimer) clearInterval(activationPollTimer);
+      const checkStatus = async () => {
+        try {
+          const result = await getStudentActivationStatus(savedRequest.requestId, savedRequest.activationSecret);
+          if (result.status === 'approved') {
+            clearInterval(activationPollTimer);
+            setAuthMode('student-password');
+            setStudentActivationStatus('وافق ولي الأمر. أنشئ الآن كلمة مرور حساب الطالب.');
+          } else if (result.status === 'rejected' || result.status === 'expired') {
+            clearInterval(activationPollTimer);
+            sessionStorage.removeItem(activationRequestKey);
+            setStudentActivationStatus(result.status === 'rejected' ? 'رفض ولي الأمر طلب التفعيل.' : 'انتهت صلاحية الطلب. ابدأ طلبًا جديدًا.');
+          }
+        } catch (error) {
+          setStudentActivationStatus('تعذر تحديث حالة الطلب مؤقتًا. سنحاول مرة أخرى.');
+        }
+      };
+      activationPollTimer = setInterval(checkStatus, 10000);
+      await checkStatus();
+    }
+
+    document.getElementById('student-activation-toggle').addEventListener('click', () => {
+      setAuthMode('student');
+    });
+    document.getElementById('student-activation-back').addEventListener('click', () => setAuthMode('login'));
+
+    document.getElementById('student-activation-request-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const submit = document.getElementById('student-activation-submit');
+      const studentCode = document.getElementById('student-activation-code').value.trim();
+      const nationalId = document.getElementById('student-activation-national-id').value.trim();
+      submit.disabled = true;
+      try {
+        const result = await requestStudentActivation({ studentCode, nationalId });
+        const savedRequest = { requestId: result.requestId, activationSecret: result.activationSecret, studentCode };
+        sessionStorage.setItem(activationRequestKey, JSON.stringify(savedRequest));
+        document.getElementById('student-activation-national-id').value = '';
+        setStudentActivationStatus('أرسلنا طلب الموافقة إلى ولي الأمر. اترك الصفحة مفتوحة أو ارجع إليها بعد الموافقة.');
+        await pollStudentActivation(savedRequest);
+      } catch (error) {
+        setStudentActivationStatus(error.message || 'تعذر إرسال طلب التفعيل.');
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    document.getElementById('student-activation-password-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const password = document.getElementById('student-activation-password').value;
+      const confirmation = document.getElementById('student-activation-password-confirm').value;
+      const submit = document.getElementById('student-activation-password-submit');
+      let savedRequest;
+      try {
+        savedRequest = JSON.parse(sessionStorage.getItem(activationRequestKey) || 'null');
+      } catch (error) {}
+      if (password !== confirmation) {
+        setStudentActivationStatus('كلمتا المرور غير متطابقتين.');
+        return;
+      }
+      submit.disabled = true;
+      try {
+        const result = await completeStudentActivation({
+          requestId: savedRequest?.requestId,
+          activationSecret: savedRequest?.activationSecret,
+          password,
+        });
+        sessionStorage.removeItem(activationRequestKey);
+        setAuthMode('student');
+        document.getElementById('user-email').value = savedRequest?.studentCode || result.email?.split('@')[0] || '';
+        setStudentActivationStatus('تم تفعيل الحساب. سجل الدخول بكود الطالب وكلمة المرور التي اخترتها.');
+        const requestForm = document.getElementById('student-activation-request-form');
+        requestForm.querySelector('#student-activation-code').value = savedRequest?.studentCode || '';
+      } catch (error) {
+        setStudentActivationStatus(error.message || 'تعذر إنشاء الحساب.');
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    function promptParentPassword() {
+      const modal = document.getElementById('parent-password-modal');
+      const form = document.getElementById('parent-password-form');
+      const password = document.getElementById('parent-password');
+      const confirmation = document.getElementById('parent-password-confirm');
+      const error = document.getElementById('parent-password-error');
+      const submit = document.getElementById('parent-password-submit');
+      modal.style.display = 'flex';
+      return new Promise((resolve) => {
+        form.onsubmit = async (event) => {
+          event.preventDefault();
+          const value = password.value;
+          if (value !== confirmation.value) {
+            error.textContent = 'كلمتا المرور غير متطابقتين.';
+            error.style.display = 'block';
+            return;
+          }
+          if (value.length < 12 || !/[a-z]/.test(value) || !/[A-Z]/.test(value) || !/\d/.test(value) || !/[^A-Za-z0-9]/.test(value)) {
+            error.textContent = 'استخدم 12 حرفًا على الأقل، مع حرف كبير وصغير ورقم ورمز.';
+            error.style.display = 'block';
+            return;
+          }
+          submit.disabled = true;
+          error.style.display = 'none';
+          try {
+            await setParentAccountPassword(value);
+            password.value = '';
+            confirmation.value = '';
+            modal.style.display = 'none';
+            resolve(true);
+          } catch (passwordError) {
+            error.textContent = passwordError.message || 'تعذر حفظ كلمة المرور. أعد فتح رابط التفعيل وحاول مرة أخرى.';
+            error.style.display = 'block';
+          } finally {
+            submit.disabled = false;
+          }
+        };
+      });
+    }
+
+    async function finishParentActivationLink() {
+      if (new URLSearchParams(window.location.search).get('flow') !== 'parent-activation') return;
+      try {
+        let email = localStorage.getItem('dse_pending_parent_email') || '';
+        if (!email) email = window.prompt('اكتب البريد الإلكتروني الذي استقبل رابط التفعيل:') || '';
+        const firebaseUser = await completeParentEmailLink(email);
+        if (!firebaseUser) return;
+        const activation = await activateParentAccount(firebaseUser);
+        if (activation.needsPassword) await promptParentPassword();
+        window.location.replace('dashboard/parent-portal.html');
+      } catch (error) {
+        await signOut(auth).catch(() => {});
+        localStorage.removeItem('dse_pending_parent_email');
+        showError(error.message || 'تعذر إكمال تفعيل حساب ولي الأمر.');
+      }
+    }
+
+    function finishStaffInvitationLink() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('flow') !== 'staff-invitation') return;
+      const invitationId = params.get('invitationId') || '';
+      setAuthMode('staff-invitation');
+      const form = document.getElementById('staff-invitation-form');
+      const submit = document.getElementById('staff-invitation-submit');
+      let invitationUser = null;
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const email = document.getElementById('staff-invitation-email').value.trim().toLowerCase();
+        const password = document.getElementById('staff-invitation-password').value;
+        const confirmation = document.getElementById('staff-invitation-password-confirm').value;
+        if (password !== confirmation) {
+          showError('كلمتا المرور غير متطابقتين.');
+          return;
+        }
+        if (password.length < 12 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+          showError('استخدم 12 حرفًا على الأقل، مع حرف كبير وصغير ورقم ورمز.');
+          return;
+        }
+        if (!/^[0-9a-f-]{36}$/i.test(invitationId)) {
+          showError('رابط الدعوة غير صالح. اطلب من الإدارة إعادة إرسال الدعوة.');
+          return;
+        }
+
+        submit.disabled = true;
+        errorAlert.style.display = 'none';
+        try {
+          invitationUser = invitationUser || (auth.currentUser?.email?.toLowerCase() === email
+            ? auth.currentUser
+            : await completeAccountInvitationEmailLink(email));
+          if (!invitationUser) throw new Error('رابط البريد غير صالح أو انتهت صلاحيته.');
+          if (invitationUser.email?.toLowerCase() !== email) throw new Error('البريد لا يطابق عنوان الدعوة.');
+          const profile = await finishAccountInvitation({ invitationId, password });
+          window.location.replace(getRoleDashboardUrl(profile.role));
+        } catch (error) {
+          showError(error.message || 'تعذر إكمال دعوة الحساب.');
+        } finally {
+          submit.disabled = false;
+        }
+      });
+    }
+
+    function promptForFirstLoginPasswordChange() {
+      const modal = document.getElementById('first-login-password-modal');
+      const form = document.getElementById('first-login-password-form');
+      const password = document.getElementById('first-login-password');
+      const confirmation = document.getElementById('first-login-password-confirm');
+      const error = document.getElementById('first-login-password-error');
+      const submit = document.getElementById('first-login-password-submit');
+      modal.style.display = 'flex';
+
+      return new Promise((resolve) => {
+        form.onsubmit = async (event) => {
+          event.preventDefault();
+          const value = password.value;
+          if (value !== confirmation.value) {
+            error.textContent = 'كلمتا المرور غير متطابقتين.';
+            error.style.display = 'block';
+            return;
+          }
+          if (value.length < 12 || !/[a-z]/.test(value) || !/[A-Z]/.test(value) || !/\d/.test(value) || !/[^A-Za-z0-9]/.test(value)) {
+            error.textContent = 'استخدم 12 حرفًا على الأقل، مع حرف كبير وصغير ورقم ورمز.';
+            error.style.display = 'block';
+            return;
+          }
+
+          submit.disabled = true;
+          error.style.display = 'none';
+          try {
+            await completeFirstLoginPasswordChange(value);
+            password.value = '';
+            confirmation.value = '';
+            modal.style.display = 'none';
+            resolve(true);
+          } catch (changeError) {
+            error.textContent = changeError.message || 'تعذر تحديث كلمة المرور. تحقق من الاتصال ثم أعد المحاولة.';
+            error.style.display = 'block';
+          } finally {
+            submit.disabled = false;
+          }
+        };
+      });
     }
 
     // Toggle password visibility with modern SVG
@@ -445,102 +814,11 @@
       setLoading(true);
       try {
         const profile = await loginWithEmailPassword(email, password);
-        const isFamily = profile.role === 'student' || profile.role === 'parent' || profile.email === 'student@dse.edu.eg' || profile.email === 'parent@dse.edu.eg';
-
-        if (isFamily) {
-          setLoading(false);
-          const choiceModal = document.getElementById('portal-choice-modal');
-          const choicesContainer = document.getElementById('portal-choices-container');
-
-          // Dynamically fetch and match all students / siblings in this family
-          const allStudents = await getStudents();
-          const enteredCode = (/^\d+$/).test(email) ? email : null;
-          let myStudent = enteredCode ? allStudents.find(s => s.code === enteredCode) : allStudents.find(s => s.email === profile.email);
-
-          let familyStudents = [];
-          if (myStudent) {
-            familyStudents = allStudents.filter(s => {
-              if (s.code === myStudent.code) return true;
-              if (myStudent.siblingCodes && myStudent.siblingCodes.includes(s.code)) return true;
-              if (s.siblingCodes && s.siblingCodes.includes(myStudent.code)) return true;
-              if (myStudent.familyId && s.familyId && s.familyId === myStudent.familyId) return true;
-              if (myStudent.parentInfo?.parentPhone && s.parentInfo?.parentPhone && s.parentInfo.parentPhone === myStudent.parentInfo.parentPhone) return true;
-              return false;
-            });
-          } else if (profile.role === 'parent' || profile.email === 'parent@dse.edu.eg') {
-            familyStudents = allStudents.filter(s => {
-              if (s.parentInfo?.parentEmail === profile.email) return true;
-              if (profile.email === 'parent@dse.edu.eg' && ['2026101', '2026102'].includes(s.code)) return true;
-              return false;
-            });
-          }
-
-          if (familyStudents.length === 0) {
-            familyStudents = allStudents.filter(s => ['2026101', '2026102'].includes(s.code));
-          }
-
-          const parentName = familyStudents[0]?.parentInfo?.parentName || 'ولي الأمر';
-
-          choicesContainer.innerHTML = `
-            ${familyStudents.map((s, idx) => `
-              <button type="button" class="family-student-choice-btn" data-code="${s.code}" style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--bg-surface-subtle); border: 2px solid var(--border-light); border-radius: var(--radius-md); cursor: pointer; text-align: start; transition: all 0.2s ease; width: 100%;">
-                <div style="width: 44px; height: 44px; border-radius: 50%; background: ${idx === 0 ? 'var(--color-primary-900)' : '#0f766e'}; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
-                  🎓
-                </div>
-                <div style="flex: 1;">
-                  <div style="font-size: var(--text-sm); font-weight: 800; color: var(--color-primary-950);">
-                    أنا الطالب: ${s.name}
-                  </div>
-                  <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">
-                    كود: <code>${s.code}</code> — ${s.grade || 'مرحلة ثانوية'}
-                  </div>
-                </div>
-                <div style="font-size: 1.1rem; color: var(--color-primary-900);">←</div>
-              </button>
-            `).join('')}
-
-            <button type="button" id="choose-parent-btn" style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--bg-surface-subtle); border: 2px solid var(--border-light); border-radius: var(--radius-md); cursor: pointer; text-align: start; transition: all 0.2s ease; width: 100%;">
-              <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--color-accent-700); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
-                👨‍👧‍👦
-              </div>
-              <div style="flex: 1;">
-                <div style="font-size: var(--text-sm); font-weight: 800; color: var(--color-primary-950);">
-                  أنا ولي الأمر: ${parentName}
-                </div>
-                <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">
-                  متابعة الأبناء معاً (${familyStudents.map(s => s.name.split(' ')[0]).join(' و')}) والغياب والدرجات وإشعارات الانصراف
-                </div>
-              </div>
-              <div style="font-size: 1.1rem; color: var(--color-accent-700);">←</div>
-            </button>
-          `;
-
-          choiceModal.style.display = 'flex';
-
-          // Attach listeners to student buttons
-          choicesContainer.querySelectorAll('.family-student-choice-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-              btn.disabled = true;
-              const code = btn.dataset.code;
-              setFamilySessionRole('student');
-              localStorage.setItem('dse_active_student_code', code);
-              document.cookie = `dse_active_student_code=${code}; path=/; max-age=2592000`;
-              window.location.href = 'dashboard/student-portal.html';
-            });
-          });
-
-          // Attach listener to parent button
-          const chooseParentBtn = document.getElementById('choose-parent-btn');
-          if (chooseParentBtn) {
-            chooseParentBtn.onclick = () => {
-              chooseParentBtn.disabled = true;
-              setFamilySessionRole('parent');
-              const familyCodes = familyStudents.map(s => s.code);
-              localStorage.setItem('dse_parent_children_codes', JSON.stringify(familyCodes));
-              document.cookie = `dse_parent_children_codes=${encodeURIComponent(JSON.stringify(familyCodes))}; path=/; max-age=2592000`;
-              window.location.href = 'dashboard/parent-portal.html';
-            };
-          }
+        if (profile.passwordChangeRequired) await promptForFirstLoginPasswordChange();
+        if (profile.role === 'student') {
+          window.location.href = 'dashboard/student-portal.html';
+        } else if (profile.role === 'parent') {
+          window.location.href = 'dashboard/parent-portal.html';
         } else {
           window.location.href = getRoleDashboardUrl(profile.role);
         }
@@ -550,7 +828,14 @@
         showError(translateAuthError(err.code || err.message));
       }
     });
+
+    if (activeSession?.passwordChangeRequired) {
+      promptForFirstLoginPasswordChange().then(() => window.location.reload());
+    }
+    finishParentActivationLink();
+    finishStaffInvitationLink();
+    resumeStudentActivationPolling();
   </script>
-  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=11.0');}</script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=17.3');}</script>
 </body>
 </html>

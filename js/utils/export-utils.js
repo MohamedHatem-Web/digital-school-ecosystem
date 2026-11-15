@@ -4,7 +4,30 @@
 // ==========================================================================
 
 import { getSchoolProfile } from '../services/school-service.js';
-import { generateQRCodeUrl, generateVerificationToken, buildVerificationUrl } from '../services/qr-service.js';
+import { generateQRCodeUrl, generateVerificationToken, buildVerificationUrl, registerVerifiedDocument } from '../services/qr-service.js';
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[char]);
+}
+
+function openPrintWindow(message, useToast = false) {
+  const printWindow = window.open('', '_blank');
+  if (printWindow) return printWindow;
+  if (useToast && typeof window.showToast === 'function') window.showToast(message, 'warning');
+  else alert(message);
+  return null;
+}
+
+async function registerPrintVerification(printWindow, record, schoolId) {
+  try {
+    await registerVerifiedDocument(record, schoolId);
+  } catch (error) {
+    printWindow?.close();
+    throw error;
+  }
+}
 
 // Export to CSV with UTF-8 BOM for flawless Arabic Excel opening
 export function exportToCsv(filename, headers, rows) {
@@ -63,6 +86,7 @@ export function exportStudentsToCsv(students = [], filename = 'دفتر_سجل_�
     'السن في 1 أكتوبر',
     'النوع',
     'الديانة',
+    'اللغة الأجنبية الثانية',
     'الصف والمرحلة والفصل',
     'اسم ولي الأمر',
     'صلة القرابة',
@@ -84,6 +108,7 @@ export function exportStudentsToCsv(students = [], filename = 'دفتر_سجل_�
     s.ageOct1 || '',
     s.gender || 'ذكر',
     s.religion || 'مسلم',
+    s.secondLanguage || '',
     s.grade || '',
     s.parentInfo?.parentName || '',
     s.parentInfo?.parentRelation || 'أب',
@@ -101,26 +126,23 @@ export function exportStudentsToCsv(students = [], filename = 'دفتر_سجل_�
 
 // Print Official Ministry Students Registry Book (سجل 31 شؤون طلاب وقوائم القيد الرسمية)
 export async function printOfficialStudentsRegister(students = []) {
+  const printWindow = openPrintWindow('يرجى السماح بالنوافذ المنبثقة لطباعة سجل شؤون الطلاب الرسمي.');
+  if (!printWindow) return;
   const profile = await getSchoolProfile();
   const schoolName = profile?.nameAr || 'مدرسة د. أحمد زويل الرسمية للغات';
   const adminName = profile?.administration || 'إدارة المستقبل التعليمية';
+  const academicYear = profile?.academicYear || '2026/2027';
   const dateStr = new Intl.DateTimeFormat('ar-EG', { dateStyle: 'full' }).format(new Date());
 
   const boysCount = students.filter(s => (s.gender || 'ذكر') === 'ذكر').length;
   const girlsCount = students.filter(s => s.gender === 'أنثى').length;
-
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    alert('يرجى السماح بالنوافذ المنبثقة لطباعة سجل شؤون الطلاب الرسمي.');
-    return;
-  }
 
   printWindow.document.write(`
     <!DOCTYPE html>
     <html lang="ar" dir="rtl">
     <head>
       <meta charset="UTF-8">
-      <title>سجل قيد وبطاقات شؤون الطلاب المعتمد — ${schoolName}</title>
+      <title>سجل قيد شؤون الطلاب — ${escapeHtml(schoolName)}</title>
       <style>
         @page { size: A4 landscape; margin: 12mm; }
         body {
@@ -130,7 +152,7 @@ export async function printOfficialStudentsRegister(students = []) {
           margin: 0;
           padding: 10px;
           direction: rtl;
-          font-size: 11px;
+          font-size: 9px;
         }
         .register-header {
           display: flex;
@@ -166,7 +188,7 @@ export async function printOfficialStudentsRegister(students = []) {
         table.gov-table th {
           background: #0f2b5c;
           color: #ffffff;
-          font-size: 10px;
+          font-size: 8px;
           font-weight: 700;
         }
         table.gov-table tr:nth-child(even) { background: #f8fafc; }
@@ -188,16 +210,16 @@ export async function printOfficialStudentsRegister(students = []) {
         <div>
           <div>جمهورية مصر العربية</div>
           <div>وزارة التربية والتعليم والتعليم الفني</div>
-          <div>${adminName}</div>
-          <div><strong>${schoolName}</strong></div>
+          <div>${escapeHtml(adminName)}</div>
+          <div><strong>${escapeHtml(schoolName)}</strong></div>
         </div>
         <div class="header-title-box">
           <h1>سجل قيد الطلاب وبيانات الحالة الرسمية</h1>
-          <h2>(دفتر 31 شؤون طلاب — العام الدراسي 2026 / 2027)</h2>
+          <h2>(دفتر 31 شؤون طلاب — العام الدراسي ${escapeHtml(academicYear)})</h2>
         </div>
         <div style="text-align: end;">
           <div>تاريخ الطباعة: ${dateStr}</div>
-          <div>خاتم شعار الجمهورية: معتمد</div>
+          <div>خاتم المدرسة: ____________________</div>
         </div>
       </div>
 
@@ -212,16 +234,20 @@ export async function printOfficialStudentsRegister(students = []) {
         <thead>
           <tr>
             <th style="width: 30px;">م</th>
-            <th style="width: 80px;">كود الوزارة</th>
+            <th style="width: 80px;">كود الطالب</th>
             <th style="width: 190px;">اسم الطالب الرباعي</th>
             <th style="width: 110px;">الرقم القومي (14 رقم)</th>
             <th style="width: 75px;">تاريخ الميلاد</th>
             <th style="width: 90px;">السن في 1 / 10</th>
             <th style="width: 45px;">النوع</th>
             <th style="width: 45px;">الديانة</th>
-            <th style="width: 95px;">الفصل</th>
+            <th style="width: 60px;">الجنسية</th>
+            <th style="width: 95px;">الصف والفصل</th>
+            <th style="width: 70px;">تاريخ الالتحاق</th>
+            <th style="width: 100px;">المصروفات / القسيمة</th>
             <th style="width: 140px;">ولي الأمر والصفة</th>
             <th style="width: 90px;">هاتف ولي الأمر</th>
+            <th style="width: 130px;">عنوان ولي الأمر</th>
             <th>محل السكن</th>
             <th style="width: 70px;">حالة القيد</th>
           </tr>
@@ -230,18 +256,22 @@ export async function printOfficialStudentsRegister(students = []) {
           ${students.map((s, idx) => `
             <tr>
               <td>${idx + 1}</td>
-              <td style="font-family: monospace; font-weight: 700;">${s.code || '—'}</td>
-              <td class="student-name-col">${s.name}</td>
-              <td style="font-family: monospace;">${s.nationalId || '—'}</td>
-              <td>${s.birthDate || '—'}</td>
-              <td>${s.ageOct1 || '—'}</td>
-              <td>${s.gender || 'ذكر'}</td>
-              <td>${s.religion || 'مسلم'}</td>
-              <td>${s.grade || 'أولى ثانوي'}</td>
-              <td>${s.parentInfo?.parentName || 'مسجل'}${s.parentInfo?.parentRelation ? ` (${s.parentInfo.parentRelation})` : ''}</td>
-              <td style="font-family: monospace;">${s.parentInfo?.parentPhone || s.parentInfo?.phone || '—'}</td>
-              <td>${s.address || 'القاهرة'}</td>
-              <td>${s.status === 'enrolled' ? 'مقيد' : (s.status || 'منتظم')}</td>
+              <td style="font-family: monospace; font-weight: 700;">${escapeHtml(s.code || '—')}</td>
+              <td class="student-name-col">${escapeHtml(s.name || '—')}</td>
+              <td style="font-family: monospace;">${escapeHtml(s.nationalId || '—')}</td>
+              <td>${escapeHtml(s.birthDate || '—')}</td>
+              <td>${escapeHtml(s.ageOct1 || '—')}</td>
+              <td>${escapeHtml(s.gender || '—')}</td>
+              <td>${escapeHtml(s.religion || '—')}</td>
+              <td>${escapeHtml(s.nationality || '—')}</td>
+              <td>${escapeHtml(s.grade || '—')}</td>
+              <td>${escapeHtml(s.registeredDate || '—')}</td>
+              <td>${escapeHtml(s.tuitionStatus || 'غير مسجلة')}<br>${escapeHtml(s.tuitionAmount || '—')}<br>${escapeHtml(s.tuitionReceiptNumber || '—')}</td>
+              <td>${escapeHtml(s.parentInfo?.parentName || '—')}${s.parentInfo?.parentRelation ? ` (${escapeHtml(s.parentInfo.parentRelation)})` : ''}</td>
+              <td style="font-family: monospace;">${escapeHtml(s.parentInfo?.parentPhone || s.parentInfo?.phone || '—')}</td>
+              <td>${escapeHtml(s.parentInfo?.parentAddress || '—')}</td>
+              <td>${escapeHtml(s.address || '—')}</td>
+              <td>${escapeHtml(s.status === 'enrolled' ? 'مقيد' : (s.status || '—'))}</td>
             </tr>
           `).join('')}
         </tbody>
@@ -251,7 +281,7 @@ export async function printOfficialStudentsRegister(students = []) {
         <div class="sig-block">
           <div class="sig-role">مسؤول قيد شؤون الطلاب</div>
           <div class="sig-line"></div>
-          <small>أ. محمود عبد الرحمن سالم</small>
+          <small>الاسم والتوقيع</small>
         </div>
         <div class="sig-block">
           <div class="sig-role">وكيل شؤون الطلاب والمشرف</div>
@@ -261,7 +291,7 @@ export async function printOfficialStudentsRegister(students = []) {
         <div class="sig-block">
           <div class="sig-role">مدير عام المدرسة</div>
           <div class="sig-line"></div>
-          <small>د. طارق محمود المنشاوي</small>
+          <small>الاسم والتوقيع</small>
         </div>
       </div>
 
@@ -278,16 +308,12 @@ export async function printOfficialStudentsRegister(students = []) {
 
 // Print Official Institutional Document
 export async function printOfficialDocument({ title, subtitle, tableHeaders, tableRows, signatureTitle = 'مدير عام المدرسة' }) {
+  const printWindow = openPrintWindow('يرجى السماح بالنوافذ المنبثقة لطباعة المستند الرسمي.');
+  if (!printWindow) return;
   const profile = await getSchoolProfile();
   const schoolName = profile?.nameAr || 'المدرسة الثانوية الرسمية';
   const adminName = profile?.administration || 'الإدارة التعليمية المعتمدة';
   const dateStr = new Intl.DateTimeFormat('ar-EG', { dateStyle: 'full' }).format(new Date());
-
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    alert('يرجى السماح بالنوافذ المنبثقة لطباعة المستند الرسمي.');
-    return;
-  }
 
   printWindow.document.write(`
     <!DOCTYPE html>
@@ -344,17 +370,6 @@ export async function printOfficialDocument({ title, subtitle, tableHeaders, tab
         </tbody>
       </table>
 
-      <div class="signatures">
-        <div class="signature-box">
-          الموظف المختص<br>
-          <div class="signature-line"></div>
-        </div>
-        <div class="signature-box">
-          يعتمد، ${signatureTitle}<br>
-          <div class="signature-line"></div>
-        </div>
-      </div>
-
       <script>
         window.onload = function() {
           window.print();
@@ -371,6 +386,8 @@ export async function printOfficialDocument({ title, subtitle, tableHeaders, tab
  * Print Official Student Enrollment Certificate (إفادة قيد رسمية معتمدة)
  */
 export async function printEnrollmentCertificate(student = {}) {
+  const printWindow = openPrintWindow('يرجى السماح بالنوافذ المنبثقة لطباعة الإفادة الرسمية.');
+  if (!printWindow) return;
   const profile = await getSchoolProfile();
   const schoolName = profile?.nameAr || 'المدرسة الثانوية الرسمية';
   const adminName = profile?.administration || 'الإدارة التعليمية';
@@ -379,12 +396,16 @@ export async function printEnrollmentCertificate(student = {}) {
   const verifyToken = generateVerificationToken('ENR', student.code || '');
   const verifyUrl = buildVerificationUrl('enrollment', verifyToken);
   const qrUrl = generateQRCodeUrl(verifyUrl, 140);
-
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    alert('يرجى السماح بالنوافذ المنبثقة لطباعة الإفادة الرسمية.');
-    return;
-  }
+  await registerPrintVerification(printWindow, {
+    token: verifyToken,
+    documentType: 'enrollment',
+    studentName: student.name,
+    studentCode: student.code,
+    grade: student.grade,
+    className: student.className || student.classId,
+    schoolName,
+    academicYear: profile?.academicYear || '2026/2027',
+  }, profile?.schoolId);
 
   printWindow.document.write(`
     <!DOCTYPE html>
@@ -403,7 +424,7 @@ export async function printEnrollmentCertificate(student = {}) {
         .cert-data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 25px 0; padding: 20px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; }
         .data-item { font-size: 14px; }
         .data-item strong { color: #0f172a; }
-        .signatures { display: flex; justify-content: space-between; margin-top: 60px; padding-inline: 40px; font-weight: bold; font-size: 14px; }
+        .signatures { display: flex; justify-content: center; margin-top: 60px; padding-inline: 40px; font-weight: bold; font-size: 14px; }
         .seal-box { width: 120px; height: 120px; border: 2px dashed #94a3b8; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #64748b; text-align: center; margin: 0 auto; }
       </style>
     </head>
@@ -430,7 +451,7 @@ export async function printEnrollmentCertificate(student = {}) {
         
         <div class="cert-data-grid">
           <div class="data-item">اسم الطالب: <strong>${student.name || '—'}</strong></div>
-          <div class="data-item">كود الطالب بالوزارة: <strong>${student.code || '—'}</strong></div>
+          <div class="data-item">كود الطالب: <strong>${student.code || '—'}</strong></div>
           <div class="data-item">الرقم القومي: <strong>${student.nationalId || '—'}</strong></div>
           <div class="data-item">الصف الدراسي: <strong>${student.grade || 'الصف الأول الثانوي'}</strong></div>
           <div class="data-item">حالة القيد: <strong>مقيد ومنتظم بالدراسة للعام 2026/2027</strong></div>
@@ -441,17 +462,9 @@ export async function printEnrollmentCertificate(student = {}) {
       </div>
 
       <div class="signatures">
-        <div style="text-align: center;">
-          مسؤول شؤون الطلاب<br><br><br>
-          ................................
-        </div>
         <div class="seal-box" style="flex-direction:column;">
           <img src="${qrUrl}" alt="QR" style="width:100px;height:100px;margin-bottom:4px;">
           <span style="font-size:9px;font-weight:400;">رمز التحقق:<br><code style="letter-spacing:1px;">${verifyToken}</code></span>
-        </div>
-        <div style="text-align: center;">
-          يعتمد، مدير عام المدرسة<br><br><br>
-          ................................
         </div>
       </div>
 
@@ -472,6 +485,9 @@ export async function printEnrollmentCertificate(student = {}) {
  * Print Official Ministry Tablet Handover Protocol (محضر تسليم تابلت وزاري رسمي)
  */
 export async function printTabletHandoverProtocol({ student = {}, device = {}, operatorName = 'مسؤول التطوير التكنولوجي' }) {
+  if (device.status !== 'delivered') throw new Error('لا يمكن إصدار محضر استلام قبل تسجيل تسليم الجهاز للطالب.');
+  const printWindow = openPrintWindow('يرجى السماح بالنوافذ المنبثقة لطباعة محضر التسليم.');
+  if (!printWindow) return;
   const profile = await getSchoolProfile();
   const schoolName = profile?.nameAr || 'المدرسة الثانوية الرسمية';
   const adminName = profile?.administration || 'الإدارة التعليمية';
@@ -480,12 +496,16 @@ export async function printTabletHandoverProtocol({ student = {}, device = {}, o
   const verifyToken = generateVerificationToken('TAB', device.imei || '');
   const verifyUrl = buildVerificationUrl('tablet_receipt', verifyToken);
   const qrUrl = generateQRCodeUrl(verifyUrl, 130);
-
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    alert('يرجى السماح بالنوافذ المنبثقة لطباعة محضر التسليم.');
-    return;
-  }
+  await registerPrintVerification(printWindow, {
+    token: verifyToken,
+    documentType: 'tablet_receipt',
+    studentName: student.name || device.assignedStudentName,
+    studentCode: student.code || device.assignedStudentCode,
+    grade: student.grade,
+    className: student.className || student.classId,
+    schoolName,
+    academicYear: profile?.academicYear || '2026/2027',
+  }, profile?.schoolId);
 
   printWindow.document.write(`
     <!DOCTYPE html>
@@ -551,20 +571,15 @@ export async function printTabletHandoverProtocol({ student = {}, device = {}, o
 
       <div class="signatures">
         <div>
-          المستلم (ولي الأمر)<br>
-          الاسم: ...............................<br>
-          الرقم القومي: ........................<br>
-          التوقيع: .............................
+          الطالب المستلم<br><br>
+          الاسم: <strong>${student.name || device.assignedStudentName || '—'}</strong><br><br>
+          التوقيع: ........................................
         </div>
         <div>
-          قسم التطوير التكنولوجي<br>
-          الاسم: <strong>${operatorName}</strong><br>
-          التوقيع: .............................
-        </div>
-        <div>
-          يعتمد، مدير عام المدرسة<br>
-          الاسم: ...............................<br>
-          التوقيع والخاتم: ......................
+          ولي أمر الطالب<br><br>
+          الاسم: ........................................<br><br>
+          الرقم القومي: ................................<br><br>
+          التوقيع: ........................................
         </div>
       </div>
 
@@ -591,6 +606,8 @@ export async function printTabletHandoverProtocol({ student = {}, device = {}, o
  * Print Official Student ID Card (كارنيه وبطاقة الطالب المدرسية المعتمدة مع QR Code)
  */
 export async function printStudentIdCard(student = {}) {
+  const printWindow = openPrintWindow('يرجى السماح بالنوافذ المنبثقة لطباعة كارنيه الطالب.');
+  if (!printWindow) return;
   const profile = await getSchoolProfile();
   const schoolName = profile?.nameAr || 'المدرسة الثانوية الرسمية';
   const adminName = profile?.administration || 'الإدارة التعليمية';
@@ -599,12 +616,17 @@ export async function printStudentIdCard(student = {}) {
   const verifyToken = generateVerificationToken('STU', student.code || '');
   const verifyUrl = buildVerificationUrl('student', verifyToken);
   const qrUrl = generateQRCodeUrl(verifyUrl, 100);
-
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    alert('يرجى السماح بالنوافذ المنبثقة لطباعة كارنيه الطالب.');
-    return;
-  }
+  await registerPrintVerification(printWindow, {
+    token: verifyToken,
+    documentType: 'student',
+    documentTitle: 'كارنيه طالب',
+    studentName: student.name,
+    studentCode: student.code,
+    grade: student.grade,
+    className: student.className || student.classId,
+    schoolName,
+    academicYear,
+  }, profile?.schoolId);
 
   printWindow.document.write(`
     <!DOCTYPE html>
@@ -831,7 +853,7 @@ export async function printStudentIdCard(student = {}) {
             <div class="student-details">
               <div class="student-name-row">${student.name || 'اسم الطالب'}</div>
               <div class="detail-row">
-                <span class="detail-label">كود الوزارة الموحد:</span>
+                <span class="detail-label">كود الطالب:</span>
                 <span class="code-box">${student.code || '—'}</span>
               </div>
               <div class="detail-row">
@@ -873,7 +895,6 @@ export async function printStudentIdCard(student = {}) {
                 <strong>طوارئ ولي الأمر:</strong> <code style="font-size: 8px; font-weight: bold;">${student.parentInfo?.parentPhone || student.parentInfo?.phone || '—'}</code>
               </div>
               <div class="stamp-box">
-                <span>توقيع شؤون الطلاب: ............</span>
                 <span>خاتم شعار المدرسة: معتمد</span>
               </div>
             </div>
@@ -896,6 +917,8 @@ export async function printStudentIdCard(student = {}) {
  * Print Official Student Honor & Excellence Certificate (شهادة تقدير وتفوق أكاديمي معتمدة)
  */
 export async function printHonorCertificate({ student = {}, reason = 'التفوق العلمي والأكاديمي والتميز في الأنشطة المدرسية وحسن السير والسلوك', term = 'العام الدراسي 2026 / 2027' } = {}) {
+  const printWindow = openPrintWindow('يرجى السماح بالنوافذ المنبثقة لطباعة شهادة التقدير.', true);
+  if (!printWindow) return;
   const profile = await getSchoolProfile();
   const schoolName = profile?.nameAr || 'المدرسة الثانوية الرسمية';
   const adminName = profile?.administration || 'الإدارة التعليمية';
@@ -903,14 +926,16 @@ export async function printHonorCertificate({ student = {}, reason = 'التفو
   const verifyToken = generateVerificationToken('HONOR', student.code || '');
   const verifyUrl = buildVerificationUrl('honor_certificate', verifyToken);
   const qrUrl = generateQRCodeUrl(verifyUrl, 110);
-
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    if (typeof window.showToast === 'function') {
-      window.showToast('يرجى السماح بالنوافذ المنبثقة لطباعة شهادة التقدير.', 'warning');
-    }
-    return;
-  }
+  await registerPrintVerification(printWindow, {
+    token: verifyToken,
+    documentType: 'honor_certificate',
+    studentName: student.name,
+    studentCode: student.code,
+    grade: student.grade,
+    className: student.className || student.classId,
+    schoolName,
+    academicYear: term,
+  }, profile?.schoolId);
 
   printWindow.document.write(`
     <!DOCTYPE html>
@@ -1068,20 +1093,14 @@ export async function printHonorCertificate({ student = {}, reason = 'التفو
 
             <div class="honor-text-intro">تتشرف إدارة المدرسة وأسرة هيئة التدريس بمنح هذه الشهادة للطالب / الطالبة:</div>
             <div class="student-name-display">${student.name || 'اسم الطالب المتميز'}</div>
-            <div class="student-class-display">${student.grade || 'الصف الأول الثانوي'} — كود الوزارة: (${student.code || '—'})</div>
+            <div class="student-class-display">${student.grade || 'الصف الأول الثانوي'} — كود الطالب: (${student.code || '—'})</div>
 
             <p class="honor-reason">
               تقديراً لجهوده المتميزة وتفوقه الباهر في ${reason}، وإعراباً عن فخر المدرسة واعتزازها به كنموذج يحتذى به بين زملائه، متمنين له دوام الرفعة والريادة في مسيرته العلمية والمهنية.
             </p>
           </div>
 
-          <div class="cert-footer-grid">
-            <div class="sig-block">
-              <div>المعلم المشرف / رائد الفصل</div>
-              <div class="sig-line"></div>
-              <small style="color: #64748b;">أ. محمد إبراهيم حسن</small>
-            </div>
-
+          <div class="cert-footer-grid" style="justify-content:center;">
             <div class="qr-verify-box">
               <img src="${qrUrl}" alt="QR" style="width: 70px; height: 70px;">
               <div class="qr-verify-text">
@@ -1089,12 +1108,6 @@ export async function printHonorCertificate({ student = {}, reason = 'التفو
                 وثيقة معتمدة ومسجلة بالسجل الأكاديمي الرقمي.<br>
                 امسح الرمز أو تحقق عبر verify.html
               </div>
-            </div>
-
-            <div class="sig-block">
-              <div>يعتمد، مدير عام المدرسة</div>
-              <div class="sig-line"></div>
-              <small style="color: #64748b;">د. طارق محمود المنشاوي</small>
             </div>
           </div>
         </div>
@@ -1115,22 +1128,27 @@ export async function printHonorCertificate({ student = {}, reason = 'التفو
  * Print Official Ministry Absence Warning Letter (إنذار غياب رسمي لولي الأمر)
  */
 export async function printAbsenceWarningLetter({ student = {}, days = 3, warningNumber = 'الأول' } = {}) {
+  const printWindow = openPrintWindow('يرجى السماح بالنوافذ المنبثقة لطباعة إنذار الغياب.', true);
+  if (!printWindow) return;
   const profile = await getSchoolProfile();
   const schoolName = profile?.nameAr || 'المدرسة الثانوية الرسمية';
   const adminName = profile?.administration || 'الإدارة التعليمية';
   const dateStr = new Intl.DateTimeFormat('ar-EG', { dateStyle: 'full' }).format(new Date());
 
   const verifyToken = generateVerificationToken('WARN', student.code || '');
-  const verifyUrl = buildVerificationUrl('absence_warning', verifyToken);
+  const verifyUrl = buildVerificationUrl('warning', verifyToken);
   const qrUrl = generateQRCodeUrl(verifyUrl, 100);
-
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    if (typeof window.showToast === 'function') {
-      window.showToast('يرجى السماح بالنوافذ المنبثقة لطباعة إنذار الغياب.', 'warning');
-    }
-    return;
-  }
+  await registerPrintVerification(printWindow, {
+    token: verifyToken,
+    documentType: 'warning',
+    documentTitle: `إنذار غياب ${warningNumber}`,
+    studentName: student.name,
+    studentCode: student.code,
+    grade: student.grade,
+    className: student.className || student.classId,
+    schoolName,
+    academicYear: profile?.academicYear || '2026/2027',
+  }, profile?.schoolId);
 
   printWindow.document.write(`
     <!DOCTYPE html>
@@ -1245,7 +1263,7 @@ export async function printAbsenceWarningLetter({ student = {}, days = 3, warnin
         <tr>
           <th>اسم الطالب الرباعي:</th>
           <td><strong>${student.name || '—'}</strong></td>
-          <th>كود الطالب الوزاري:</th>
+          <th>كود الطالب:</th>
           <td><code>${student.code || '—'}</code></td>
         </tr>
         <tr>
@@ -1271,24 +1289,6 @@ export async function printAbsenceWarningLetter({ student = {}, days = 3, warnin
         تحية طيبة وبعد،<br>
         نحيط سيادتكم علماً بأن نجلكم المذكور عاليه قد انقطع عن الحضور للمدرسة وتجاوز النسبة المقررة قانوناً للغياب بدون تقديم عذر طبي أو رسمي تقبله إدارة المدرسة.<br>
         وبناءً على المادة (19) من قانون التعليم ولائحة الانضباط المدرسي المعتمدة، ننذر سيادتكم بسرعة الحضور إلى مقر المدرسة (مكتب الخدمة الاجتماعية وشؤون الطلاب) خلال <strong>48 ساعة</strong> من تاريخ استلام هذا الإنذار لتسوية الموقف، وإلا ستضطر إدارة المدرسة آسفةً لاتخاذ الإجراءات القانونية المقررة والتي قد تصل إلى الحرمان من دخول الامتحانات أو الفصل وإعادة القيد.
-      </div>
-
-      <div class="signatures-row">
-        <div class="sig-block">
-          مسؤول شؤون الطلاب<br>
-          <div class="sig-space"></div>
-          أ. محمود عبد الرحمن سالم
-        </div>
-        <div class="sig-block">
-          الأخصائي الاجتماعي<br>
-          <div class="sig-space"></div>
-          أ. نادية مصطفى الشريف
-        </div>
-        <div class="sig-block">
-          يعتمد، مدير عام المدرسة<br>
-          <div class="sig-space"></div>
-          د. طارق محمود المنشاوي
-        </div>
       </div>
 
       <div class="footer-verify">

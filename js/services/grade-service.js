@@ -8,9 +8,12 @@ import {
   collection,
   doc,
   getDocs,
+  query,
+  where,
   setDoc,
   serverTimestamp,
 } from '../firebase.js';
+import { getCurrentUser } from '../auth.js';
 import { DEFAULT_SCHOOL_ID } from './school-service.js';
 import { recordAuditEvent } from './audit-service.js';
 
@@ -182,50 +185,85 @@ export const DEFAULT_GRADES = [
  * Fetch grades for students or specific student
  */
 export async function getStudentGrades(studentCode = null, schoolId = DEFAULT_SCHOOL_ID) {
-  const cacheKey = `${CACHE_GRADES_KEY}${schoolId}`;
-  const cachedStr = localStorage.getItem(cacheKey);
-  
-  if (cachedStr) {
+  const currentUser = getCurrentUser();
+  const demoGradeIds = new Set(DEFAULT_GRADES.map((grade) => grade.id));
+  const keepRecordedGrades = (grades) => grades.filter((grade) => !demoGradeIds.has(grade.id));
+  if (['student', 'parent'].includes(currentUser?.role)) {
+    const cleanCode = String(studentCode || '').trim();
+    if (!cleanCode) return [];
     try {
-      const list = JSON.parse(cachedStr);
-      if (Array.isArray(list) && list.length > 0) {
-        // Background sync
-        try {
-          getDocs(collection(db, 'schools', schoolId, 'grades')).then((snap) => {
-            if (!snap.empty) {
-              const freshList = [];
-              snap.forEach((d) => freshList.push({ id: d.id, ...d.data() }));
-              localStorage.setItem(cacheKey, JSON.stringify(freshList));
-            }
-          }).catch(() => {});
-        } catch (e) {}
-
-        if (studentCode) {
-          return list.filter((g) => g.studentCode === String(studentCode).trim());
-        }
-        return list;
-      }
-    } catch (e) {
-      // ignore
+      const gradesQuery = query(
+        collection(db, 'schools', schoolId, 'grades'),
+        where('studentCode', '==', cleanCode)
+      );
+      const snapshot = await getDocs(gradesQuery);
+      return keepRecordedGrades(snapshot.docs.map((gradeDoc) => ({ id: gradeDoc.id, ...gradeDoc.data() })));
+    } catch (error) {
+      console.warn('Firestore getStudentGrades scoped read notice:', error);
+      return [];
     }
   }
 
-  const initialGrades = DEFAULT_GRADES.map(g => ({ ...g, schoolId }));
-  localStorage.setItem(cacheKey, JSON.stringify(initialGrades));
+  if (currentUser?.role === 'teacher') {
+    if (studentCode) {
+      try {
+        const gradesQuery = query(
+          collection(db, 'schools', schoolId, 'grades'),
+          where('studentCode', '==', String(studentCode).trim())
+        );
+        const snapshot = await getDocs(gradesQuery);
+        return keepRecordedGrades(snapshot.docs.map((gradeDoc) => ({ id: gradeDoc.id, ...gradeDoc.data() })));
+      } catch (error) {
+        console.warn('Firestore getStudentGrades teacher-scoped read notice:', error);
+        return [];
+      }
+    }
+
+    if (!currentUser.classId) return [];
+    try {
+      const rosterQuery = query(
+        collection(db, 'schools', schoolId, 'students'),
+        where('classId', '==', currentUser.classId)
+      );
+      const rosterSnapshot = await getDocs(rosterQuery);
+      const gradeSnapshots = await Promise.all(rosterSnapshot.docs.map((studentDoc) => {
+        const code = String(studentDoc.data().code || '').trim();
+        if (!code) return Promise.resolve(null);
+        return getDocs(query(
+          collection(db, 'schools', schoolId, 'grades'),
+          where('studentCode', '==', code)
+        ));
+      }));
+      const grades = gradeSnapshots.flatMap((snapshot) => snapshot?.docs || [])
+        .map((gradeDoc) => ({ id: gradeDoc.id, ...gradeDoc.data() }));
+      return keepRecordedGrades(grades);
+    } catch (error) {
+      console.warn('Firestore getStudentGrades teacher-scoped read notice:', error);
+      return [];
+    }
+  }
+
+  const cacheKey = `${CACHE_GRADES_KEY}${schoolId}`;
+  try {
+    const snapshot = await getDocs(collection(db, 'schools', schoolId, 'grades'));
+    const recordedGrades = keepRecordedGrades(snapshot.docs.map((gradeDoc) => ({ id: gradeDoc.id, ...gradeDoc.data() })));
+    localStorage.setItem(cacheKey, JSON.stringify(recordedGrades));
+    return studentCode
+      ? recordedGrades.filter((grade) => String(grade.studentCode) === String(studentCode).trim())
+      : recordedGrades;
+  } catch (error) {
+    console.warn('Firestore getStudentGrades notice:', error);
+  }
 
   try {
-    for (const grd of initialGrades) {
-      const docRef = doc(db, 'schools', schoolId, 'grades', grd.id);
-      setDoc(docRef, { ...grd, serverCreatedAt: serverTimestamp() }, { merge: true }).catch(() => {});
-    }
-  } catch (e) {
-    // ignore
+    const cachedGrades = JSON.parse(localStorage.getItem(cacheKey) || '[]');
+    const recordedGrades = Array.isArray(cachedGrades) ? keepRecordedGrades(cachedGrades) : [];
+    return studentCode
+      ? recordedGrades.filter((grade) => String(grade.studentCode) === String(studentCode).trim())
+      : recordedGrades;
+  } catch (error) {
+    return [];
   }
-
-  if (studentCode) {
-    return initialGrades.filter((g) => g.studentCode === String(studentCode).trim());
-  }
-  return initialGrades;
 }
 
 /**

@@ -55,10 +55,15 @@ export async function getSchoolClasses(schoolId = DEFAULT_SCHOOL_ID) {
 
   // Fallback to cache or initial defaults
   const cached = localStorage.getItem(`${CACHE_CLASSES_KEY}${schoolId}`);
-  if (cached) return JSON.parse(cached);
+  if (cached) {
+    const cachedClasses = JSON.parse(cached);
+    const demoClassIds = new Set(DEFAULT_INITIAL_CLASSES.map((item) => item.id));
+    const containsOnlyDemoClasses = cachedClasses.length > 0 && cachedClasses.every((item) => demoClassIds.has(item.id));
+    if (!containsOnlyDemoClasses) return cachedClasses;
+    localStorage.removeItem(`${CACHE_CLASSES_KEY}${schoolId}`);
+  }
 
-  localStorage.setItem(`${CACHE_CLASSES_KEY}${schoolId}`, JSON.stringify(DEFAULT_INITIAL_CLASSES));
-  return DEFAULT_INITIAL_CLASSES;
+  return [];
 }
 
 /**

@@ -8,12 +8,15 @@ import {
   collection,
   doc,
   getDocs,
+  query,
+  where,
   setDoc,
   updateDoc,
   serverTimestamp,
 } from '../firebase.js';
 import { DEFAULT_SCHOOL_ID } from './school-service.js';
 import { recordAuditEvent } from './audit-service.js';
+import { getCurrentUser } from '../auth.js';
 
 const CACHE_DEVICES_KEY = 'dse_tablet_devices_v5_';
 const CACHE_BATCHES_KEY = 'dse_tablet_batches_v5_';
@@ -42,15 +45,9 @@ export async function getTabletBatches(schoolId = DEFAULT_SCHOOL_ID) {
   try {
     const batchesCol = collection(db, 'schools', schoolId, 'batches');
     const snapshot = await getDocs(batchesCol);
-    if (!snapshot.empty) {
-      const list = [];
-      snapshot.forEach((docSnap) => {
-        list.push({ id: docSnap.id, ...docSnap.data() });
-      });
-
-      localStorage.setItem(`${CACHE_BATCHES_KEY}${schoolId}`, JSON.stringify(list));
-      return list;
-    }
+    const list = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+    localStorage.setItem(`${CACHE_BATCHES_KEY}${schoolId}`, JSON.stringify(list));
+    return list;
   } catch (err) {
     console.warn('Firestore getTabletBatches notice (cache fallback):', err);
   }
@@ -65,17 +62,60 @@ export async function getTabletBatches(schoolId = DEFAULT_SCHOOL_ID) {
     }
   }
 
-  const initialBatches = DEFAULT_BATCHES.map(b => ({ ...b, schoolId }));
-  localStorage.setItem(`${CACHE_BATCHES_KEY}${schoolId}`, JSON.stringify(initialBatches));
-  return initialBatches;
+  return [];
 }
 
 export const registerTabletBatch = createTabletBatch;
+
+export async function increaseTabletBatchQuantity(batchId, quantity, notes = '', schoolId = DEFAULT_SCHOOL_ID) {
+  const additionalQuantity = Number(quantity);
+  if (!batchId) throw new Error('اختر الدفعة التي تريد زيادة كميتها.');
+  if (!Number.isInteger(additionalQuantity) || additionalQuantity < 1) {
+    throw new Error('أدخل كمية صحيحة أكبر من صفر.');
+  }
+
+  const batches = await getTabletBatches(schoolId);
+  const batch = batches.find((entry) => entry.id === batchId);
+  if (!batch) throw new Error('الدفعة غير موجودة. حدّث الصفحة ثم حاول مرة أخرى.');
+
+  const updatedBatch = {
+    ...batch,
+    receivedQuantity: Number(batch.receivedQuantity || 0) + additionalQuantity,
+    notes: notes.trim() || batch.notes || '',
+    updatedAt: new Date().toISOString(),
+  };
+
+  const batchRef = doc(db, 'schools', schoolId, 'batches', batchId);
+  await updateDoc(batchRef, {
+    receivedQuantity: updatedBatch.receivedQuantity,
+    notes: updatedBatch.notes,
+    updatedAt: serverTimestamp(),
+  });
+
+  localStorage.setItem(
+    `${CACHE_BATCHES_KEY}${schoolId}`,
+    JSON.stringify(batches.map((entry) => entry.id === batchId ? updatedBatch : entry))
+  );
+
+  await recordAuditEvent({
+    action: 'زيادة كمية دفعة تابلت',
+    target: `دفعة ${batch.batchNumber || batchId}`,
+    details: `إضافة ${additionalQuantity} جهاز. الإجمالي الجديد: ${updatedBatch.receivedQuantity}`,
+    operatorRole: 'tech_specialist',
+    schoolId,
+  });
+
+  return updatedBatch;
+}
 
 export async function createTabletBatch({ batchNumber, academicYear, receivedQuantity, deviceCount, deliveryDate, notes, operatorName }, schoolId = DEFAULT_SCHOOL_ID) {
   const cleanNumber = String(batchNumber).trim();
   if (!cleanNumber) {
     throw new Error('يرجى تحديد رقم أو إشارة دفعة الاستلام الوزارية.');
+  }
+  const quantity = Number(receivedQuantity ?? deviceCount);
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    throw new Error('أدخل كمية مستلمة صحيحة أكبر من صفر.');
   }
 
   const batchId = `batch_${Date.now()}`;
@@ -83,7 +123,7 @@ export async function createTabletBatch({ batchNumber, academicYear, receivedQua
     id: batchId,
     batchNumber: cleanNumber,
     academicYear: academicYear || '2026/2027',
-    receivedQuantity: Number(receivedQuantity || deviceCount) || 0,
+    receivedQuantity: quantity,
     registeredCount: 0,
     activatedCount: 0,
     deliveredCount: 0,
@@ -93,15 +133,11 @@ export async function createTabletBatch({ batchNumber, academicYear, receivedQua
     schoolId,
   };
 
-  try {
-    const batchRef = doc(db, 'schools', schoolId, 'batches', batchId);
-    await setDoc(batchRef, {
-      ...batchData,
-      createdAt: serverTimestamp(),
-    });
-  } catch (err) {
-    console.warn('Firestore createTabletBatch notice:', err);
-  }
+  const batchRef = doc(db, 'schools', schoolId, 'batches', batchId);
+  await setDoc(batchRef, {
+    ...batchData,
+    createdAt: serverTimestamp(),
+  });
 
   // Update local cache
   const existing = await getTabletBatches(schoolId);
@@ -178,57 +214,78 @@ export const DEFAULT_DEVICES = [
   }
 ];
 
-export async function getTabletDevices(schoolId = DEFAULT_SCHOOL_ID) {
-  const cacheKey = `${CACHE_DEVICES_KEY}${schoolId}`;
-  const cachedStr = localStorage.getItem(cacheKey);
+export async function getTabletDevicesForStudent(studentCode, schoolId = DEFAULT_SCHOOL_ID) {
+  const cleanCode = String(studentCode || '').trim();
+  if (!/^\d{6,12}$/.test(cleanCode)) return [];
 
-  if (cachedStr) {
+  const devicesQuery = query(
+    collection(db, 'schools', schoolId, 'devices'),
+    where('assignedStudentCode', '==', cleanCode),
+  );
+  const snapshot = await getDocs(devicesQuery);
+  return snapshot.docs.map((deviceDoc) => ({ id: deviceDoc.id, ...deviceDoc.data() }));
+}
+
+export async function getTabletDevices(schoolId = DEFAULT_SCHOOL_ID) {
+  const currentUser = getCurrentUser();
+  if (currentUser?.role === 'teacher') {
+    if (!currentUser.classId) return [];
     try {
-      const parsed = JSON.parse(cachedStr);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        // Sync in background
-        try {
-          getDocs(collection(db, 'schools', schoolId, 'devices')).then((snapshot) => {
-            if (!snapshot.empty) {
-              const list = [];
-              snapshot.forEach((docSnap) => list.push({ id: docSnap.id, ...docSnap.data() }));
-              localStorage.setItem(cacheKey, JSON.stringify(list));
-            }
-          }).catch(() => {});
-        } catch (e) {}
-        return parsed;
-      }
-    } catch (e) {
-      // ignore
+      const roster = await getDocs(query(
+        collection(db, 'schools', schoolId, 'students'),
+        where('classId', '==', currentUser.classId)
+      ));
+      const codes = roster.docs.map((studentDoc) => String(studentDoc.data().code || '').trim()).filter(Boolean);
+      const snapshots = await Promise.all(codes.map((code) => getDocs(query(
+        collection(db, 'schools', schoolId, 'devices'),
+        where('assignedStudentCode', '==', code)
+      ))));
+      return snapshots.flatMap((snapshot) => snapshot.docs.map((deviceDoc) => ({ id: deviceDoc.id, ...deviceDoc.data() })));
+    } catch (error) {
+      console.warn('Firestore getTeacherTabletDevices notice:', error);
+      return [];
+    }
+  }
+  if (currentUser?.role === 'student') {
+    const studentCode = String(currentUser.studentCode || currentUser.email?.match(/^(\d+)@cairo7\.moe\.edu\.eg$/i)?.[1] || '').trim();
+    if (!studentCode) return [];
+    try {
+      const studentDevicesQuery = query(
+        collection(db, 'schools', schoolId, 'devices'),
+        where('assignedStudentCode', '==', studentCode)
+      );
+      const snapshot = await getDocs(studentDevicesQuery);
+      return snapshot.docs.map((deviceDoc) => ({ id: deviceDoc.id, ...deviceDoc.data() }));
+    } catch (error) {
+      console.warn('Firestore getStudentTablet notice:', error);
+      return [];
     }
   }
 
-  // If clean mode is enabled for real school operation, return clean empty list
-  if (localStorage.getItem(`dse_clean_mode_${schoolId}`) === 'true') {
-    localStorage.setItem(cacheKey, JSON.stringify([]));
-    return [];
+  const cacheKey = `${CACHE_DEVICES_KEY}${schoolId}`;
+  try {
+    const snapshot = await getDocs(collection(db, 'schools', schoolId, 'devices'));
+    const list = snapshot.docs.map((deviceDoc) => ({ id: deviceDoc.id, ...deviceDoc.data() }));
+    localStorage.setItem(cacheKey, JSON.stringify(list));
+    return list;
+  } catch (error) {
+    console.warn('Firestore getTabletDevices notice (cache fallback):', error);
   }
-
-  const initialDevices = DEFAULT_DEVICES.map(d => ({ ...d, schoolId }));
-  localStorage.setItem(cacheKey, JSON.stringify(initialDevices));
 
   try {
-    for (const dev of initialDevices) {
-      const docRef = doc(db, 'schools', schoolId, 'devices', dev.id);
-      setDoc(docRef, { ...dev, createdAt: serverTimestamp() }, { merge: true }).catch(() => {});
-    }
-  } catch (e) {
-    // ignore
+    const parsed = JSON.parse(localStorage.getItem(cacheKey) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
   }
-
-  return initialDevices;
 }
 
 export async function registerTabletDevice({ imei, serialNumber, batchId, model }, schoolId = DEFAULT_SCHOOL_ID) {
   const cleanImei = String(imei).trim();
-  if (!cleanImei || cleanImei.length < 14) {
+  if (!/^\d{14,15}$/.test(cleanImei)) {
     throw new Error('رقم IMEI غير صحيح، يجب أن يتكون من 14 إلى 15 رقماً.');
   }
+  if (!batchId) throw new Error('اختر دفعة التابلت قبل تسجيل الجهاز.');
 
   const devices = await getTabletDevices(schoolId);
 
@@ -238,12 +295,20 @@ export async function registerTabletDevice({ imei, serialNumber, batchId, model 
     throw new Error(`رقم IMEI (${cleanImei}) مسجل بالفعل مسبقاً في قاعدة بيانات المدرسة.`);
   }
 
+  const batches = await getTabletBatches(schoolId);
+  const batch = batches.find((entry) => entry.id === batchId);
+  if (!batch) throw new Error('الدفعة المختارة غير موجودة. حدّث الصفحة ثم حاول مرة أخرى.');
+  const batchDevices = devices.filter((device) => device.batchId === batchId);
+  if (batchDevices.length >= Number(batch.receivedQuantity || 0)) {
+    throw new Error('تم تسجيل كل الأجهزة المستلمة في هذه الدفعة. أضف كمية للدفعة أولاً.');
+  }
+
   const deviceId = `dev_${cleanImei}`;
   const deviceData = {
     id: deviceId,
     imei: cleanImei,
     serialNumber: (serialNumber || '').trim(),
-    batchId: batchId || 'عام',
+    batchId,
     model: model || 'تابلت مدرسي معتمد',
     status: 'inventory', // inventory | delivered | maintenance
     assignedStudentCode: null,
@@ -261,15 +326,11 @@ export async function registerTabletDevice({ imei, serialNumber, batchId, model 
     ],
   };
 
-  try {
-    const deviceRef = doc(db, 'schools', schoolId, 'devices', deviceId);
-    await setDoc(deviceRef, {
-      ...deviceData,
-      createdAt: serverTimestamp(),
-    });
-  } catch (err) {
-    console.warn('Firestore registerTabletDevice notice:', err);
-  }
+  const deviceRef = doc(db, 'schools', schoolId, 'devices', deviceId);
+  await setDoc(deviceRef, {
+    ...deviceData,
+    createdAt: serverTimestamp(),
+  });
 
   // Update local cache
   const updatedDevices = [deviceData, ...devices.filter((d) => d.imei !== cleanImei)];
@@ -278,7 +339,7 @@ export async function registerTabletDevice({ imei, serialNumber, batchId, model 
   await recordAuditEvent({
     action: 'تسجيل جهاز تابلت جديد بالمخزن',
     target: `IMEI: ${cleanImei}`,
-    details: `الرقم التسلسلي: ${deviceData.serialNumber || 'غير محدد'}`,
+    details: `الدفعة: ${batch.batchNumber} | الرقم التسلسلي: ${deviceData.serialNumber || 'غير محدد'}`,
     operatorRole: 'tech_specialist',
     schoolId,
   });
@@ -286,10 +347,18 @@ export async function registerTabletDevice({ imei, serialNumber, batchId, model 
   return deviceData;
 }
 
-export async function deliverTabletDevice(imei, { studentCode, studentName, operatorName }, schoolId = DEFAULT_SCHOOL_ID) {
+export async function deliverTabletDevice(imei, { studentCode, studentName, operatorName, recipientName = '', recipientNationalId = '', recipientPhone = '' } = {}, schoolId = DEFAULT_SCHOOL_ID) {
   const cleanImei = String(imei).trim();
+  if (!cleanImei) {
+    throw new Error('يرجى إدخال رقم IMEI للجهاز المراد تسليمه.');
+  }
+
   const devices = await getTabletDevices(schoolId);
   const device = devices.find((d) => d.imei === cleanImei);
+
+  if (!studentCode || !studentName) {
+    throw new Error('يرجى اختيار الطالب وتأكيد بيانات ولي الأمر قبل اعتماد التسليم.');
+  }
 
   if (!device) {
     throw new Error('الجهاز غير مسجل في قاعدة بيانات المدرسة.');
@@ -315,23 +384,25 @@ export async function deliverTabletDevice(imei, { studentCode, studentName, oper
     assignedStudentName: studentName,
     deliveredDate: new Date().toISOString().split('T')[0],
     deliveredBy: operatorName || 'مسؤول التطوير التكنولوجي',
+    deliveryRecipient: {
+      name: String(recipientName).trim(),
+      nationalId: String(recipientNationalId).trim(),
+      phone: String(recipientPhone).trim(),
+    },
     history: updatedHistory,
   };
 
-  try {
-    const deviceRef = doc(db, 'schools', schoolId, 'devices', device.id || `dev_${cleanImei}`);
-    await updateDoc(deviceRef, {
-      status: 'delivered',
-      assignedStudentCode: studentCode,
-      assignedStudentName: studentName,
-      deliveredDate: updatedDevice.deliveredDate,
-      deliveredBy: updatedDevice.deliveredBy,
-      history: updatedHistory,
-      updatedAt: serverTimestamp(),
-    });
-  } catch (err) {
-    console.warn('Firestore deliverTabletDevice notice:', err);
-  }
+  const deviceRef = doc(db, 'schools', schoolId, 'devices', device.id || `dev_${cleanImei}`);
+  await updateDoc(deviceRef, {
+    status: 'delivered',
+    assignedStudentCode: studentCode,
+    assignedStudentName: studentName,
+    deliveredDate: updatedDevice.deliveredDate,
+    deliveredBy: updatedDevice.deliveredBy,
+    deliveryRecipient: updatedDevice.deliveryRecipient,
+    history: updatedHistory,
+    updatedAt: serverTimestamp(),
+  });
 
   // Update local cache
   const updatedList = devices.map((d) => (d.imei === cleanImei ? updatedDevice : d));

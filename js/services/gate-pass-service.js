@@ -10,14 +10,16 @@ import {
   getDocs,
   setDoc,
   updateDoc,
+  onSnapshot,
   serverTimestamp,
 } from '../firebase.js';
 import { DEFAULT_SCHOOL_ID } from './school-service.js';
 import { recordAuditEvent } from './audit-service.js';
 import { createNotification } from './notification-service.js';
+import { generateVerificationToken, getVerifiedDocument, registerVerifiedDocument, updateVerifiedDocumentStatus } from './qr-service.js';
 
 const CACHE_KEY_PREFIX = 'dse_gate_passes_';
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const getCacheKey = (schoolId) => `${CACHE_KEY_PREFIX}${CACHE_VERSION}_${schoolId}`;
 
 // Gate pass statuses
@@ -39,111 +41,37 @@ export const EXIT_REASONS = [
   { id: 'other', label: 'سبب آخر (يُذكر)', icon: '📋' },
 ];
 
-// Default demo gate passes
-const DEFAULT_GATE_PASSES = [
-  {
-    id: 'gp_001',
-    studentCode: '2026101',
-    studentName: 'يوسف أحمد المنشاوي',
-    studentClass: 'الصف الأول الثانوي — فصل 1/1',
-    reasonId: 'medical',
-    reasonLabel: 'حالة مرضية / إسعاف طبي',
-    reasonDetails: 'صداع شديد ودوخة — تم إبلاغ ولي الأمر هاتفياً',
-    exitTime: '2026-11-03T10:30:00',
-    status: 'used',
-    approvedBy: 'أ. محمود عبد الرحمن سالم',
-    approvedAt: '2026-11-03T10:25:00',
-    parentNotified: true,
-    parentName: 'أ. أحمد المنشاوي',
-    parentPhone: '01012345678',
-    securityConfirmedExit: true,
-    securityExitTime: '2026-11-03T10:32:00',
-    qrToken: 'GP-2026-001-YAM',
-    createdAt: '2026-11-03T10:20:00',
-  },
-  {
-    id: 'gp_002',
-    studentCode: '2026103',
-    studentName: 'زياد محمود عبد الرحمن',
-    studentClass: 'الصف الأول الثانوي — فصل 1/1',
-    reasonId: 'parent_request',
-    reasonLabel: 'طلب ولي الأمر (تواصل هاتفي)',
-    reasonDetails: 'اتصل ولي الأمر لاصطحاب الطالب لموعد طبي',
-    exitTime: '2026-11-05T11:00:00',
-    status: 'used',
-    approvedBy: 'أ. محمود عبد الرحمن سالم',
-    approvedAt: '2026-11-05T10:55:00',
-    parentNotified: true,
-    parentName: 'أ. محمود عبد الرحمن',
-    parentPhone: '01098765432',
-    securityConfirmedExit: true,
-    securityExitTime: '2026-11-05T11:05:00',
-    qrToken: 'GP-2026-002-ZMR',
-    createdAt: '2026-11-05T10:50:00',
-  },
-  {
-    id: 'gp_003',
-    studentCode: '2026102',
-    studentName: 'مريم أحمد المنشاوي',
-    studentClass: 'الصف الأول الثانوي — فصل 1/2',
-    reasonId: 'official_appointment',
-    reasonLabel: 'موعد رسمي (جهة حكومية / سفارة)',
-    reasonDetails: 'موعد استخراج جواز سفر — مصلحة الجوازات',
-    exitTime: null,
-    status: 'pending',
-    approvedBy: null,
-    approvedAt: null,
-    parentNotified: false,
-    parentName: 'أ. أحمد المنشاوي',
-    parentPhone: '01012345678',
-    securityConfirmedExit: false,
-    securityExitTime: null,
-    qrToken: 'GP-2026-003-MAM',
-    createdAt: new Date().toISOString(),
-  },
-];
-
 /**
  * Generate a unique QR token for a gate pass
  */
-function generateQRToken(studentCode) {
-  const ts = Date.now().toString(36).toUpperCase();
-  const initials = studentCode.slice(-3);
-  return `GP-${new Date().getFullYear()}-${ts}-${initials}`;
-}
-
 /**
  * Retrieve all gate passes for the school
  */
 export async function getGatePasses(schoolId = DEFAULT_SCHOOL_ID) {
   const cacheKey = getCacheKey(schoolId);
-
-  // Try cache first
-  try {
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch (e) {
-    console.warn('Gate pass cache read error:', e);
-  }
-
-  // Try Firestore
   try {
     const snap = await getDocs(collection(db, 'schools', schoolId, 'gate_passes'));
-    if (!snap.empty) {
-      const passes = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      localStorage.setItem(cacheKey, JSON.stringify(passes));
-      return passes;
-    }
+    const passes = snap.docs.map((passDoc) => ({ ...passDoc.data(), id: passDoc.id }));
+    passes.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    localStorage.setItem(cacheKey, JSON.stringify(passes));
+    return passes;
   } catch (e) {
-    console.warn('Gate pass Firestore read error:', e);
+    console.warn('Gate pass Firestore read failed:', e);
+    throw new Error('تعذر تحميل تصاريح الخروج من خادم المدرسة. تحقق من الاتصال والصلاحيات ثم أعد المحاولة.');
   }
+}
 
-  // Fallback to defaults
-  localStorage.setItem(cacheKey, JSON.stringify(DEFAULT_GATE_PASSES));
-  return [...DEFAULT_GATE_PASSES];
+export function subscribeToGatePasses(onUpdate, onError = () => {}, schoolId = DEFAULT_SCHOOL_ID) {
+  const cacheKey = getCacheKey(schoolId);
+  return onSnapshot(collection(db, 'schools', schoolId, 'gate_passes'), (snapshot) => {
+    const passes = snapshot.docs.map((passDoc) => ({ ...passDoc.data(), id: passDoc.id }));
+    passes.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    localStorage.setItem(cacheKey, JSON.stringify(passes));
+    onUpdate(passes);
+  }, (error) => {
+    console.warn('Gate pass live updates failed:', error);
+    onError(error);
+  });
 }
 
 /**
@@ -151,12 +79,13 @@ export async function getGatePasses(schoolId = DEFAULT_SCHOOL_ID) {
  */
 export async function createGatePass(passData, schoolId = DEFAULT_SCHOOL_ID) {
   const id = `gp_${Date.now()}`;
-  const qrToken = generateQRToken(passData.studentCode);
+  const qrToken = generateVerificationToken('GP', passData.studentCode);
   const record = {
     id,
     ...passData,
     status: GATE_PASS_STATUS.PENDING,
     qrToken,
+    schoolId,
     securityConfirmedExit: false,
     securityExitTime: null,
     createdAt: new Date().toISOString(),
@@ -166,15 +95,25 @@ export async function createGatePass(passData, schoolId = DEFAULT_SCHOOL_ID) {
     await setDoc(doc(db, 'schools', schoolId, 'gate_passes', id), {
       ...record,
       updatedAt: serverTimestamp(),
-    }, { merge: true });
+    });
   } catch (e) {
-    console.warn('Gate pass Firestore write error:', e);
+    console.warn('Gate pass Firestore write failed:', e);
+    throw new Error('تعذر حفظ تصريح الخروج على خادم المدرسة؛ لم يتم إصدار التصريح.');
   }
 
-  // Update cache
-  const passes = await getGatePasses(schoolId);
-  passes.unshift(record);
-  localStorage.setItem(getCacheKey(schoolId), JSON.stringify(passes));
+  await registerVerifiedDocument({
+    token: qrToken,
+    documentType: 'gate_pass',
+    studentName: passData.studentName,
+    studentCode: passData.studentCode,
+    grade: passData.grade,
+    className: passData.studentClass || passData.className,
+    academicYear: passData.academicYear || '',
+    status: GATE_PASS_STATUS.PENDING,
+  }, schoolId);
+
+  const passes = JSON.parse(localStorage.getItem(getCacheKey(schoolId)) || '[]');
+  localStorage.setItem(getCacheKey(schoolId), JSON.stringify([record, ...passes.filter((pass) => pass.id !== id)]));
 
   await recordAuditEvent({
     action: 'gate_pass_created',
@@ -198,20 +137,18 @@ export async function approveGatePass(passId, approverName, schoolId = DEFAULT_S
   };
 
   try {
-    await updateDoc(doc(db, 'schools', schoolId, 'gate_passes', passId), {
-      ...update,
-      updatedAt: serverTimestamp(),
-    });
+    await updateDoc(doc(db, 'schools', schoolId, 'gate_passes', passId), { ...update, updatedAt: serverTimestamp() });
   } catch (e) {
-    console.warn('Gate pass approve Firestore error:', e);
+    console.warn('Gate pass approve Firestore failed:', e);
+    throw new Error('تعذر اعتماد التصريح على خادم المدرسة؛ لم يتغير وضعه.');
   }
 
-  // Update cache
   const passes = await getGatePasses(schoolId);
   const idx = passes.findIndex((p) => p.id === passId);
   if (idx !== -1) {
     Object.assign(passes[idx], update);
     localStorage.setItem(getCacheKey(schoolId), JSON.stringify(passes));
+    await ensureGatePassVerification(passes[idx], schoolId, GATE_PASS_STATUS.APPROVED, { approvedAt: now });
 
     // Send notification to parent
     await createNotification({
@@ -244,12 +181,10 @@ export async function rejectGatePass(passId, rejectorName, rejectionReason, scho
   };
 
   try {
-    await updateDoc(doc(db, 'schools', schoolId, 'gate_passes', passId), {
-      ...update,
-      updatedAt: serverTimestamp(),
-    });
+    await updateDoc(doc(db, 'schools', schoolId, 'gate_passes', passId), { ...update, updatedAt: serverTimestamp() });
   } catch (e) {
-    console.warn('Gate pass reject Firestore error:', e);
+    console.warn('Gate pass reject Firestore failed:', e);
+    throw new Error('تعذر رفض التصريح على خادم المدرسة؛ لم يتغير وضعه.');
   }
 
   const passes = await getGatePasses(schoolId);
@@ -257,6 +192,7 @@ export async function rejectGatePass(passId, rejectorName, rejectionReason, scho
   if (idx !== -1) {
     Object.assign(passes[idx], update);
     localStorage.setItem(getCacheKey(schoolId), JSON.stringify(passes));
+    await ensureGatePassVerification(passes[idx], schoolId, GATE_PASS_STATUS.REJECTED, { revokedAt: update.rejectedAt });
   }
 
   await recordAuditEvent({
@@ -281,12 +217,10 @@ export async function confirmSecurityExit(passId, schoolId = DEFAULT_SCHOOL_ID) 
   };
 
   try {
-    await updateDoc(doc(db, 'schools', schoolId, 'gate_passes', passId), {
-      ...update,
-      updatedAt: serverTimestamp(),
-    });
+    await updateDoc(doc(db, 'schools', schoolId, 'gate_passes', passId), { ...update, updatedAt: serverTimestamp() });
   } catch (e) {
-    console.warn('Gate pass security confirm Firestore error:', e);
+    console.warn('Gate pass security confirm Firestore failed:', e);
+    throw new Error('تعذر تأكيد الخروج على خادم المدرسة؛ لم يتم إغلاق التصريح.');
   }
 
   const passes = await getGatePasses(schoolId);
@@ -294,6 +228,7 @@ export async function confirmSecurityExit(passId, schoolId = DEFAULT_SCHOOL_ID) 
   if (idx !== -1) {
     Object.assign(passes[idx], update);
     localStorage.setItem(getCacheKey(schoolId), JSON.stringify(passes));
+    await ensureGatePassVerification(passes[idx], schoolId, GATE_PASS_STATUS.USED, { usedAt: now });
 
     // Notify parent of actual exit
     await createNotification({
@@ -316,19 +251,41 @@ export async function confirmSecurityExit(passId, schoolId = DEFAULT_SCHOOL_ID) 
  * Verify a gate pass by QR token (used by security/public verification page)
  */
 export async function verifyGatePassByToken(qrToken, schoolId = DEFAULT_SCHOOL_ID) {
-  const passes = await getGatePasses(schoolId);
-  const pass = passes.find((p) => p.qrToken === qrToken);
-  if (!pass) return { valid: false, message: 'رمز التصريح غير موجود في قاعدة البيانات' };
+  const record = await getVerifiedDocument(qrToken);
+  if (!record || record.documentType !== 'gate_pass' || record.schoolId !== schoolId) {
+    return { valid: false, message: 'رمز التصريح غير موجود في سجل التحقق.' };
+  }
+  if (record.status === 'used') return { valid: true, used: true, message: 'تم استخدام هذا التصريح مسبقًا.', pass: record };
+  if (record.status === 'valid') return { valid: true, used: false, message: 'تصريح معتمد وجاهز للاستخدام.', pass: record };
+  if (record.status === 'revoked') return { valid: false, message: 'هذا التصريح مرفوض.', pass: record };
+  return { valid: false, message: 'التصريح في انتظار الموافقة.', pass: record };
+}
 
-  if (pass.status === GATE_PASS_STATUS.REJECTED) {
-    return { valid: false, message: 'هذا التصريح مرفوض', pass };
+async function ensureGatePassVerification(pass, schoolId, status, timestamps = {}) {
+  if (!pass?.qrToken) return;
+  const verificationStatus = {
+    [GATE_PASS_STATUS.PENDING]: 'pending',
+    [GATE_PASS_STATUS.APPROVED]: 'valid',
+    [GATE_PASS_STATUS.REJECTED]: 'revoked',
+    [GATE_PASS_STATUS.USED]: 'used',
+  }[status];
+  if (!verificationStatus) return;
+  const existing = await getVerifiedDocument(pass.qrToken);
+  if (existing) {
+    await updateVerifiedDocumentStatus(pass.qrToken, verificationStatus, timestamps);
+    return;
   }
-  if (pass.status === GATE_PASS_STATUS.USED) {
-    return { valid: true, used: true, message: 'تم استخدام هذا التصريح مسبقاً', pass };
-  }
-  if (pass.status === GATE_PASS_STATUS.APPROVED) {
-    return { valid: true, used: false, message: 'تصريح معتمد وجاهز للاستخدام', pass };
-  }
-  return { valid: false, message: 'التصريح في انتظار الموافقة', pass };
+  const initialStatus = verificationStatus === 'pending' ? 'pending' : 'valid';
+  await registerVerifiedDocument({
+    token: pass.qrToken,
+    documentType: 'gate_pass',
+    studentName: pass.studentName,
+    studentCode: pass.studentCode,
+    grade: pass.grade,
+    className: pass.studentClass || pass.className,
+    academicYear: pass.academicYear || '',
+    status: initialStatus,
+  }, schoolId);
+  if (initialStatus !== verificationStatus) await updateVerifiedDocumentStatus(pass.qrToken, verificationStatus, timestamps);
 }
 

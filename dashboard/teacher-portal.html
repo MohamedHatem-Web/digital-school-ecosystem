@@ -6,8 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>بوابة المعلم ورصد الحضور — منظومة المدرسة الرقمية</title>
   <link rel="stylesheet" href="../css/tokens.css?v=11.0">
-  <link rel="stylesheet" href="../css/base.css?v=11.0">
-  <link rel="stylesheet" href="../css/components.css?v=11.0">
+  <link rel="stylesheet" href="../css/base.css?v=11.1">
+  <link rel="stylesheet" href="../css/components.css?v=17.2">
   <link rel="stylesheet" href="../css/dashboard.css?v=11.0">
   <link rel="manifest" href="../manifest.webmanifest">
   <meta name="theme-color" content="#0a1628">
@@ -46,6 +46,10 @@
           <a href="#academic" class="sidebar-link active" id="tab-nav-academic">
             <span class="sidebar-icon">✅</span>
             <span>رصد الحضور والغياب ورصد الدرجات</span>
+          </a>
+          <a href="#student-inquiry" class="sidebar-link" id="tab-nav-student-inquiry">
+            <span class="sidebar-icon">🔎</span>
+            <span>ملف الطالب والاستعلام</span>
           </a>
           <a href="#messages" class="sidebar-link" id="tab-nav-messages">
             <span class="sidebar-icon">✉️</span>
@@ -97,10 +101,10 @@
 
           <div>
             <h1 style="font-size: var(--text-2xl); font-weight: 800; color: var(--color-primary-950);">
-              رصد الحضور والغياب اليومي للفصول
+              رصد حضور الطلاب في كل حصة
             </h1>
             <p style="font-size: var(--text-sm); color: var(--text-muted);">
-              تسجيل الحضور اليومي للطلاب المقيدين في الفصول المسندة لك رسميًا.
+              سجل بوابة المدرسة اليومي مستقل عن حضور كل حصة، وتظهر حالة الهروب تلقائيًا عند ثبوتها.
             </p>
           </div>
 
@@ -113,16 +117,17 @@
                   اختر الفصل المراد رصد حضور الحصة له:
                 </p>
               </div>
-              <div style="display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap;">
-                <button type="button" class="btn btn-sm btn-primary teacher-class-filter active" data-class="all" style="font-weight: 700;">
-                  👥 كافة الفصول
-                </button>
-                <button type="button" class="btn btn-sm btn-outline teacher-class-filter" data-class="فصل 1/1" style="font-weight: 700;">
-                  🎓 فصل 1/1 (يوسف وزياد)
-                </button>
-                <button type="button" class="btn btn-sm btn-outline teacher-class-filter" data-class="فصل 1/2" style="font-weight: 700;">
-                  🎓 فصل 1/2 (مريم)
-                </button>
+              <div style="display:flex;align-items:end;gap:var(--space-3);flex-wrap:wrap;">
+                <div id="teacher-class-filters" style="display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap;"></div>
+                <div class="form-group" style="margin:0;min-width:150px;">
+                  <label class="form-label" for="teacher-lesson-select">الحصة</label>
+                  <select class="form-control" id="teacher-lesson-select">
+                    <option value="1">الحصة 1</option><option value="2">الحصة 2</option>
+                    <option value="3">الحصة 3</option><option value="4">الحصة 4</option>
+                    <option value="5">الحصة 5</option><option value="6">الحصة 6</option>
+                    <option value="7">الحصة 7</option><option value="8">الحصة 8</option>
+                  </select>
+                </div>
               </div>
             </div>
             <div class="panel-body" style="padding: 0;">
@@ -151,6 +156,7 @@
                   </div>
                 </div>
               </div>
+              <div id="teacher-attendance-alerts" style="padding:0 var(--space-4) var(--space-4);"></div>
             </div>
           </div>
 
@@ -358,6 +364,9 @@
           </div>
         </div>
         <!-- End of View 2: Messages -->
+
+        <!-- View 3: Staff Student Inquiry -->
+        <div id="view-student-inquiry" class="portal-tab-view" style="display:none;flex-direction:column;gap:var(--space-5);"></div>
       </main>
     </div>
   </div>
@@ -393,9 +402,11 @@
     import { getCurrentUser } from '../js/auth.js';
     import { DEFAULT_SCHOOL_ID } from '../js/services/school-service.js';
     import { getStudents } from '../js/services/student-service.js';
-    import { recordAuditEvent } from '../js/services/audit-service.js';
     import { getAssessments, createAssessment, getStudentGrades, recordStudentGrade } from '../js/services/grade-service.js';
     import { getMessages, sendMessage, markMessageAsRead, getAllowedRecipients, getUnreadCount } from '../js/services/messaging-service.js';
+    import { getClassAttendance, saveClassAttendance } from '../js/services/attendance-service.js';
+    import { renderAttendanceAlerts } from '../js/views/attendance-alerts-view.js';
+    import { renderStudentInquiryView } from '../js/views/student-inquiry-view.js';
 
     checkRouteAccess(['teacher', 'director', 'super_admin']);
     initComponents();
@@ -403,23 +414,38 @@
     const currentUser = getCurrentUser() || { displayName: 'معلم معتمد', role: 'teacher', email: 'teacher@dse.edu.eg' };
     const schoolId = currentUser.schoolId || DEFAULT_SCHOOL_ID;
     const container = document.getElementById('teacher-students-container');
+    renderAttendanceAlerts(document.getElementById('teacher-attendance-alerts'), currentUser.role);
 
     // View Switching
     const viewAcademic = document.getElementById('view-academic');
     const viewMessages = document.getElementById('view-messages');
+    const viewStudentInquiry = document.getElementById('view-student-inquiry');
     const tabNavAcademic = document.getElementById('tab-nav-academic');
     const tabNavMessages = document.getElementById('tab-nav-messages');
+    const tabNavStudentInquiry = document.getElementById('tab-nav-student-inquiry');
 
     function switchView(tabKey) {
       if (tabKey === 'messages') {
         viewAcademic.style.display = 'none';
         viewMessages.style.display = 'flex';
+        viewStudentInquiry.style.display = 'none';
         tabNavAcademic.classList.remove('active');
         tabNavMessages.classList.add('active');
+        tabNavStudentInquiry.classList.remove('active');
         loadTeacherMessages();
+      } else if (tabKey === 'student-inquiry') {
+        viewAcademic.style.display = 'none';
+        viewMessages.style.display = 'none';
+        viewStudentInquiry.style.display = 'flex';
+        tabNavAcademic.classList.remove('active');
+        tabNavMessages.classList.remove('active');
+        tabNavStudentInquiry.classList.add('active');
+        renderStudentInquiryView(viewStudentInquiry);
       } else {
         viewMessages.style.display = 'none';
+        viewStudentInquiry.style.display = 'none';
         viewAcademic.style.display = 'flex';
+        tabNavStudentInquiry.classList.remove('active');
         tabNavMessages.classList.remove('active');
         tabNavAcademic.classList.add('active');
       }
@@ -437,6 +463,12 @@
       switchView('messages');
     });
 
+    tabNavStudentInquiry.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.location.hash = 'student-inquiry';
+      switchView('student-inquiry');
+    });
+
     window.addEventListener('hashchange', () => {
       const h = window.location.hash.replace('#', '');
       switchView(h);
@@ -452,31 +484,55 @@
     // --------------------------------------------------------------------------
     // Class Filtering & Attendance Roster
     // --------------------------------------------------------------------------
-    let selectedClassFilter = 'all';
+    let selectedClassFilter = '';
+    const classFilterContainer = document.getElementById('teacher-class-filters');
+    const lessonSelect = document.getElementById('teacher-lesson-select');
 
-    // Wire up class filter pills
-    const classFilterBtns = document.querySelectorAll('.teacher-class-filter');
-    classFilterBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        classFilterBtns.forEach(b => {
-          b.classList.remove('active', 'btn-primary');
-          b.classList.add('btn-outline');
-        });
-        btn.classList.add('active', 'btn-primary');
-        btn.classList.remove('btn-outline');
-
-        selectedClassFilter = btn.dataset.class || 'all';
-        renderTeacherRoster();
-        loadTeacherGradesRoster();
+    function renderTeacherClassFilters(students) {
+      if (!classFilterContainer) return;
+      const classValues = [...new Set(students.map((student) => String(student.grade || '').trim()).filter(Boolean))];
+      classFilterContainer.replaceChildren();
+      if (classValues.length === 0) {
+        classFilterContainer.textContent = 'لا توجد فصول مرتبطة بطلاب مقيدين.';
+        return;
+      }
+      classValues.forEach((classValue) => {
+        const button = document.createElement('button');
+        const active = selectedClassFilter === classValue;
+        button.type = 'button';
+        button.className = `btn btn-sm teacher-class-filter ${active ? 'btn-primary active' : 'btn-outline'}`;
+        button.dataset.class = classValue;
+        button.style.fontWeight = '700';
+        button.textContent = `🎓 ${classValue}`;
+        classFilterContainer.append(button);
       });
+    }
+
+    classFilterContainer?.addEventListener('click', (event) => {
+      const button = event.target.closest('.teacher-class-filter');
+      if (!button) return;
+      selectedClassFilter = button.dataset.class || '';
+      renderTeacherRoster();
+      loadTeacherGradesRoster();
     });
+    lessonSelect?.addEventListener('change', renderTeacherRoster);
 
     // Attendance Roster
     async function renderTeacherRoster() {
       const allStudents = await getStudents(schoolId);
+      renderTeacherClassFilters(allStudents);
+      if (!selectedClassFilter) {
+        container.innerHTML = `
+          <div class="empty-state" style="border: none; margin: var(--space-6);">
+            <div class="empty-state-icon">📋</div>
+            <h4 class="empty-state-title">${allStudents.length ? 'اختر فصلاً لبدء رصد الحضور' : 'لا توجد قوائم طلاب حقيقية مسجلة'}</h4>
+            <p class="empty-state-desc">${allStudents.length ? 'تُبنى خيارات الفصول من سجلات الطلاب المعتمدة.' : 'تظهر الفصول والطلاب بعد اعتماد القيد على خادم المدرسة.'}</p>
+          </div>
+        `;
+        return;
+      }
       const students = allStudents.filter(s => {
-        if (selectedClassFilter === 'all') return true;
-        return (s.grade || '').includes(selectedClassFilter);
+        return String(s.grade || '').trim() === selectedClassFilter;
       });
 
       if (students.length === 0) {
@@ -492,6 +548,13 @@
         return;
       }
 
+      const today = new Date().toISOString().split('T')[0];
+      const lessonId = lessonSelect?.value || '1';
+      const firstPlacement = String(students[0].grade || '').split(/\s*[—–-]\s*/);
+      const classKey = String(students[0].className || students[0].classId || firstPlacement.slice(1).join(' — ') || selectedClassFilter).trim();
+      const attendanceData = await getClassAttendance(classKey, today, schoolId, 'lesson', lessonId).catch(() => []);
+      const statusMap = Object.fromEntries((attendanceData || []).map((entry) => [String(entry.studentCode), entry.status || 'present']));
+
       container.innerHTML = `
         <div class="table-wrap" style="border: none;">
           <table class="data-table">
@@ -500,44 +563,84 @@
                 <th>اسم الطالب</th>
                 <th>كود الطالب</th>
                 <th>المرحلة</th>
-                <th>حالة الحضور لليوم</th>
+                <th>حالة الحضور للحصة ${lessonId}</th>
               </tr>
             </thead>
             <tbody>
-              ${students.map((s, idx) => `
-                <tr>
-                  <td><strong>${s.name}</strong></td>
-                  <td><code>${s.code}</code></td>
-                  <td>${s.grade}</td>
-                  <td>
-                    <select class="form-control attendance-select" data-code="${s.code}" data-name="${s.name}" style="max-width: 170px; padding: 4px 8px; font-size: var(--text-xs);">
-                      <option value="present">حاضر ✓</option>
-                      <option value="absent_unexcused">غياب بدون عذر ✗</option>
-                      <option value="absent_excused">غياب بعذر ⚠️</option>
-                      <option value="late">تأخر صباحي ⏰</option>
-                    </select>
-                  </td>
-                </tr>
-              `).join('')}
+              ${students.map((s, idx) => {
+                const currentStatus = statusMap[String(s.code)] || '';
+                return `
+                  <tr>
+                    <td><strong>${s.name}</strong></td>
+                    <td><code>${s.code}</code></td>
+                    <td>${s.grade}</td>
+                    <td>
+                      <select class="form-control attendance-select" data-code="${s.code}" data-name="${s.name}" style="max-width: 170px; padding: 4px 8px; font-size: var(--text-xs);">
+                        <option value="" ${!currentStatus ? 'selected' : ''}>اختر الحالة</option>
+                        <option value="present" ${currentStatus === 'present' ? 'selected' : ''}>حاضر ✓</option>
+                        <option value="absent_unexcused" ${currentStatus === 'absent_unexcused' ? 'selected' : ''}>غياب بدون عذر ✗</option>
+                        <option value="absent_excused" ${currentStatus === 'absent_excused' ? 'selected' : ''}>غياب بعذر ⚠️</option>
+                        <option value="late" ${currentStatus === 'late' ? 'selected' : ''}>متأخر للحصة ⏰</option>
+                        ${currentStatus === 'escaped' ? '<option value="escaped" selected disabled>هروب مؤكد ⚠️</option>' : ''}
+                      </select>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
             </tbody>
           </table>
           <div style="padding: var(--space-4); display: flex; justify-content: flex-end; border-top: 1px solid var(--border-light);">
             <button type="button" id="save-attendance-btn" class="btn btn-primary btn-md">
-              اعتماد دفتر الحضور اليومي
+              اعتماد حضور الحصة ${lessonId}
             </button>
           </div>
         </div>
       `;
 
       document.getElementById('save-attendance-btn').addEventListener('click', async () => {
-        await recordAuditEvent({
-          action: 'رصد واعتماد حضور وغياب الفصل',
-          target: `عدد ${students.length} طالب (${selectedClassFilter === 'all' ? 'كافة الفصول' : selectedClassFilter})`,
-          details: 'تم الحفظ والاعتماد في دفتر الحضور الرسمي',
-          operatorRole: 'teacher',
-          schoolId,
+        const records = students.map((student) => {
+          const select = document.querySelector(`.attendance-select[data-code="${student.code}"]`);
+          const finalStatus = select?.value || 'present';
+          return {
+            studentCode: student.code,
+            studentName: student.name,
+            grade: student.grade || 'غير محدد',
+            status: finalStatus,
+            classId: classKey,
+            date: today,
+            phase: 'lesson',
+            lessonId,
+          };
         });
-        alert('تم اعتماد وحفظ دفتر الحضور اليومي بنجاح وتوثيقه في المنظومة.');
+
+        if (records.some((record) => !record.status)) {
+          alert('يرجى تحديد حالة الحضور لكل طالب قبل اعتماد الحصة.');
+          return;
+        }
+
+        try {
+          const saveResult = await saveClassAttendance({
+            grade: firstPlacement[0] || selectedClassFilter,
+            classId: classKey,
+            date: today,
+            phase: 'lesson',
+            lessonId,
+            records,
+            recordedBy: currentUser.displayName || 'معلم معتمد',
+            recordedByRole: 'teacher',
+          }, schoolId);
+          const escapedStudents = saveResult.records.filter((record) => record.status === 'escaped');
+          await renderTeacherRoster();
+          if (saveResult.persistedRemotely) {
+            alert(escapedStudents.length
+              ? `تم اعتماد حضور الحصة. تنبيه هروب: ${escapedStudents.map((student) => student.studentName).join('، ')}. أُرسل التنبيه للجهات المختصة.`
+              : 'تم اعتماد حضور الحصة وحفظه على خادم المدرسة.');
+          } else {
+            alert(`حُفظت نسخة مؤقتة على هذا الجهاز فقط، ولم يتم اعتمادها على خادم المدرسة. ${saveResult.persistenceError || ''}`);
+          }
+        } catch (error) {
+          alert(error.message || 'تعذر اعتماد دفتر الحضور.');
+        }
       });
     }
 
@@ -603,8 +706,8 @@
       ]);
 
       const students = allStudents.filter(s => {
-        if (selectedClassFilter === 'all') return true;
-        return (s.grade || '').includes(selectedClassFilter);
+        if (!selectedClassFilter) return false;
+        return String(s.grade || '').trim() === selectedClassFilter;
       });
 
       // If no assessments exist in DB, create initial default assessments list
@@ -746,7 +849,7 @@
     let teacherMessages = [];
 
     async function loadTeacherMessages() {
-      const unreadCount = await getUnreadCount(currentUser.uid || currentUser.email, currentUser.role);
+      const unreadCount = await getUnreadCount(currentUser.uid || currentUser.email, currentUser.role, currentUser.schoolId, currentUser.email);
       const badge = document.getElementById('inbox-count-badge');
       if (badge) badge.textContent = unreadCount;
 
@@ -905,6 +1008,6 @@
       switchView('messages');
     }
   </script>
-  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=11.0');}</script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=17.3');}</script>
 </body>
 </html>

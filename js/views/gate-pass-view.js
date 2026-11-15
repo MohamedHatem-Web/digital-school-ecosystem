@@ -5,18 +5,26 @@
 
 import {
   getGatePasses,
+  subscribeToGatePasses,
   createGatePass,
   approveGatePass,
   useGatePass,
 } from '../services/gate-pass-service.js';
 import { getStudents } from '../services/student-service.js';
+import { getCurrentUser } from '../auth.js';
+import { DEFAULT_SCHOOL_ID } from '../services/school-service.js';
 import { showToast } from '../components.js';
 
 let isInitialized = false;
 let passesList = [];
 let allStudents = [];
+let unsubscribeGatePasses = null;
+let activeSchoolId = DEFAULT_SCHOOL_ID;
+let activeUser = null;
 
 export async function renderGatePassView(container) {
+  activeUser = getCurrentUser();
+  activeSchoolId = activeUser?.schoolId || DEFAULT_SCHOOL_ID;
   if (!isInitialized) {
     container.innerHTML = `
       <div style="display: flex; flex-direction: column; gap: var(--space-5);">
@@ -108,12 +116,27 @@ export async function renderGatePassView(container) {
     isInitialized = true;
   }
 
-  await loadGatePassData();
+  try {
+    await loadGatePassData(activeSchoolId);
+  } catch (error) {
+    const tbody = container.querySelector('#gp-passes-tbody');
+    if (tbody) tbody.innerHTML = `<tr><td colspan="6" role="status" style="padding:var(--space-5);text-align:center;color:var(--color-danger-text);">${error.message || 'تعذر تحميل تصاريح الخروج من الخادم.'}</td></tr>`;
+    showToast(error.message || 'تعذر تحميل تصاريح الخروج.', 'error');
+    return;
+  }
+  if (!unsubscribeGatePasses) {
+    unsubscribeGatePasses = subscribeToGatePasses((passes) => {
+      passesList = passes;
+      renderPassesTable();
+    }, (error) => {
+      showToast(`تعذر تحديث تصاريح الخروج مباشرة: ${error.message || 'تحقق من الاتصال والصلاحيات.'}`, 'error');
+    }, activeSchoolId);
+  }
 }
 
-async function loadGatePassData() {
-  passesList = (await getGatePasses()) || [];
-  allStudents = (await getStudents()) || [];
+async function loadGatePassData(schoolId) {
+  passesList = await getGatePasses(schoolId);
+  allStudents = (await getStudents(schoolId)) || [];
 
   const badge = document.getElementById('gp-count-badge');
   if (badge) badge.textContent = `${passesList.length} تصاريح`;
@@ -126,6 +149,10 @@ async function loadGatePassData() {
       </option>
     `).join('');
   }
+
+  const canCreate = ['student_affairs', 'director', 'super_admin'].includes(activeUser?.role);
+  const createButton = document.getElementById('gp-open-create-btn');
+  if (createButton) createButton.hidden = !canCreate;
 
   renderPassesTable();
 }
@@ -157,19 +184,19 @@ function renderPassesTable() {
           <strong style="font-size: var(--text-xs); color: var(--color-primary-950);">${p.studentName}</strong>
           <div style="font-size: 11px; color: var(--text-muted);">كود: <code>${p.studentCode}</code></div>
         </td>
-        <td style="font-size: var(--text-xs); color: var(--text-secondary);">${p.reason}</td>
+        <td style="font-size: var(--text-xs); color: var(--text-secondary);">${p.reason || p.reasonLabel || '—'}</td>
         <td style="font-size: var(--text-xs);">${p.companionName || 'ولي الأمر'}</td>
         <td>${statusBadge}</td>
         <td style="text-align: center;">
-          ${p.status === 'approved' ? `
+          ${p.status === 'approved' && ['tech_specialist', 'director', 'super_admin'].includes(activeUser?.role) ? `
             <button type="button" class="btn btn-outline btn-sm use-pass-btn" data-id="${p.id}" style="padding: 2px 8px; font-size: 11px; color: var(--color-success-solid);">
               🚶 إتمام الخروج
             </button>
-          ` : (p.status === 'pending' ? `
+          ` : (p.status === 'pending' && ['student_affairs', 'director', 'super_admin'].includes(activeUser?.role) ? `
             <button type="button" class="btn btn-primary btn-sm approve-pass-btn" data-id="${p.id}" style="padding: 2px 8px; font-size: 11px;">
               ✓ اعتماد
             </button>
-          ` : `<span style="font-size: 11px; color: var(--text-muted);">مغلق</span>`)}
+          ` : `<span style="font-size: 11px; color: var(--text-muted);">${p.status === 'pending' ? 'قيد المراجعة' : 'مغلق'}</span>`)}
         </td>
       </tr>
     `;
@@ -177,15 +204,27 @@ function renderPassesTable() {
 
   tbody.querySelectorAll('.approve-pass-btn').forEach((btn) => {
     btn.addEventListener('click', async () => {
-      await approveGatePass(btn.dataset.id, 'مدير المدرسة');
-      await loadGatePassData();
+      btn.disabled = true;
+      try {
+        await approveGatePass(btn.dataset.id, activeUser?.displayName || 'مدير المدرسة', activeSchoolId);
+        showToast('تم اعتماد التصريح على خادم المدرسة.');
+      } catch (error) {
+        btn.disabled = false;
+        showToast(error.message || 'تعذر اعتماد التصريح.', 'error');
+      }
     });
   });
 
   tbody.querySelectorAll('.use-pass-btn').forEach((btn) => {
     btn.addEventListener('click', async () => {
-      await useGatePass(btn.dataset.id);
-      await loadGatePassData();
+      btn.disabled = true;
+      try {
+        await useGatePass(btn.dataset.id, activeSchoolId);
+        showToast('تم تسجيل الخروج من البوابة على خادم المدرسة.');
+      } catch (error) {
+        btn.disabled = false;
+        showToast(error.message || 'تعذر تأكيد الخروج.', 'error');
+      }
     });
   });
 }
@@ -214,7 +253,7 @@ function bindGatePassEvents(container) {
         companionName: document.getElementById('gp-companion').value.trim(),
         destination: 'منزل الطالب',
         expectedReturnTime: '',
-      });
+      }, activeSchoolId);
       form.reset();
       panel.style.display = 'none';
       showToast('✓ تم إصدار تصريح الخروج وتوثيقه بنجاح.');

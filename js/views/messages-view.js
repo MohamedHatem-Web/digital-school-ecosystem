@@ -254,10 +254,11 @@ function renderFilteredMessages(user) {
       <div class="empty-state" style="border: none; padding: 30px; text-align: center;">
         <div class="empty-state-icon" style="font-size: 28px; margin-bottom: 8px;">📭</div>
         <p style="color: var(--text-muted); margin: 0; font-size: var(--text-sm);">
-          ${searchQuery ? 'لا توجد رسائل مطابقة لكلمة البحث.' : 'لا توجد رسائل في هذا الصندوق حالياً.'}
+          ${searchQuery ? 'لا توجد رسائل مطابقة لكلمة البحث.' : 'لا توجد رسائل في هذا المجلد حالياً.'}
         </p>
       </div>
     `;
+    if (badge) badge.textContent = '0 رسائل';
     return;
   }
 

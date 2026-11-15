@@ -141,18 +141,19 @@ export async function printHtmlAsPdf({
   subtitle = '',
   contentHtml,
   signatureTitle = 'مدير عام المدرسة',
-  includeSeal = true
+  includeSeal = true,
+  includeSignatures = false,
 }) {
-  const profile = await getSchoolProfile().catch(() => null);
-  const schoolName = profile?.nameAr || 'المدرسة الثانوية الرسمية المعتمدة';
-  const adminName = profile?.administration || 'إدارة المعادي التعليمية';
-  const dateStr = new Intl.DateTimeFormat('ar-EG', { dateStyle: 'full' }).format(new Date());
-
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
     alert('يرجى السماح بالنوافذ المنبثقة لإنشاء ملف الـ PDF وطباعته.');
     return;
   }
+
+  const profile = await getSchoolProfile().catch(() => null);
+  const schoolName = profile?.nameAr || 'المدرسة الثانوية الرسمية المعتمدة';
+  const adminName = profile?.administration || 'إدارة المعادي التعليمية';
+  const dateStr = new Intl.DateTimeFormat('ar-EG', { dateStyle: 'full' }).format(new Date());
 
   const fullHtml = `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -185,20 +186,20 @@ export async function printHtmlAsPdf({
     ${contentHtml}
   </div>
 
-  <div class="print-footer">
+  ${includeSignatures ? `<div class="print-footer">
     <div class="signature-block">
       <span>مسؤول شؤون الطلاب</span>
       <div class="signature-line"></div>
     </div>
     ${includeSeal ? `
     <div class="official-seal-box">
-      خاتم شعار الجمهورية<br>(معتمد)
+      مكان ختم المدرسة<br>يُستكمل عند الطباعة
     </div>` : ''}
     <div class="signature-block">
       <span>${signatureTitle}</span>
       <div class="signature-line"></div>
     </div>
-  </div>
+  </div>` : ''}
 
   <script>
     window.addEventListener('load', () => {

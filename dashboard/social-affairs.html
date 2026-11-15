@@ -6,8 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>الأخصائي الاجتماعي والإنذارات — منظومة المدرسة الرقمية</title>
   <link rel="stylesheet" href="../css/tokens.css?v=11.0">
-  <link rel="stylesheet" href="../css/base.css?v=11.0">
-  <link rel="stylesheet" href="../css/components.css?v=11.0">
+  <link rel="stylesheet" href="../css/base.css?v=11.1">
+  <link rel="stylesheet" href="../css/components.css?v=17.2">
   <link rel="stylesheet" href="../css/dashboard.css?v=11.0">
   <link rel="manifest" href="../manifest.webmanifest">
   <meta name="theme-color" content="#0a1628">
@@ -35,7 +35,7 @@
 
       <div class="sidebar-role-indicator">
         <span>المساحة المهنية:</span>
-        <span class="badge badge-warning">أخصائي اجتماعي</span>
+        <span class="badge badge-warning" id="soc-role-badge">أخصائي اجتماعي</span>
       </div>
 
       <nav class="sidebar-nav">
@@ -48,6 +48,10 @@
           <a href="#students" class="sidebar-link" id="soc-nav-students">
             <span class="sidebar-icon">🎓</span>
             <span>سجل الطلاب والقيد</span>
+          </a>
+          <a href="#student-inquiry" class="sidebar-link" id="soc-nav-student-inquiry">
+            <span class="sidebar-icon">🔎</span>
+            <span>ملف الطالب والاستعلام</span>
           </a>
           <a href="#gate-pass" class="sidebar-link" id="soc-nav-gate">
             <span class="sidebar-icon">🚪</span>
@@ -90,7 +94,7 @@
             <div class="user-avatar" id="soc-user-avatar">س</div>
             <div class="user-text-info">
               <span class="user-name" id="soc-user-name">الأخصائي الاجتماعي</span>
-              <span class="user-role-title">Social Affairs Specialist</span>
+              <span class="user-role-title" id="soc-user-role-title">أخصائي اجتماعي</span>
             </div>
             <a href="#" class="logout-action-btn logout-btn" title="تسجيل الخروج">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -107,6 +111,7 @@
         <!-- Container for SPA Views -->
         <div id="view-social-container"></div>
         <div id="view-students-container" style="display: none;"></div>
+        <div id="view-student-inquiry-container" style="display: none;"></div>
         <div id="view-gate-pass-container" style="display: none;"></div>
         <div id="view-audit-container" style="display: none;"></div>
         <div id="view-messages-container" style="display: none;"></div>
@@ -119,19 +124,36 @@
     import { initComponents } from '../js/components.js?v=11.0';
     import { renderSocialView } from '../js/views/social-view.js';
     import { renderStudentsView } from '../js/views/students-view.js';
+    import { renderStudentInquiryView } from '../js/views/student-inquiry-view.js';
     import { renderGatePassView } from '../js/views/gate-pass-view.js';
     import { renderMessagesView } from '../js/views/messages-view.js';
     import { getAuditLogs } from '../js/services/audit-service.js';
     import { getCurrentUser } from '../js/auth.js';
     import { skeletonTable } from '../js/utils/skeleton-utils.js';
 
-    // Restrict access to social specialist and director
-    checkRouteAccess(['social_affairs', 'director', 'super_admin']);
+    // Restrict access to social affairs, school leadership, and technical support.
+    checkRouteAccess(['social_affairs', 'director', 'tech_specialist', 'super_admin']);
     initComponents();
+    const currentUser = getCurrentUser();
+    const roleLabels = {
+      social_affairs: 'أخصائي اجتماعي',
+      director: 'مدير المدرسة',
+      tech_specialist: 'أخصائي تطوير',
+      super_admin: 'مدير النظام',
+    };
+    const roleBadge = document.getElementById('soc-role-badge');
+    if (roleBadge) roleBadge.textContent = roleLabels[currentUser?.role] || 'مسؤول المدرسة';
+    const userRoleTitle = document.getElementById('soc-user-role-title');
+    if (userRoleTitle) userRoleTitle.textContent = roleLabels[currentUser?.role] || 'مسؤول المدرسة';
+    const userName = document.getElementById('soc-user-name');
+    if (userName && currentUser?.displayName) userName.textContent = currentUser.displayName;
+    const userAvatar = document.getElementById('soc-user-avatar');
+    if (userAvatar && currentUser?.displayName) userAvatar.textContent = currentUser.displayName.trim().charAt(0);
 
     const navLinks = {
       social: document.getElementById('soc-nav-social'),
       students: document.getElementById('soc-nav-students'),
+      'student-inquiry': document.getElementById('soc-nav-student-inquiry'),
       'gate-pass': document.getElementById('soc-nav-gate'),
       'audit-logs': document.getElementById('soc-nav-audit'),
       messages: document.getElementById('soc-nav-messages'),
@@ -140,6 +162,7 @@
     const containers = {
       social: document.getElementById('view-social-container'),
       students: document.getElementById('view-students-container'),
+      'student-inquiry': document.getElementById('view-student-inquiry-container'),
       'gate-pass': document.getElementById('view-gate-pass-container'),
       'audit-logs': document.getElementById('view-audit-container'),
       messages: document.getElementById('view-messages-container'),
@@ -167,6 +190,8 @@
         await renderSocialView(containers.social);
       } else if (activeKey === 'students') {
         await renderStudentsView(containers.students);
+      } else if (activeKey === 'student-inquiry') {
+        await renderStudentInquiryView(containers['student-inquiry']);
       } else if (activeKey === 'gate-pass') {
         await renderGatePassView(containers['gate-pass']);
       } else if (activeKey === 'audit-logs') {

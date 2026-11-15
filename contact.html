@@ -6,9 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>اتصل بنا — منظومة المدرسة الرقمية</title>
   <link rel="stylesheet" href="css/tokens.css?v=11.0">
-  <link rel="stylesheet" href="css/base.css?v=11.0">
-  <link rel="stylesheet" href="css/components.css?v=11.0">
-  <link rel="stylesheet" href="css/public-site.css?v=11.0">
+  <link rel="stylesheet" href="css/base.css?v=11.1">
+  <link rel="stylesheet" href="css/components.css?v=17.2">
+  <link rel="stylesheet" href="css/public-site.css?v=17.2">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#0a1628">
   <meta name="mobile-web-app-capable" content="yes">
@@ -110,8 +110,9 @@
               </div>
               <div class="panel-body">
                 <div id="inquiry-success-msg" class="alert alert-success" style="display: none;">
-                  ✓ تم تسجيل استفسارك بنجاح في سجل المتابعة الإدارية.
+                  ✓ تم استلام استفسارك وإرساله إلى القسم المختص.
                 </div>
+                <div id="inquiry-error-msg" class="alert alert-danger" role="alert" style="display:none;"></div>
 
                 <form id="inquiry-form">
                   <div class="form-group">
@@ -178,18 +179,8 @@
       </div>
 
       <div>
-        <h4 class="footer-col-title">البوابات الإدارية</h4>
-        <ul class="footer-links-list">
-          <li><a href="login.html">مكتب المدير</a></li>
-          <li><a href="login.html">التطوير التكنولوجي والتابلت</a></li>
-          <li><a href="login.html">شؤون الطلاب والقيد</a></li>
-          <li><a href="login.html">بوابة المعلم وولي الأمر</a></li>
-        </ul>
-      </div>
-
-      <div>
         <h4 class="footer-col-title">بيانات التواصل المعتمدة</h4>
-        <p style="font-size: var(--text-xs); color: #94a3b8; line-height: var(--leading-relaxed);">
+        <p id="footer-contact-text" style="font-size: var(--text-xs); color: #94a3b8; line-height: var(--leading-relaxed);">
           لم تُسجل بيانات تواصل رسمية بعد، يمكن لإدارة المدرسة تسجيل المقر والهواتف من لوحة التحكم.
         </p>
       </div>
@@ -207,6 +198,7 @@
     import { initI18n } from './js/i18n.js';
     import { initComponents } from './js/components.js?v=11.0';
     import { getSchoolProfile } from './js/services/school-service.js';
+    import { MEDIA_CONFIG } from './js/config.js';
 
     initI18n();
     initComponents();
@@ -225,13 +217,46 @@
       }
     }
 
-    // Form submit simulation
-    document.getElementById('inquiry-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      document.getElementById('inquiry-success-msg').style.display = 'flex';
-      e.target.reset();
+    const inquiryForm = document.getElementById('inquiry-form');
+    const inquirySuccess = document.getElementById('inquiry-success-msg');
+    const inquiryError = document.getElementById('inquiry-error-msg');
+    const inquirySubmit = inquiryForm.querySelector('button[type="submit"]');
+
+    inquiryForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      inquirySuccess.style.display = 'none';
+      inquiryError.style.display = 'none';
+      const idleLabel = inquirySubmit.textContent;
+      inquirySubmit.disabled = true;
+      inquirySubmit.textContent = 'جارٍ إرسال الاستفسار...';
+      try {
+        const gatewayUrl = MEDIA_CONFIG.workerGatewayUrl;
+        if (!gatewayUrl) throw new Error('خدمة استقبال الاستفسارات غير مفعّلة.');
+        const response = await fetch(`${gatewayUrl.replace(/\/$/, '')}/api/public/contact`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: document.getElementById('inq-name').value.trim(),
+            phone: document.getElementById('inq-phone').value.trim(),
+            studentCode: document.getElementById('inq-code').value.trim(),
+            topic: document.getElementById('inq-topic').value,
+            message: document.getElementById('inq-msg').value.trim(),
+          }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) throw new Error(result.error || 'تعذر حفظ الاستفسار. حاول مرة أخرى.');
+        inquirySuccess.textContent = `✓ تم إرسال الاستفسار إلى القسم المختص. رقم المتابعة: ${result.inquiryId}`;
+        inquirySuccess.style.display = 'flex';
+        inquiryForm.reset();
+      } catch (error) {
+        inquiryError.textContent = error.message || 'تعذر إرسال الاستفسار الآن.';
+        inquiryError.style.display = 'flex';
+      } finally {
+        inquirySubmit.disabled = false;
+        inquirySubmit.textContent = idleLabel;
+      }
     });
   </script>
-  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=11.0');}</script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=17.3');}</script>
 </body>
 </html>

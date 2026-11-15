@@ -11,6 +11,9 @@
  * @param {number} size - QR code size in pixels (default 200)
  * @returns {string} URL to the QR code image
  */
+import { db, doc, getDoc, setDoc, updateDoc, serverTimestamp } from '../firebase.js';
+import { getCurrentUser } from '../auth.js';
+
 export function generateQRCodeUrl(data, size = 200) {
   const encoded = encodeURIComponent(data);
   return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encoded}&format=svg&margin=8`;
@@ -35,9 +38,10 @@ export function buildVerificationUrl(type, token) {
  * @returns {string} Verification token
  */
 export function generateVerificationToken(prefix, identifier) {
-  const timestamp = Date.now().toString(36).toUpperCase();
-  const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `${prefix}-${new Date().getFullYear()}-${timestamp}-${rand}`;
+  const randomBytes = new Uint8Array(16);
+  crypto.getRandomValues(randomBytes);
+  const randomPart = [...randomBytes].map((value) => value.toString(16).padStart(2, '0')).join('').toUpperCase();
+  return `${String(prefix || 'DOC').toUpperCase()}-${new Date().getFullYear()}-${randomPart}`;
 }
 
 /**
@@ -74,7 +78,101 @@ export const VERIFIABLE_DOCUMENT_TYPES = {
     icon: '⚠️',
     prefix: 'DSC',
   },
+  student: {
+    label: 'كارنيه طالب',
+    icon: '🪪',
+    prefix: 'STU',
+  },
+  honor_certificate: {
+    label: 'شهادة تقدير وتفوق',
+    icon: '🏅',
+    prefix: 'HONOR',
+  },
+  report_card: {
+    label: 'بيان درجات',
+    icon: '📊',
+    prefix: 'RC',
+  },
+  warning: {
+    label: 'إنذار رسمي',
+    icon: '⚠️',
+    prefix: 'WARN',
+  },
 };
+
+const DOCUMENT_ISSUER_ROLES = new Set([
+  'director', 'student_affairs', 'teacher', 'social_affairs', 'tech_specialist', 'super_admin',
+]);
+
+export async function registerVerifiedDocument({
+  token,
+  documentType,
+  documentTitle,
+  studentName = '',
+  studentCode = '',
+  grade = '',
+  className = '',
+  schoolName = '',
+  academicYear = '',
+  status = 'valid',
+  issuedAt = new Date().toISOString(),
+}, schoolId = '') {
+  const user = getCurrentUser();
+  if (!user || !DOCUMENT_ISSUER_ROLES.has(user.role)) {
+    throw new Error('يجب تسجيل الدخول بحساب مخول لإصدار مستند قابل للتحقق.');
+  }
+  if (!token || !VERIFIABLE_DOCUMENT_TYPES[documentType]) {
+    throw new Error('نوع المستند أو رمز التحقق غير صالح.');
+  }
+  if (!String(studentCode || '').trim() || !String(studentName || '').trim()) {
+    throw new Error('لا يمكن تسجيل مستند رسمي دون اسم الطالب وكوده.');
+  }
+  const resolvedSchoolId = user.schoolId || schoolId;
+  if (!resolvedSchoolId) throw new Error('تعذر تحديد المدرسة المصدرة للمستند.');
+  const record = {
+    token,
+    documentType,
+    documentTitle: documentTitle || VERIFIABLE_DOCUMENT_TYPES[documentType].label,
+    studentName: String(studentName || '').trim(),
+    studentCode: String(studentCode || '').trim(),
+    grade: String(grade || '').trim(),
+    className: String(className || '').trim(),
+    schoolName: String(schoolName || '').trim(),
+    academicYear: String(academicYear || '').trim(),
+    schoolId: resolvedSchoolId,
+    issuerName: String(user.displayName || 'إدارة المدرسة').trim(),
+    issuerRole: user.role,
+    issuedAt,
+    status,
+  };
+  await setDoc(doc(db, 'documentVerifications', token), {
+    ...record,
+    serverCreatedAt: serverTimestamp(),
+  });
+  return record;
+}
+
+export async function getVerifiedDocument(token) {
+  const safeToken = String(token || '').trim().toUpperCase();
+  if (!safeToken) return null;
+  const snapshot = await getDoc(doc(db, 'documentVerifications', safeToken));
+  return snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null;
+}
+
+export async function updateVerifiedDocumentStatus(token, status, timestamps = {}) {
+  if (!['pending', 'valid', 'used', 'revoked'].includes(status)) {
+    throw new Error('حالة التحقق المطلوبة غير صالحة.');
+  }
+  const allowedTimestamps = {};
+  ['approvedAt', 'usedAt', 'revokedAt'].forEach((key) => {
+    if (timestamps[key]) allowedTimestamps[key] = timestamps[key];
+  });
+  await updateDoc(doc(db, 'documentVerifications', String(token || '').trim().toUpperCase()), {
+    status,
+    ...allowedTimestamps,
+    updatedAt: serverTimestamp(),
+  });
+}
 
 /**
  * Render a printable document section with QR verification code

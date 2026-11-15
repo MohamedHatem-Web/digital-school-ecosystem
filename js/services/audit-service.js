@@ -183,11 +183,11 @@ export function filterAuditLogs(logs = [], { query = '', role = 'all', category 
 
     // Date range filter
     if (startDate) {
-      const logDate = new Date(log.timestamp).toISOString().split('T')[0];
+      const logDate = getAuditDate(log);
       if (logDate < startDate) return false;
     }
     if (endDate) {
-      const logDate = new Date(log.timestamp).toISOString().split('T')[0];
+      const logDate = getAuditDate(log);
       if (logDate > endDate) return false;
     }
 
@@ -208,6 +208,12 @@ export function filterAuditLogs(logs = [], { query = '', role = 'all', category 
 
     return true;
   });
+}
+
+function getAuditDate(log) {
+  const timestamp = log.timestamp || log.createdAt;
+  const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp || 0);
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString().split('T')[0];
 }
 
 /**

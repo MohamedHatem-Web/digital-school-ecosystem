@@ -786,10 +786,28 @@
   color: var(--text-primary);
 }
 
+[data-theme="dark"] .badge-primary {
+  background-color: #1a2a44;
+  color: #bfdbfe;
+  border-color: #35547f;
+}
+
+[data-theme="dark"] .badge-accent {
+  background-color: #3a2a11;
+  color: #fde68a;
+  border-color: #805516;
+}
+
 [data-theme="dark"] .modal-backdrop > div {
   background-color: var(--bg-surface) !important;
   border-color: var(--border-subtle) !important;
   color: var(--text-primary) !important;
+}
+
+.audit-modal-header,
+[data-theme="dark"] .audit-modal-header {
+  background-color: #172542 !important;
+  color: #ffffff !important;
 }
 
 /* --------------------------------------------------------------------------

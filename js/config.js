@@ -10,11 +10,18 @@ export const APP_CONFIG = {
   defaultSchoolId: 'sch_cairo_sec_01',
 };
 
+const localHostname = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const emulatorRequested = localHostname && new URLSearchParams(window.location.search).get('emulator') === '1';
+if (emulatorRequested) localStorage.setItem('dse_use_firebase_emulator', '1');
+export const USE_LOCAL_FIREBASE_EMULATORS = localHostname && (
+  emulatorRequested || localStorage.getItem('dse_use_firebase_emulator') === '1'
+);
+
 // Official Firebase project configuration
 export const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyBD4WFrHSJB5EjpFwsOnlPzNCxf91vEyQw",
-  authDomain: "digital-school-ecosystem.firebaseapp.com",
-  projectId: "digital-school-ecosystem",
+  apiKey: USE_LOCAL_FIREBASE_EMULATORS ? 'fake-api-key' : 'AIzaSyBD4WFrHSJB5EjpFwsOnlPzNCxf91vEyQw',
+  authDomain: USE_LOCAL_FIREBASE_EMULATORS ? 'demo-dse-local.firebaseapp.com' : 'digital-school-ecosystem.firebaseapp.com',
+  projectId: USE_LOCAL_FIREBASE_EMULATORS ? 'demo-dse-local' : 'digital-school-ecosystem',
   messagingSenderId: "436764188612",
   appId: "1:436764188612:web:ed3e7e5c111cdc59010e91",
   measurementId: "G-V9Z6SPMCQJ"
@@ -27,7 +34,7 @@ export const MEDIA_CONFIG = {
   
   // Cloudflare Worker gateway for cryptographically signed upload requests
   // Defaults to production worker URL, or reads custom override if configured
-  workerGatewayUrl: localStorage.getItem('dse_worker_gateway_url') || '',
+  workerGatewayUrl: USE_LOCAL_FIREBASE_EMULATORS ? '' : (localStorage.getItem('dse_worker_gateway_url') || 'https://dse-cloudinary-gateway.hatmm462.workers.dev'),
 
   // Allowed media upload mime types & sizes
   allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],

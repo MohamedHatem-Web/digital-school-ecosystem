@@ -5,33 +5,91 @@
 
 export default {
   async fetch(request, env) {
+    const requestEnv = Object.create(env);
+    requestEnv.REQUEST_ORIGIN = request.headers.get('Origin') || '';
     const url = new URL(request.url);
 
     // 1. CORS Preflight
     if (request.method === 'OPTIONS') {
-      return handleCors(env);
+      return handleCors(requestEnv);
     }
 
     // 2. Health check
     if (url.pathname === '/api/health') {
-      return jsonResponse({ status: 'healthy', timestamp: new Date().toISOString() }, 200, env);
+      return jsonResponse({ status: 'healthy', timestamp: new Date().toISOString() }, 200, requestEnv);
+    }
+
+    if (url.pathname === '/api/public/contact' && request.method === 'POST') {
+      return handlePublicContactInquiry(request, requestEnv);
     }
 
     // 3. Media Upload Signature Endpoint
     if (url.pathname === '/api/media/sign-upload' && request.method === 'POST') {
-      return handleSignUpload(request, env);
+      return handleSignUpload(request, requestEnv);
     }
 
     // 4. Media Deletion Endpoint
     if (url.pathname === '/api/media/delete' && request.method === 'POST') {
-      return handleDeleteMedia(request, env);
+      return handleDeleteMedia(request, requestEnv);
     }
 
     if (url.pathname === '/api/admin/change-password' && request.method === 'POST') {
-      return handleChangePassword(request, env);
+      return handleChangePassword(request, requestEnv);
     }
 
-    return jsonResponse({ error: 'Endpoint Not Found' }, 404, env);
+    if (url.pathname === '/api/admin/account-invitations' && request.method === 'POST') {
+      return handleCreateAccountInvitation(request, requestEnv);
+    }
+
+    if (url.pathname === '/api/admin/link-student-family' && request.method === 'POST') {
+      return handleLinkEnrolledStudentFamily(request, requestEnv);
+    }
+
+    if (url.pathname === '/api/auth/complete-first-login' && request.method === 'POST') {
+      return handleCompleteFirstLogin(request, requestEnv);
+    }
+
+    if (url.pathname === '/api/auth/complete-account-invitation' && request.method === 'POST') {
+      return handleCompleteAccountInvitation(request, requestEnv);
+    }
+
+    if (url.pathname === '/api/portal/student-attendance' && request.method === 'POST') {
+      return handleStudentPortalAttendance(request, requestEnv);
+    }
+
+    if (url.pathname === '/api/portal/students' && request.method === 'POST') {
+      return handleFamilyStudentRecords(request, requestEnv);
+    }
+
+      if (url.pathname === '/api/family/activate-parent' && request.method === 'POST') {
+        return handleParentActivation(request, requestEnv);
+      }
+
+      if (url.pathname === '/api/family/complete-parent-password' && request.method === 'POST') {
+        return handleCompleteParentPassword(request, requestEnv);
+      }
+
+      if (url.pathname === '/api/family/request-student-activation' && request.method === 'POST') {
+        return handleStudentActivationRequest(request, requestEnv);
+      }
+
+      if (url.pathname === '/api/family/student-activation-status' && request.method === 'POST') {
+        return handleStudentActivationStatus(request, requestEnv);
+      }
+
+      if (url.pathname === '/api/family/activation-requests' && request.method === 'POST') {
+        return handleListActivationRequests(request, requestEnv);
+      }
+
+      if (url.pathname === '/api/family/review-student-activation' && request.method === 'POST') {
+        return handleReviewStudentActivation(request, requestEnv);
+      }
+
+      if (url.pathname === '/api/family/complete-student-activation' && request.method === 'POST') {
+        return handleCompleteStudentActivation(request, requestEnv);
+      }
+
+    return jsonResponse({ error: 'Endpoint Not Found' }, 404, requestEnv);
   }
 };
 
@@ -43,20 +101,20 @@ let firebaseKeysExpiry = 0;
 let firebaseAdminToken = null;
 let firebaseAdminTokenExpiry = 0;
 
-async function verifyAuth(request, env) {
+async function verifyAuth(request, env, allowUnprovisioned = false) {
   const authHeader = request.headers.get('Authorization') || '';
   if (!authHeader.startsWith('Bearer ')) {
-    throw new Error('Missing or invalid Authorization header');
+    throw Object.assign(new Error('Missing or invalid Authorization header'), { status: 401 });
   }
 
   const token = authHeader.split('Bearer ')[1].trim();
   if (!token) {
-    throw new Error('Empty token provided');
+    throw Object.assign(new Error('Empty token provided'), { status: 401 });
   }
 
   const parts = token.split('.');
   if (parts.length !== 3) {
-    throw new Error('Malformed JWT token');
+    throw Object.assign(new Error('Malformed JWT token'), { status: 401 });
   }
 
   try {
@@ -87,6 +145,13 @@ async function verifyAuth(request, env) {
     );
     if (!validSignature) throw new Error('Invalid Firebase token signature');
 
+    const identity = {
+      uid: payload.sub,
+      email: typeof payload.email === 'string' ? payload.email.toLowerCase() : '',
+      emailVerified: payload.email_verified === true,
+    };
+    if (allowUnprovisioned) return identity;
+
     const profileResponse = await fetch(
       `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${encodeURIComponent(payload.sub)}`,
       { headers: { Authorization: `Bearer ${token}` } }
@@ -99,9 +164,902 @@ async function verifyAuth(request, env) {
     const status = fields.status?.stringValue;
     if (status && status !== 'active') throw new Error('User account is inactive');
 
-    return { uid: payload.sub, role, schoolId };
+    return {
+      ...identity,
+      role,
+      schoolId,
+      studentCode: fields.studentCode?.stringValue || '',
+      linkedStudentCodes: (fields.linkedStudentCodes?.arrayValue?.values || []).map((value) => value.stringValue || '').filter(Boolean),
+      mustChangePassword: fields.passwordChangeRequired?.booleanValue === true,
+    };
   } catch (err) {
-    throw new Error('Firebase authentication failed: ' + err.message);
+    throw Object.assign(new Error('Firebase authentication failed: ' + err.message), { status: 401 });
+  }
+}
+
+async function handleParentActivation(request, env) {
+  try {
+    const identity = await verifyAuth(request, env, true);
+    if (!identity.email || !identity.emailVerified) {
+      return jsonResponse({ error: 'افتح رابط التفعيل من البريد الإلكتروني لولي الأمر أولاً.' }, 403, env);
+    }
+
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const schoolId = env.DEFAULT_SCHOOL_ID || 'sch_cairo_sec_01';
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const profileUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${encodeURIComponent(identity.uid)}`;
+    const existingProfileResponse = await fetch(profileUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+    let existingProfile = null;
+    if (existingProfileResponse.ok) {
+      existingProfile = await existingProfileResponse.json();
+      const existingRole = firestoreString(existingProfile.fields || {}, 'role');
+      if (existingRole && existingRole !== 'parent') {
+        return jsonResponse({ error: 'هذا البريد مرتبط بحساب مدرسي آخر؛ استخدم بريد ولي الأمر المسجل.' }, 409, env);
+      }
+    } else if (existingProfileResponse.status !== 404) {
+      return jsonResponse({ error: 'تعذر التحقق من ملف حساب ولي الأمر.' }, 502, env);
+    }
+
+    const studentsUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(schoolId)}/students`;
+    const studentDocuments = [];
+    let pageToken = '';
+    do {
+      const pageUrl = new URL(studentsUrl);
+      pageUrl.searchParams.set('pageSize', '1000');
+      if (pageToken) pageUrl.searchParams.set('pageToken', pageToken);
+      const pageResponse = await fetch(pageUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+      if (!pageResponse.ok) throw new Error('تعذر قراءة سجلات الطلاب لربط الأسرة.');
+      const page = await pageResponse.json();
+      studentDocuments.push(...(page.documents || []));
+      if (studentDocuments.length > 10000) throw new Error('عدد سجلات الطلاب تجاوز حد التحقق الآمن.');
+      pageToken = page.nextPageToken || '';
+    } while (pageToken);
+
+    const studentsByCode = new Map();
+    const linkedCodes = new Set();
+    for (const document of studentDocuments) {
+      const fields = document.fields || {};
+      const code = firestoreString(fields, 'code');
+      if (code) studentsByCode.set(code, document);
+      const parentEmail = fields.parentInfo?.mapValue?.fields?.parentEmail?.stringValue || '';
+      if (code && parentEmail.trim().toLowerCase() === identity.email) linkedCodes.add(code);
+    }
+    if (linkedCodes.size === 0) {
+      return jsonResponse({ error: 'لم نعثر على طالب مسجل بهذا البريد. راجع البريد المسجل مع شؤون الطلاب.' }, 404, env);
+    }
+
+    for (const code of [...linkedCodes]) {
+      const fields = studentsByCode.get(code)?.fields || {};
+      const siblingCodes = fields.siblingCodes?.arrayValue?.values || [];
+      for (const value of siblingCodes) {
+        const siblingCode = value.stringValue || '';
+        const siblingFields = studentsByCode.get(siblingCode)?.fields || {};
+        const siblingEmail = siblingFields.parentInfo?.mapValue?.fields?.parentEmail?.stringValue || '';
+        if (siblingCode && (!siblingEmail || siblingEmail.trim().toLowerCase() === identity.email)) {
+          linkedCodes.add(siblingCode);
+        }
+      }
+    }
+
+    const familyId = firestoreString(existingProfile?.fields || {}, 'familyId') || `fam_${identity.uid}`;
+    const passwordSetupRequired = existingProfile?.fields?.passwordSetupRequired?.booleanValue !== false;
+    const linkedStudents = [...linkedCodes].map((code) => studentsByCode.get(code)).filter(Boolean);
+    const parentName = linkedStudents[0]?.fields?.parentInfo?.mapValue?.fields?.parentName?.stringValue || 'ولي الأمر';
+    for (const document of linkedStudents) {
+      const fields = document.fields || {};
+      const parentInfo = decodeFirestoreValue(fields.parentInfo || { mapValue: { fields: {} } });
+      const code = firestoreString(fields, 'code');
+      const siblingCodes = Array.from(new Set([
+        ...((fields.siblingCodes?.arrayValue?.values || []).map((value) => value.stringValue || '')),
+        ...[...linkedCodes].filter((linkedCode) => linkedCode !== code),
+      ].filter(Boolean)));
+      parentInfo.parentEmail = identity.email;
+      parentInfo.parentUid = identity.uid;
+      const documentPath = document.name.split('/documents/')[1];
+      const updateUrl = new URL(`https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${documentPath}`);
+      ['familyId', 'siblingCodes', 'linkedParentUid', 'parentInfo'].forEach((field) => updateUrl.searchParams.append('updateMask.fieldPaths', field));
+      const updateResponse = await fetch(updateUrl, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: encodeFirestoreMap({
+          familyId,
+          siblingCodes,
+          linkedParentUid: identity.uid,
+          parentInfo,
+        }) }),
+      });
+      if (!updateResponse.ok) throw new Error('تعذر ربط جميع أبناء الأسرة؛ أعد المحاولة.');
+    }
+
+    const profileFields = encodeFirestoreMap({
+      role: 'parent',
+      schoolId,
+      status: 'active',
+      email: identity.email,
+      displayName: parentName,
+      parentName,
+      familyId,
+      linkedStudentCodes: [...linkedCodes],
+      passwordSetupRequired,
+    });
+    const profileUrlWithMask = new URL(profileUrl);
+    ['role', 'schoolId', 'status', 'email', 'displayName', 'parentName', 'familyId', 'linkedStudentCodes', 'passwordSetupRequired'].forEach((field) => {
+      profileUrlWithMask.searchParams.append('updateMask.fieldPaths', field);
+    });
+    const profileResponse = await fetch(profileUrlWithMask, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: profileFields }),
+    });
+    if (!profileResponse.ok) throw new Error('تم التحقق من البريد لكن تعذر إنشاء ملف ولي الأمر.');
+
+    return jsonResponse({ success: true, profile: {
+      uid: identity.uid,
+      email: identity.email,
+      role: 'parent',
+      schoolId,
+      displayName: parentName,
+      parentName,
+      familyId,
+      linkedStudentCodes: [...linkedCodes],
+      passwordSetupRequired,
+    }, needsPassword: passwordSetupRequired }, 200, env);
+  } catch (error) {
+    return jsonResponse({ error: error.message || 'تعذر تفعيل حساب ولي الأمر.' }, error.status || 401, env);
+  }
+}
+
+async function handleCompleteParentPassword(request, env) {
+  try {
+    const parent = await verifyAuth(request, env);
+    if (parent.role !== 'parent' || !parent.emailVerified) {
+      return jsonResponse({ error: 'يجب استخدام حساب ولي أمر موثق.' }, 403, env);
+    }
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const profileUrl = new URL(`https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${encodeURIComponent(parent.uid)}`);
+    profileUrl.searchParams.append('updateMask.fieldPaths', 'passwordSetupRequired');
+    profileUrl.searchParams.append('updateMask.fieldPaths', 'passwordUpdatedAt');
+    const response = await fetch(profileUrl, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: encodeFirestoreMap({
+        passwordSetupRequired: false,
+        passwordUpdatedAt: new Date().toISOString(),
+      }) }),
+    });
+    if (!response.ok) throw new Error('تعذر حفظ اكتمال إعداد كلمة المرور.');
+    return jsonResponse({ success: true }, 200, env);
+  } catch (error) {
+    return jsonResponse({ error: error.message || 'تعذر تأكيد كلمة مرور ولي الأمر.' }, error.status || 401, env);
+  }
+}
+
+async function handleStudentActivationRequest(request, env) {
+  let requestId = '';
+  try {
+    if (Number(request.headers.get('Content-Length') || 0) > 8192) {
+      return jsonResponse({ error: 'بيانات الطلب أكبر من المسموح.' }, 413, env);
+    }
+    const body = await request.json();
+    const studentCode = String(body.studentCode || '').trim();
+    const nationalId = String(body.nationalId || '').trim();
+    if (!/^\d{6,12}$/.test(studentCode) || !/^\d{14}$/.test(nationalId)) {
+      return jsonResponse({ error: 'تعذر التحقق من البيانات. راجع شؤون الطلاب.' }, 400, env);
+    }
+
+    const rateLimiter = env.FAMILY_ACTIVATION_LIMITER;
+    const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
+    if (!rateLimiter) return jsonResponse({ error: 'خدمة التفعيل غير مكتملة الإعداد.' }, 503, env);
+    const [ipLimit, studentLimit] = await Promise.all([
+      rateLimiter.limit({ key: `ip:${clientIp}` }),
+      rateLimiter.limit({ key: `student:${studentCode}` }),
+    ]);
+    if (!ipLimit.success || !studentLimit.success) {
+      return jsonResponse({ error: 'محاولات كثيرة. انتظر دقيقة ثم حاول مرة أخرى.' }, 429, env);
+    }
+
+    const schoolId = env.DEFAULT_SCHOOL_ID || 'sch_cairo_sec_01';
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const studentUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(schoolId)}/students/${encodeURIComponent(`stu_${studentCode}`)}`;
+    const studentResponse = await fetch(studentUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+    if (!studentResponse.ok) return jsonResponse({ error: 'تعذر التحقق من البيانات. راجع شؤون الطلاب.' }, 400, env);
+    const studentDocument = await studentResponse.json();
+    const studentFields = studentDocument.fields || {};
+    const storedNationalId = firestoreString(studentFields, 'nationalId');
+    const parentFields = studentFields.parentInfo?.mapValue?.fields || {};
+    const parentEmail = (parentFields.parentEmail?.stringValue || '').trim().toLowerCase();
+    const accountAlreadyLinked = Boolean(firestoreString(studentFields, 'authUid')) ||
+      firestoreString(studentFields, 'accountStatus') === 'active';
+    if (storedNationalId !== nationalId || accountAlreadyLinked || !parentEmail ||
+      ['archived', 'withdrawn', 'transferred_out'].includes(firestoreString(studentFields, 'status'))) {
+      return jsonResponse({ error: 'تعذر التحقق من البيانات. راجع شؤون الطلاب.' }, 400, env);
+    }
+
+    requestId = crypto.randomUUID();
+    const activationSecret = encodeBase64Url(crypto.getRandomValues(new Uint8Array(32)));
+    const secretHash = await hashActivationSecret(activationSecret);
+    const activationUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(schoolId)}/activationRequests?documentId=${encodeURIComponent(requestId)}`;
+    const createRequest = await fetch(activationUrl, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: {
+        studentCode: { stringValue: studentCode },
+        studentName: { stringValue: firestoreString(studentFields, 'name') },
+        grade: { stringValue: firestoreString(studentFields, 'grade') },
+        parentEmail: { stringValue: parentEmail },
+        parentUid: { stringValue: parentFields.parentUid?.stringValue || '' },
+        schoolId: { stringValue: schoolId },
+        status: { stringValue: 'pending' },
+        secretHash: { stringValue: secretHash },
+        createdAt: { timestampValue: new Date().toISOString() },
+        expiresAt: { timestampValue: new Date(Date.now() + 30 * 60 * 1000).toISOString() },
+      } }),
+    });
+    if (!createRequest.ok) throw new Error('تعذر إنشاء طلب التفعيل.');
+
+    const emailResult = await sendParentActivationEmail(parentEmail, env);
+    if (!emailResult.ok) {
+      await fetch(activationUrl.replace(`?documentId=${encodeURIComponent(requestId)}`, `/${encodeURIComponent(requestId)}`), {
+        method: 'DELETE', headers: { Authorization: `Bearer ${adminToken}` },
+      }).catch(() => {});
+      console.error('Student activation parent email failed', { status: emailResult.status, code: emailResult.code });
+      const message = emailResult.code === 'OPERATION_NOT_ALLOWED'
+        ? 'تسجيل الدخول برابط البريد غير مفعّل في Firebase Authentication.'
+        : ['UNAUTHORIZED_DOMAIN', 'INVALID_CONTINUE_URI'].includes(emailResult.code)
+          ? 'عنوان صفحة التفعيل غير مسموح به في نطاقات Firebase Authentication المعتمدة.'
+          : emailResult.code
+            ? `تعذر إرسال طلب الموافقة إلى ولي الأمر (Firebase: ${emailResult.code}).`
+            : 'تعذر إرسال طلب الموافقة إلى ولي الأمر. أعد المحاولة لاحقًا.';
+      return jsonResponse({ error: message }, 502, env);
+    }
+
+    return jsonResponse({ success: true, requestId, activationSecret, expiresInSeconds: 1800 }, 202, env);
+  } catch (error) {
+    return jsonResponse({ error: error.message || 'تعذر إرسال طلب تفعيل الطالب.' }, error.status || 500, env);
+  }
+}
+
+async function handlePublicContactInquiry(request, env) {
+  try {
+    if (getCorsOrigin(env) === 'null') return jsonResponse({ error: 'Origin not allowed' }, 403, env);
+    if (Number(request.headers.get('Content-Length') || 0) > 8192) {
+      return jsonResponse({ error: 'بيانات الطلب أكبر من المسموح.' }, 413, env);
+    }
+
+    const body = await request.json();
+    const name = String(body.name || '').trim();
+    const phone = String(body.phone || '').trim();
+    const studentCode = String(body.studentCode || '').trim();
+    const topic = String(body.topic || '').trim();
+    const message = String(body.message || '').trim();
+    const allowedTopics = new Set(['tablet', 'student-affairs', 'attendance', 'other']);
+    if (name.length < 4 || name.length > 120 || !/^\+?[0-9()\-\s]{8,20}$/.test(phone) ||
+      (studentCode && !/^\d{6,12}$/.test(studentCode)) || !allowedTopics.has(topic) ||
+      message.length < 10 || message.length > 2500) {
+      return jsonResponse({ error: 'راجع الاسم والهاتف وكود الطالب وموضوع الرسالة وتفاصيلها.' }, 400, env);
+    }
+
+    const rateLimiter = env.PUBLIC_CONTACT_LIMITER;
+    if (!rateLimiter) return jsonResponse({ error: 'خدمة استقبال الاستفسارات غير مكتملة الإعداد.' }, 503, env);
+    const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const rateLimit = await rateLimiter.limit({ key: `public-contact:${clientIp}` });
+    if (!rateLimit.success) return jsonResponse({ error: 'تم استلام طلبات كثيرة. انتظر دقيقة ثم حاول مجددًا.' }, 429, env);
+
+    const recipientByTopic = {
+      tablet: { id: 'tech_specialist', role: 'tech_specialist', name: 'مسؤول التطوير التكنولوجي' },
+      'student-affairs': { id: 'student_affairs', role: 'student_affairs', name: 'شؤون الطلاب والقيد' },
+      attendance: { id: 'student_affairs', role: 'student_affairs', name: 'شؤون الطلاب والقيد' },
+      other: { id: 'director', role: 'director', name: 'مدير المدرسة' },
+    }[topic];
+    const schoolId = env.DEFAULT_SCHOOL_ID || 'sch_cairo_sec_01';
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const inquiryId = `public_${crypto.randomUUID()}`;
+    const createdAt = new Date().toISOString();
+    const messageRecord = {
+      id: inquiryId,
+      schoolId,
+      source: 'public-contact',
+      senderId: 'public_contact',
+      senderRole: 'public',
+      senderName: name,
+      senderEmail: '',
+      recipientId: recipientByTopic.id,
+      recipientRole: recipientByTopic.role,
+      recipientName: recipientByTopic.name,
+      subject: `استفسار من الموقع العام: ${topic}`,
+      body: `الاسم: ${name}\nالهاتف: ${phone}\nكود الطالب: ${studentCode || 'غير متاح'}\n\n${message}`,
+      priority: 'normal',
+      createdAt,
+      formattedDate: new Intl.DateTimeFormat('ar-EG', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(createdAt)),
+      readBy: [],
+    };
+    const endpoint = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(schoolId)}/messages?documentId=${encodeURIComponent(inquiryId)}`;
+    const writeResponse = await fetch(endpoint, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: encodeFirestoreMap(messageRecord) }),
+    });
+    if (!writeResponse.ok) {
+      console.error('Public contact inquiry persistence failed:', writeResponse.status);
+      return jsonResponse({ error: 'تعذر حفظ الاستفسار على خادم المدرسة. أعد المحاولة لاحقًا.' }, 502, env);
+    }
+
+    return jsonResponse({ success: true, inquiryId }, 201, env);
+  } catch (error) {
+    console.error('Public contact inquiry failed:', error.message);
+    return jsonResponse({ error: error.message || 'تعذر إرسال الاستفسار.' }, error.status || 500, env);
+  }
+}
+
+async function sendParentActivationEmail(email, env) {
+  if (!env.FIREBASE_WEB_API_KEY || !env.FAMILY_ACTIVATION_CONTINUE_URL) {
+    return { ok: false, status: 0, code: 'MISSING_EMAIL_LINK_CONFIGURATION' };
+  }
+  const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${encodeURIComponent(env.FIREBASE_WEB_API_KEY)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      requestType: 'EMAIL_SIGNIN',
+      email,
+      continueUrl: env.FAMILY_ACTIVATION_CONTINUE_URL,
+      canHandleCodeInApp: true,
+    }),
+  });
+  const result = await response.json().catch(() => ({}));
+  return { ok: response.ok, status: response.status, code: getFirebaseApiErrorCode(result) };
+}
+
+async function handleCreateAccountInvitation(request, env) {
+  let invitationUrl = '';
+  try {
+    const operator = await verifyAuth(request, env);
+    const rolesByOperator = {
+      super_admin: ['director', 'tech_specialist', 'student_affairs', 'social_affairs', 'teacher'],
+      director: ['tech_specialist', 'student_affairs', 'social_affairs', 'teacher'],
+      tech_specialist: ['student_affairs', 'social_affairs', 'teacher'],
+    };
+    if (!rolesByOperator[operator.role]) {
+      return jsonResponse({ error: 'غير مصرح لك بإنشاء حسابات موظفين.' }, 403, env);
+    }
+    if (Number(request.headers.get('Content-Length') || 0) > 8192) {
+      return jsonResponse({ error: 'بيانات الدعوة أكبر من المسموح.' }, 413, env);
+    }
+
+    const body = await request.json();
+    const email = String(body.email || '').trim().toLowerCase();
+    const displayName = String(body.displayName || '').trim();
+    const role = String(body.role || '').trim();
+    const schoolId = String(body.schoolId || '').trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 ||
+      !displayName || displayName.length > 120 || !rolesByOperator[operator.role].includes(role) ||
+      !schoolId || schoolId !== operator.schoolId || !canAccessSchool(operator, schoolId)) {
+      return jsonResponse({ error: 'راجع البريد والاسم والدور المحدد للمدرسة.' }, 400, env);
+    }
+    if (email === operator.email) return jsonResponse({ error: 'لا يمكن إرسال دعوة إلى بريد الحساب نفسه.' }, 409, env);
+
+    const teacherInfo = {};
+    if (role === 'teacher') {
+      teacherInfo.subject = String(body.subject || '').trim();
+      teacherInfo.classId = String(body.classId || '').trim();
+      teacherInfo.className = String(body.className || '').trim();
+      teacherInfo.weeklyHours = Number(body.weeklyHours);
+      if (!teacherInfo.subject || teacherInfo.subject.length > 120 || !teacherInfo.classId ||
+        !teacherInfo.className || !Number.isInteger(teacherInfo.weeklyHours) ||
+        teacherInfo.weeklyHours < 1 || teacherInfo.weeklyHours > 40) {
+        return jsonResponse({ error: 'حدد مادة المعلم وفصله وحمله الأسبوعي من 1 إلى 40 ساعة.' }, 400, env);
+      }
+    }
+
+    const rateLimit = env.FAMILY_ACTIVATION_LIMITER;
+    if (!rateLimit) return jsonResponse({ error: 'خدمة الدعوات غير مكتملة الإعداد.' }, 503, env);
+    const inviteLimit = await rateLimit.limit({ key: `invite:${operator.uid}` });
+    if (!inviteLimit.success) return jsonResponse({ error: 'تم إرسال دعوات كثيرة. انتظر دقيقة ثم حاول.' }, 429, env);
+
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const authBase = `https://identitytoolkit.googleapis.com/v1/projects/${projectId}`;
+    const lookupResponse = await fetch(`${authBase}/accounts:lookup`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: [email] }),
+    });
+    const lookupData = await lookupResponse.json().catch(() => ({}));
+    if (!lookupResponse.ok) {
+      const code = getFirebaseApiErrorCode(lookupData);
+      console.error('Account invitation account lookup failed', { status: lookupResponse.status, code });
+      return jsonResponse({
+        error: code
+          ? `تعذر التحقق من الحساب في Firebase (${code}).`
+          : 'تعذر التحقق من البريد قبل إرسال الدعوة.',
+      }, 502, env);
+    }
+    const existingAccount = lookupData.users?.find((account) => account.email?.toLowerCase() === email);
+    if (existingAccount?.localId) {
+      const existingProfileResponse = await fetch(
+        `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${encodeURIComponent(existingAccount.localId)}`,
+        { headers: { Authorization: `Bearer ${adminToken}` } }
+      );
+      if (existingProfileResponse.ok) {
+        return jsonResponse({ error: 'يوجد حساب مرتبط بهذا البريد بالفعل.' }, 409, env);
+      }
+      if (existingProfileResponse.status !== 404) {
+        return jsonResponse({ error: 'تعذر التحقق من الحساب الموجود.' }, 502, env);
+      }
+    }
+
+    const invitationId = crypto.randomUUID();
+    invitationUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/accountInvitations?documentId=${encodeURIComponent(invitationId)}`;
+    const invitation = {
+      invitationId,
+      email,
+      displayName,
+      role,
+      schoolId,
+      teacherInfo,
+      status: 'pending',
+      invitedByUid: operator.uid,
+      invitedByRole: operator.role,
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
+    };
+    const createResponse = await fetch(invitationUrl, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: encodeFirestoreMap(invitation) }),
+    });
+    if (!createResponse.ok) {
+      const createData = await createResponse.json().catch(() => ({}));
+      const code = getFirebaseApiErrorCode(createData);
+      console.error('Account invitation record creation failed', { status: createResponse.status, code });
+      throw Object.assign(new Error(code
+        ? `تعذر إنشاء سجل الدعوة في Firebase (${code}).`
+        : 'تعذر إنشاء سجل الدعوة في Firebase.'), { status: 502 });
+    }
+
+    const continueUrl = new URL(env.FAMILY_ACTIVATION_CONTINUE_URL);
+    continueUrl.searchParams.set('flow', 'staff-invitation');
+    continueUrl.searchParams.set('invitationId', invitationId);
+    const emailResult = await sendAccountInvitationEmail(email, continueUrl.toString(), env);
+    if (!emailResult.ok) {
+      await fetch(invitationUrl.replace(`?documentId=${encodeURIComponent(invitationId)}`, `/${encodeURIComponent(invitationId)}`), {
+        method: 'DELETE', headers: { Authorization: `Bearer ${adminToken}` },
+      }).catch(() => {});
+      console.error('Account invitation email delivery failed', { status: emailResult.status, code: emailResult.code });
+      const message = emailResult.code === 'OPERATION_NOT_ALLOWED'
+        ? 'تسجيل الدخول برابط البريد غير مفعّل في Firebase Authentication.'
+        : ['UNAUTHORIZED_DOMAIN', 'INVALID_CONTINUE_URI'].includes(emailResult.code)
+          ? 'عنوان صفحة إكمال الدعوة غير مسموح به في نطاقات Firebase Authentication المعتمدة.'
+          : emailResult.code
+            ? `تعذر إرسال رابط الدعوة (Firebase: ${emailResult.code}).`
+            : 'تعذر إرسال رابط الدعوة. تحقق من إعداد Firebase للبريد.';
+      return jsonResponse({ error: message }, 502, env);
+    }
+
+    return jsonResponse({ success: true, invitationId, email, role }, 202, env);
+  } catch (error) {
+    return jsonResponse({ error: error.message || 'تعذر إرسال دعوة الحساب.' }, error.status || 500, env);
+  }
+}
+
+async function sendAccountInvitationEmail(email, continueUrl, env) {
+  if (!env.FIREBASE_WEB_API_KEY) return { ok: false, status: 0, code: 'MISSING_WEB_API_KEY' };
+  const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${encodeURIComponent(env.FIREBASE_WEB_API_KEY)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      requestType: 'EMAIL_SIGNIN',
+      email,
+      continueUrl,
+      canHandleCodeInApp: true,
+    }),
+  });
+  const result = await response.json().catch(() => ({}));
+  return { ok: response.ok, status: response.status, code: getFirebaseApiErrorCode(result) };
+}
+
+function getFirebaseApiErrorCode(result) {
+  const message = String(result?.error?.message || result?.error?.status || '');
+  return message.split(/[\s:]/, 1)[0].replace(/[^A-Z0-9_]/gi, '').slice(0, 60);
+}
+
+async function handleCompleteAccountInvitation(request, env) {
+  try {
+    const identity = await verifyAuth(request, env, true);
+    if (!identity.email || !identity.emailVerified) {
+      return jsonResponse({ error: 'افتح رابط الدعوة من البريد المدعو إليه.' }, 403, env);
+    }
+    const body = await request.json();
+    const invitationId = String(body.invitationId || '').trim();
+    if (!/^[0-9a-f-]{36}$/i.test(invitationId)) return jsonResponse({ error: 'معرّف الدعوة غير صالح.' }, 400, env);
+
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const invitationUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/accountInvitations/${encodeURIComponent(invitationId)}`;
+    const invitationResponse = await fetch(invitationUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+    if (!invitationResponse.ok) return jsonResponse({ error: 'الدعوة غير موجودة أو انتهت صلاحيتها.' }, 404, env);
+    const invitationDocument = await invitationResponse.json();
+    const invitation = decodeFirestoreMap(invitationDocument.fields || {});
+    if (String(invitation.email || '').toLowerCase() !== identity.email) {
+      return jsonResponse({ error: 'استخدم البريد الإلكتروني الذي استقبل الدعوة.' }, 403, env);
+    }
+    if (Date.parse(invitation.expiresAt || '') <= Date.now()) {
+      return jsonResponse({ error: 'انتهت صلاحية الدعوة. اطلب دعوة جديدة من إدارة المدرسة.' }, 410, env);
+    }
+    if (!['director', 'tech_specialist', 'student_affairs', 'social_affairs', 'teacher'].includes(invitation.role)) {
+      return jsonResponse({ error: 'الدور الوظيفي في الدعوة غير صالح.' }, 400, env);
+    }
+
+    const profileUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${encodeURIComponent(identity.uid)}`;
+    const existingProfileResponse = await fetch(profileUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+    if (existingProfileResponse.ok) {
+      const existingProfile = await existingProfileResponse.json();
+      const fields = existingProfile.fields || {};
+      if (firestoreString(fields, 'invitationId') !== invitationId ||
+        firestoreString(fields, 'schoolId') !== invitation.schoolId) {
+        return jsonResponse({ error: 'هذا الحساب مرتبط بالفعل بمدرسة أو دعوة أخرى.' }, 409, env);
+      }
+      return jsonResponse({ success: true, profile: decodeFirestoreMap(fields) }, 200, env);
+    }
+    if (existingProfileResponse.status !== 404) {
+      return jsonResponse({ error: 'تعذر التحقق من ملف المستخدم.' }, 502, env);
+    }
+    if (invitation.status !== 'pending') {
+      return jsonResponse({ error: 'تم استخدام الدعوة أو إلغاؤها بالفعل.' }, 409, env);
+    }
+
+    const authBase = `https://identitytoolkit.googleapis.com/v1/projects/${projectId}`;
+    const accountResponse = await fetch(`${authBase}/accounts:lookup`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ localId: [identity.uid] }),
+    });
+    const accountData = await accountResponse.json().catch(() => ({}));
+    const account = accountData.users?.find((user) => user.localId === identity.uid);
+    if (!accountResponse.ok || !account?.providerUserInfo?.some((provider) => provider.providerId === 'password')) {
+      return jsonResponse({ error: 'أنشئ كلمة المرور من شاشة الدعوة أولًا.' }, 400, env);
+    }
+
+    const teacherInfo = invitation.teacherInfo || {};
+    const profile = {
+      role: invitation.role,
+      schoolId: invitation.schoolId,
+      status: 'active',
+      email: identity.email,
+      displayName: invitation.displayName,
+      invitationId,
+      createdAt: new Date().toISOString(),
+      createdByUid: invitation.invitedByUid,
+    };
+    if (invitation.role === 'teacher') {
+      profile.subject = teacherInfo.subject || '';
+      profile.classId = teacherInfo.classId || '';
+      profile.className = teacherInfo.className || '';
+      profile.weeklyHours = Number(teacherInfo.weeklyHours) || 0;
+    }
+
+    const profileResponse = await fetch(profileUrl, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: encodeFirestoreMap(profile) }),
+    });
+    if (!profileResponse.ok) throw new Error('تعذر إنشاء ملف الصلاحيات. أعد المحاولة.');
+
+    const invitationUpdateUrl = new URL(invitationUrl);
+    ['status', 'accountUid', 'acceptedAt'].forEach((field) => invitationUpdateUrl.searchParams.append('updateMask.fieldPaths', field));
+    await fetch(invitationUpdateUrl, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: encodeFirestoreMap({
+        status: 'completed',
+        accountUid: identity.uid,
+        acceptedAt: new Date().toISOString(),
+      }) }),
+    });
+
+    await recordAccountInvitationAudit(env, adminToken, invitation, identity);
+    return jsonResponse({ success: true, profile }, 201, env);
+  } catch (error) {
+    return jsonResponse({ error: error.message || 'تعذر إكمال دعوة الحساب.' }, error.status || 401, env);
+  }
+}
+
+async function recordAccountInvitationAudit(env, accessToken, invitation, identity) {
+  const documentId = `account_invite_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+  const endpoint = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/schools/${encodeURIComponent(invitation.schoolId)}/auditLogs?documentId=${documentId}`;
+  await fetch(endpoint, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields: encodeFirestoreMap({
+      action: 'إكمال دعوة حساب موظف',
+      target: `${invitation.displayName} (${identity.email})`,
+      details: `تم إنشاء حساب بدور ${invitation.role} بواسطة ${invitation.invitedByRole}.`,
+      category: 'auth',
+      operatorUid: invitation.invitedByUid,
+      operatorRole: invitation.invitedByRole,
+      schoolId: invitation.schoolId,
+      createdAt: new Date().toISOString(),
+    }) }),
+  });
+}
+
+async function hashActivationSecret(secret) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function loadActivationRequest(requestId, projectId, adminToken) {
+  const documentUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent('sch_cairo_sec_01')}/activationRequests/${encodeURIComponent(requestId)}`;
+  const response = await fetch(documentUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+  if (!response.ok) return null;
+  const document = await response.json();
+  return { document, url: documentUrl, data: decodeFirestoreMap(document.fields || {}) };
+}
+
+function safeStringEquals(left, right) {
+  if (typeof left !== 'string' || typeof right !== 'string' || left.length !== right.length) return false;
+  let difference = 0;
+  for (let index = 0; index < left.length; index += 1) difference |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  return difference === 0;
+}
+
+async function verifyActivationSecret(activation, secret) {
+  if (!activation || !/^[A-Za-z0-9_-]{40,50}$/.test(secret)) return false;
+  return safeStringEquals(activation.data.secretHash || '', await hashActivationSecret(secret));
+}
+
+function activationRequestExpired(activation) {
+  const expiry = Date.parse(activation?.data?.expiresAt || '');
+  return !Number.isFinite(expiry) || expiry <= Date.now();
+}
+
+async function handleStudentActivationStatus(request, env) {
+  try {
+    const body = await request.json();
+    const requestId = String(body.requestId || '').trim();
+    const secret = String(body.activationSecret || '').trim();
+    if (!/^[0-9a-f-]{36}$/i.test(requestId)) return jsonResponse({ error: 'طلب التفعيل غير صالح.' }, 400, env);
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const activation = await loadActivationRequest(requestId, env.FIREBASE_PROJECT_ID, adminToken);
+    if (!await verifyActivationSecret(activation, secret)) return jsonResponse({ error: 'طلب التفعيل غير صالح أو انتهت صلاحيته.' }, 404, env);
+    if (activationRequestExpired(activation)) return jsonResponse({ status: 'expired' }, 200, env);
+    return jsonResponse({ status: activation.data.status }, 200, env);
+  } catch (error) {
+    return jsonResponse({ error: error.message || 'تعذر التحقق من حالة الطلب.' }, error.status || 401, env);
+  }
+}
+
+async function handleListActivationRequests(request, env) {
+  try {
+    const parent = await verifyAuth(request, env);
+    if (parent.role !== 'parent' || !parent.emailVerified) {
+      return jsonResponse({ error: 'يجب تسجيل الدخول ببريد ولي أمر موثق.' }, 403, env);
+    }
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const schoolId = parent.schoolId || env.DEFAULT_SCHOOL_ID || 'sch_cairo_sec_01';
+    const collectionUrl = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/schools/${encodeURIComponent(schoolId)}/activationRequests`;
+    const requests = [];
+    let pageToken = '';
+    do {
+      const pageUrl = new URL(collectionUrl);
+      pageUrl.searchParams.set('pageSize', '1000');
+      if (pageToken) pageUrl.searchParams.set('pageToken', pageToken);
+      const response = await fetch(pageUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+      if (!response.ok) throw new Error('تعذر تحميل طلبات التفعيل.');
+      const page = await response.json();
+      for (const document of page.documents || []) {
+        const data = decodeFirestoreMap(document.fields || {});
+        if (data.status !== 'pending' || activationRequestExpired({ data })) continue;
+        if (data.parentUid !== parent.uid && String(data.parentEmail || '').toLowerCase() !== parent.email) continue;
+        requests.push({
+          requestId: document.name.split('/').pop(),
+          studentCode: data.studentCode,
+          studentName: data.studentName,
+          grade: data.grade,
+          createdAt: data.createdAt,
+        });
+      }
+      if (requests.length > 100) throw new Error('طلبات التفعيل كثيرة؛ راجع إدارة المدرسة.');
+      pageToken = page.nextPageToken || '';
+    } while (pageToken);
+    requests.sort((left, right) => String(right.createdAt).localeCompare(String(left.createdAt)));
+    return jsonResponse({ requests }, 200, env);
+  } catch (error) {
+    return jsonResponse({ error: error.message || 'تعذر تحميل طلبات التفعيل.' }, error.status || 401, env);
+  }
+}
+
+async function handleReviewStudentActivation(request, env) {
+  try {
+    const parent = await verifyAuth(request, env);
+    if (parent.role !== 'parent' || !parent.emailVerified) {
+      return jsonResponse({ error: 'يجب تسجيل الدخول ببريد ولي أمر موثق.' }, 403, env);
+    }
+    const body = await request.json();
+    const requestId = String(body.requestId || '').trim();
+    const decision = String(body.decision || '').trim();
+    if (!/^[0-9a-f-]{36}$/i.test(requestId) || !['approve', 'reject'].includes(decision)) {
+      return jsonResponse({ error: 'بيانات مراجعة الطلب غير صالحة.' }, 400, env);
+    }
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const activation = await loadActivationRequest(requestId, env.FIREBASE_PROJECT_ID, adminToken);
+    if (!activation || activation.data.status !== 'pending' || activationRequestExpired(activation)) {
+      return jsonResponse({ error: 'انتهت صلاحية الطلب أو تمت مراجعته بالفعل.' }, 409, env);
+    }
+    if (activation.data.parentUid !== parent.uid && String(activation.data.parentEmail || '').toLowerCase() !== parent.email) {
+      return jsonResponse({ error: 'هذا الطلب غير مرتبط بحساب ولي الأمر.' }, 403, env);
+    }
+
+    const updateUrl = new URL(activation.url);
+    ['status', 'parentUid', 'reviewedAt'].forEach((field) => updateUrl.searchParams.append('updateMask.fieldPaths', field));
+    const response = await fetch(updateUrl, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: encodeFirestoreMap({
+        status: decision === 'approve' ? 'approved' : 'rejected',
+        parentUid: parent.uid,
+        reviewedAt: new Date().toISOString(),
+      }) }),
+    });
+    if (!response.ok) throw new Error('تعذر حفظ قرار ولي الأمر.');
+    return jsonResponse({ success: true, status: decision === 'approve' ? 'approved' : 'rejected' }, 200, env);
+  } catch (error) {
+    return jsonResponse({ error: error.message || 'تعذر مراجعة طلب التفعيل.' }, error.status || 401, env);
+  }
+}
+
+async function handleCompleteStudentActivation(request, env) {
+  let createdUid = '';
+  let profileCreated = false;
+  let studentLinked = false;
+  let studentUrlForRollback = '';
+  let userProfileUrlForRollback = '';
+  try {
+    if (Number(request.headers.get('Content-Length') || 0) > 8192) return jsonResponse({ error: 'الطلب أكبر من المسموح.' }, 413, env);
+    const body = await request.json();
+    const requestId = String(body.requestId || '').trim();
+    const secret = String(body.activationSecret || '').trim();
+    const password = String(body.password || '');
+    if (!/^[0-9a-f-]{36}$/i.test(requestId) || password.length < 12 || !/[a-z]/.test(password) ||
+      !/[A-Z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+      return jsonResponse({ error: 'استخدم كلمة مرور من 12 حرفًا على الأقل تشمل حرفًا كبيرًا وصغيرًا ورقمًا ورمزًا.' }, 400, env);
+    }
+    const rateLimit = env.FAMILY_ACTIVATION_LIMITER;
+    if (!rateLimit) return jsonResponse({ error: 'خدمة التفعيل غير مكتملة الإعداد.' }, 503, env);
+    const limit = await rateLimit.limit({ key: `complete:${requestId}` });
+    if (!limit.success) return jsonResponse({ error: 'محاولات كثيرة. انتظر دقيقة ثم حاول مرة أخرى.' }, 429, env);
+
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const activation = await loadActivationRequest(requestId, projectId, adminToken);
+    if (!await verifyActivationSecret(activation, secret) || activationRequestExpired(activation)) {
+      return jsonResponse({ error: 'انتهت صلاحية طلب التفعيل أو بياناته غير صحيحة.' }, 403, env);
+    }
+    if (activation.data.status === 'completed') return jsonResponse({ success: true, email: `${activation.data.studentCode}@cairo7.moe.edu.eg` }, 200, env);
+    if (activation.data.status !== 'approved') return jsonResponse({ error: 'بانتظار موافقة ولي الأمر.' }, 409, env);
+
+    const schoolId = activation.data.schoolId || env.DEFAULT_SCHOOL_ID || 'sch_cairo_sec_01';
+    const studentCode = String(activation.data.studentCode || '');
+    const studentUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(schoolId)}/students/${encodeURIComponent(`stu_${studentCode}`)}`;
+    studentUrlForRollback = studentUrl;
+    const studentResponse = await fetch(studentUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+    if (!studentResponse.ok) return jsonResponse({ error: 'ملف الطالب غير موجود. راجع شؤون الطلاب.' }, 404, env);
+    const studentDocument = await studentResponse.json();
+    const studentFields = studentDocument.fields || {};
+    if (firestoreString(studentFields, 'authUid')) return jsonResponse({ error: 'تم تفعيل حساب الطالب بالفعل.' }, 409, env);
+
+    const email = `${studentCode}@cairo7.moe.edu.eg`;
+    const authBase = `https://identitytoolkit.googleapis.com/v1/projects/${projectId}`;
+    const createResponse = await fetch(`${authBase}/accounts`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        password,
+        displayName: firestoreString(studentFields, 'name'),
+        emailVerified: false,
+        disabled: false,
+      }),
+    });
+    const createData = await createResponse.json().catch(() => ({}));
+    if (!createResponse.ok || !createData.localId) {
+      const duplicate = /EMAIL_EXISTS|email.*already/i.test(JSON.stringify(createData));
+      return jsonResponse({ error: duplicate ? 'يوجد حساب مسبق لهذا البريد؛ تواصل مع إدارة المدرسة لربطه.' : 'تعذر إنشاء حساب الطالب.' }, duplicate ? 409 : 502, env);
+    }
+    createdUid = createData.localId;
+
+    const parentInfo = decodeFirestoreValue(studentFields.parentInfo || { mapValue: { fields: {} } });
+    const parentName = parentInfo.parentName || '';
+    const familyId = firestoreString(studentFields, 'familyId') || `fam_${studentCode}`;
+    const userProfileUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${encodeURIComponent(createdUid)}`;
+    userProfileUrlForRollback = userProfileUrl;
+    const userProfileResponse = await fetch(userProfileUrl, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: encodeFirestoreMap({
+        role: 'student',
+        schoolId,
+        status: 'active',
+        email,
+        displayName: firestoreString(studentFields, 'name'),
+        studentCode,
+        familyId,
+        parentName,
+        parentUid: activation.data.parentUid || parentInfo.parentUid || '',
+        passwordChangeRequired: false,
+        createdAt: new Date().toISOString(),
+      }) }),
+    });
+    if (!userProfileResponse.ok) throw new Error('تعذر إنشاء ملف صلاحيات الطالب.');
+    profileCreated = true;
+
+    const studentUpdateUrl = new URL(studentUrl);
+    ['authUid', 'accountStatus', 'linkedParentUid', 'familyId'].forEach((field) => studentUpdateUrl.searchParams.append('updateMask.fieldPaths', field));
+    const studentUpdateResponse = await fetch(studentUpdateUrl, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: encodeFirestoreMap({
+        authUid: createdUid,
+        accountStatus: 'active',
+        linkedParentUid: activation.data.parentUid || parentInfo.parentUid || '',
+        familyId,
+      }) }),
+    });
+    if (!studentUpdateResponse.ok) throw new Error('تعذر ربط حساب الطالب بملف القيد.');
+    studentLinked = true;
+
+    const activationUpdateUrl = new URL(activation.url);
+    ['status', 'accountUid', 'completedAt'].forEach((field) => activationUpdateUrl.searchParams.append('updateMask.fieldPaths', field));
+    const completionResponse = await fetch(activationUpdateUrl, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: encodeFirestoreMap({
+        status: 'completed',
+        accountUid: createdUid,
+        completedAt: new Date().toISOString(),
+      }) }),
+    });
+    if (!completionResponse.ok) throw new Error('تعذر إنهاء طلب التفعيل. حاول مرة أخرى.');
+
+    await recordStudentAccountAudit(env, adminToken, {
+      uid: activation.data.parentUid || 'family_activation',
+      role: 'parent',
+    }, schoolId, email, studentCode);
+    return jsonResponse({ success: true, uid: createdUid, email }, 201, env);
+  } catch (error) {
+    if (createdUid) {
+      try {
+        const adminToken = await getFirebaseAdminAccessToken(env);
+        const projectId = env.FIREBASE_PROJECT_ID;
+        if (studentLinked && studentUrlForRollback) {
+          const unlinkUrl = new URL(studentUrlForRollback);
+          ['authUid', 'accountStatus', 'linkedParentUid'].forEach((field) => unlinkUrl.searchParams.append('updateMask.fieldPaths', field));
+          await fetch(unlinkUrl, {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fields: encodeFirestoreMap({
+              authUid: '',
+              accountStatus: 'pending_activation',
+              linkedParentUid: '',
+            }) }),
+          });
+        }
+        if (profileCreated && userProfileUrlForRollback) {
+          await fetch(userProfileUrlForRollback, {
+            method: 'DELETE', headers: { Authorization: `Bearer ${adminToken}` },
+          });
+        }
+        await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:delete`, {
+          method: 'POST', headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ localId: createdUid }),
+        });
+      } catch (rollbackError) {
+        console.error('Student activation rollback failed:', rollbackError.message);
+      }
+    }
+    return jsonResponse({ error: error.message || 'تعذر إكمال تفعيل الطالب.' }, error.status || 500, env);
   }
 }
 
@@ -167,7 +1125,7 @@ async function getFirebaseAdminAccessToken(env) {
   const header = encodeBase64Url(new TextEncoder().encode(JSON.stringify({ alg: 'RS256', typ: 'JWT' })));
   const payload = encodeBase64Url(new TextEncoder().encode(JSON.stringify({
     iss: credentials.client_email,
-    scope: 'https://www.googleapis.com/auth/identitytoolkit https://www.googleapis.com/auth/datastore',
+      scope: 'https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/identitytoolkit https://www.googleapis.com/auth/datastore',
     aud: tokenUri,
     iat: now,
     exp: now + 3600,
@@ -204,6 +1162,99 @@ async function getFirebaseAdminAccessToken(env) {
   firebaseAdminToken = tokenData.access_token;
   firebaseAdminTokenExpiry = Date.now() + Math.max(60, Number(tokenData.expires_in || 3600) - 60) * 1000;
   return firebaseAdminToken;
+}
+
+async function handleLinkEnrolledStudentFamily(request, env) {
+  try {
+    const operator = await verifyAuth(request, env);
+    if (!['student_affairs', 'director', 'super_admin'].includes(operator.role)) {
+      return jsonResponse({ error: 'Forbidden: only school staff can link a new student to a family' }, 403, env);
+    }
+    const body = await request.json();
+    const studentCode = String(body.studentCode || '').trim();
+    const schoolId = String(body.schoolId || '').trim();
+    if (!/^\d{6,12}$/.test(studentCode) || !schoolId || schoolId !== operator.schoolId ||
+      !canAccessSchool(operator, schoolId)) {
+      return jsonResponse({ error: 'Invalid student code or school scope' }, 400, env);
+    }
+
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const studentUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(schoolId)}/students/${encodeURIComponent(`stu_${studentCode}`)}`;
+    const studentResponse = await fetch(studentUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+    if (!studentResponse.ok) return jsonResponse({ error: 'Student record was not found' }, 404, env);
+    const studentDocument = await studentResponse.json();
+    const studentFields = studentDocument.fields || {};
+    const parentInfo = decodeFirestoreValue(studentFields.parentInfo || { mapValue: { fields: {} } });
+    const parentEmail = String(parentInfo.parentEmail || '').trim().toLowerCase();
+    if (!parentEmail || firestoreString(studentFields, 'code') !== studentCode) {
+      return jsonResponse({ success: true, linked: false }, 200, env);
+    }
+
+    const authBase = `https://identitytoolkit.googleapis.com/v1/projects/${projectId}`;
+    const lookupResponse = await fetch(`${authBase}/accounts:lookup`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: [parentEmail] }),
+    });
+    const lookupData = await lookupResponse.json().catch(() => ({}));
+    const parentAccount = lookupData.users?.find((account) => account.email?.toLowerCase() === parentEmail);
+    if (!lookupResponse.ok || !parentAccount?.localId) return jsonResponse({ success: true, linked: false }, 200, env);
+
+    const parentProfileUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${encodeURIComponent(parentAccount.localId)}`;
+    const parentProfileResponse = await fetch(parentProfileUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+    if (!parentProfileResponse.ok) return jsonResponse({ success: true, linked: false }, 200, env);
+    const parentProfile = await parentProfileResponse.json();
+    const profileFields = parentProfile.fields || {};
+    if (firestoreString(profileFields, 'role') !== 'parent' || firestoreString(profileFields, 'schoolId') !== schoolId) {
+      return jsonResponse({ success: true, linked: false }, 200, env);
+    }
+
+    const familyId = firestoreString(profileFields, 'familyId') || `fam_${parentAccount.localId}`;
+    const linkedCodes = Array.from(new Set([
+      ...(profileFields.linkedStudentCodes?.arrayValue?.values || []).map((value) => value.stringValue || ''),
+      studentCode,
+    ].filter(Boolean)));
+    const updateProfileUrl = new URL(parentProfileUrl);
+    ['familyId', 'linkedStudentCodes'].forEach((field) => updateProfileUrl.searchParams.append('updateMask.fieldPaths', field));
+    const updateProfileResponse = await fetch(updateProfileUrl, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: encodeFirestoreMap({ familyId, linkedStudentCodes: linkedCodes }) }),
+    });
+    if (!updateProfileResponse.ok) throw new Error('Parent family profile could not be updated');
+
+    for (const linkedCode of linkedCodes) {
+      let linkedFields = studentFields;
+      let linkedStudentUrl = studentUrl;
+      if (linkedCode !== studentCode) {
+        linkedStudentUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(schoolId)}/students/${encodeURIComponent(`stu_${linkedCode}`)}`;
+        const linkedResponse = await fetch(linkedStudentUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+        if (!linkedResponse.ok) throw new Error('A linked sibling record could not be loaded');
+        linkedFields = (await linkedResponse.json()).fields || {};
+      }
+      const linkedParentInfo = decodeFirestoreValue(linkedFields.parentInfo || { mapValue: { fields: {} } });
+      linkedParentInfo.parentEmail = parentEmail;
+      linkedParentInfo.parentUid = parentAccount.localId;
+      const updateStudentUrl = new URL(linkedStudentUrl);
+      ['familyId', 'linkedParentUid', 'parentInfo', 'siblingCodes'].forEach((field) => updateStudentUrl.searchParams.append('updateMask.fieldPaths', field));
+      const updateStudentResponse = await fetch(updateStudentUrl, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: encodeFirestoreMap({
+          familyId,
+          linkedParentUid: parentAccount.localId,
+          parentInfo: linkedParentInfo,
+          siblingCodes: linkedCodes.filter((code) => code !== linkedCode),
+        }) }),
+      });
+      if (!updateStudentResponse.ok) throw new Error('Student record could not be linked to the parent');
+    }
+
+    return jsonResponse({ success: true, linked: true, familyId }, 200, env);
+  } catch (error) {
+    return jsonResponse({ error: error.message || 'Could not link the student family account' }, error.status || 401, env);
+  }
 }
 
 function encodeBase64Url(bytes) {
@@ -333,6 +1384,367 @@ async function recordPasswordChangeAudit(env, accessToken, operator, targetAccou
     if (!response.ok) console.warn('Password-change audit write failed');
   } catch {
     console.warn('Password-change audit write failed');
+  }
+}
+
+function makeInitialStudentPassword() {
+  const bytes = crypto.getRandomValues(new Uint8Array(24));
+  return `Dse-${encodeBase64Url(bytes)}1!aA`;
+}
+
+function firestoreString(fields, name) {
+  return fields?.[name]?.stringValue || '';
+}
+
+function firestoreBool(fields, name) {
+  return fields?.[name]?.booleanValue === true;
+}
+
+async function handleProvisionStudent(request, env) {
+  let createdUid = '';
+  let profileCreated = false;
+  let studentDocumentUrl = '';
+  try {
+    const operator = await verifyAuth(request, env);
+    if (!['student_affairs', 'director', 'super_admin'].includes(operator.role)) {
+      return jsonResponse({ error: 'Forbidden: only student affairs or school administration can provision student accounts' }, 403, env);
+    }
+    if (typeof operator.schoolId !== 'string' || !operator.schoolId) {
+      return jsonResponse({ error: 'Operator has no school assignment' }, 403, env);
+    }
+
+    const contentLength = Number(request.headers.get('Content-Length') || 0);
+    if (contentLength > 4096) return jsonResponse({ error: 'Request is too large' }, 413, env);
+    const body = await request.json();
+    const code = String(body.studentCode || '').trim();
+    const schoolId = String(body.schoolId || '').trim();
+    const expectedEmail = `${code}@cairo7.moe.edu.eg`;
+    if (!/^\d{6,12}$/.test(code) || !schoolId || !canAccessSchool(operator, schoolId) || schoolId !== operator.schoolId) {
+      return jsonResponse({ error: 'Invalid student code or school scope' }, 400, env);
+    }
+
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const studentPath = `schools/${encodeURIComponent(schoolId)}/students/${encodeURIComponent(`stu_${code}`)}`;
+    studentDocumentUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${studentPath}`;
+    const studentResponse = await fetch(studentDocumentUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+    if (!studentResponse.ok) return jsonResponse({ error: 'A registered student record for this code was not found' }, 404, env);
+    const studentDocument = await studentResponse.json();
+    const studentFields = studentDocument.fields || {};
+    if (firestoreString(studentFields, 'schoolId') !== schoolId ||
+        firestoreString(studentFields, 'code') !== code ||
+        firestoreString(studentFields, 'email').toLowerCase() !== expectedEmail ||
+        ['archived', 'withdrawn', 'transferred_out'].includes(firestoreString(studentFields, 'status'))) {
+      return jsonResponse({ error: 'Student record is not eligible for account activation' }, 409, env);
+    }
+    if (firestoreString(studentFields, 'authUid')) {
+      return jsonResponse({ error: 'A login account is already linked to this student' }, 409, env);
+    }
+
+    const studentName = firestoreString(studentFields, 'name');
+    const parentName = studentFields.parentInfo?.mapValue?.fields?.parentName?.stringValue || '';
+    const initialPassword = makeInitialStudentPassword();
+    const authBase = `https://identitytoolkit.googleapis.com/v1/projects/${projectId}`;
+    const createResponse = await fetch(`${authBase}/accounts`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: expectedEmail, password: initialPassword, displayName: studentName, emailVerified: false, disabled: false }),
+    });
+    const createData = await createResponse.json().catch(() => ({}));
+    if (!createResponse.ok || !createData.localId) {
+      const isDuplicate = /EMAIL_EXISTS|email.*already/i.test(JSON.stringify(createData));
+      return jsonResponse({ error: isDuplicate ? 'An authentication account already exists for this student email; contact the administrator to link it safely' : 'Firebase could not create the student account' }, isDuplicate ? 409 : 502, env);
+    }
+    createdUid = createData.localId;
+
+    const userDocUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${encodeURIComponent(createdUid)}`;
+    const userFields = {
+      role: { stringValue: 'student' },
+      schoolId: { stringValue: schoolId },
+      status: { stringValue: 'active' },
+      email: { stringValue: expectedEmail },
+      displayName: { stringValue: studentName },
+      studentCode: { stringValue: code },
+      parentName: { stringValue: parentName },
+      passwordChangeRequired: { booleanValue: true },
+      createdAt: { timestampValue: new Date().toISOString() },
+    };
+    const profileResponse = await fetch(userDocUrl, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: userFields }),
+    });
+    if (!profileResponse.ok) throw new Error('Firebase could not create the student authorization profile');
+    profileCreated = true;
+
+    const updateMask = new URLSearchParams();
+    ['authUid', 'accountStatus', 'linkedParentUid'].forEach((field) => updateMask.append('updateMask.fieldPaths', field));
+    const linkResponse = await fetch(`${studentDocumentUrl}?${updateMask.toString()}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: {
+        authUid: { stringValue: createdUid },
+        accountStatus: { stringValue: 'active' },
+        linkedParentUid: { stringValue: createdUid },
+      } }),
+    });
+    if (!linkResponse.ok) throw new Error('The student record could not be linked to the new account');
+
+    await recordStudentAccountAudit(env, adminToken, operator, schoolId, expectedEmail, code);
+    return jsonResponse({ success: true, uid: createdUid, email: expectedEmail, initialPassword, passwordChangeRequired: true }, 201, env);
+  } catch (error) {
+    if (createdUid) {
+      try {
+        const adminToken = await getFirebaseAdminAccessToken(env);
+        const projectId = env.FIREBASE_PROJECT_ID;
+        if (studentDocumentUrl) {
+          const unlinkMask = new URLSearchParams();
+          ['authUid', 'accountStatus', 'linkedParentUid'].forEach((field) => unlinkMask.append('updateMask.fieldPaths', field));
+          await fetch(`${studentDocumentUrl}?${unlinkMask.toString()}`, {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fields: {} }),
+          });
+        }
+        if (profileCreated) {
+          await fetch(`https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${encodeURIComponent(createdUid)}`, {
+            method: 'DELETE', headers: { Authorization: `Bearer ${adminToken}` },
+          });
+        }
+        await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:delete`, {
+          method: 'POST', headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ localId: createdUid }),
+        });
+      } catch (rollbackError) {
+        console.error('Student account rollback failed:', rollbackError.message);
+      }
+    }
+    return jsonResponse({ error: error.message || 'Student account provisioning failed' }, error.status || 500, env);
+  }
+}
+
+async function recordStudentAccountAudit(env, accessToken, operator, schoolId, email, studentCode) {
+  const projectId = env.FIREBASE_PROJECT_ID;
+  const documentId = `student_account_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+  const endpoint = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(schoolId)}/auditLogs?documentId=${documentId}`;
+  const fields = {
+    action: { stringValue: 'إنشاء حساب دخول لطالب عند اعتماد القيد' },
+    target: { stringValue: `${email} (كود الطالب: ${studentCode})` },
+    details: { stringValue: `تم إنشاء حساب الطالب بواسطة ${operator.role}. لم تُحفظ كلمة المرور في سجل التدقيق.` },
+    category: { stringValue: 'auth' },
+    operatorUid: { stringValue: operator.uid },
+    operatorRole: { stringValue: operator.role },
+    schoolId: { stringValue: schoolId },
+    createdAt: { timestampValue: new Date().toISOString() },
+  };
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields }),
+  });
+  if (!response.ok) console.warn('Student account audit write failed');
+}
+
+async function handleFamilyStudentRecords(request, env) {
+  try {
+    const user = await verifyAuth(request, env);
+    if (!['student', 'parent'].includes(user.role) || !user.schoolId ||
+      (user.role === 'parent' && !user.emailVerified)) {
+      return jsonResponse({ error: 'حساب الأسرة غير مخول لعرض سجلات الطلاب.' }, 403, env);
+    }
+
+    const studentCodes = user.role === 'student' ? [user.studentCode] : user.linkedStudentCodes;
+    if (!studentCodes.length || studentCodes.length > 100) return jsonResponse({ students: [] }, 200, env);
+
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const students = [];
+    for (const studentCode of studentCodes) {
+      if (!/^\d{6,12}$/.test(studentCode)) continue;
+      const studentUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(user.schoolId)}/students/${encodeURIComponent(`stu_${studentCode}`)}`;
+      const response = await fetch(studentUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+      if (!response.ok) continue;
+      const document = await response.json();
+      const fields = document.fields || {};
+      const parentFields = fields.parentInfo?.mapValue?.fields || {};
+      const linkedToStudent = user.role === 'student' &&
+        firestoreString(fields, 'code') === user.studentCode &&
+        firestoreString(fields, 'authUid') === user.uid;
+      const linkedToParent = user.role === 'parent' && (
+        firestoreString(fields, 'linkedParentUid') === user.uid ||
+        (parentFields.parentUid?.stringValue || '') === user.uid ||
+        (parentFields.parentEmail?.stringValue || '').toLowerCase() === user.email
+      );
+      if (!linkedToStudent && !linkedToParent) continue;
+
+      const siblingCodes = fields.siblingCodes?.arrayValue?.values || [];
+      students.push({
+        id: document.name.split('/').pop(),
+        name: firestoreString(fields, 'name'),
+        code: firestoreString(fields, 'code'),
+        email: firestoreString(fields, 'email'),
+        nationalId: linkedToStudent ? firestoreString(fields, 'nationalId') : '',
+        birthDate: linkedToStudent ? firestoreString(fields, 'birthDate') : '',
+        ageOct1: linkedToStudent ? firestoreString(fields, 'ageOct1') : '',
+        gender: linkedToStudent ? firestoreString(fields, 'gender') : '',
+        religion: linkedToStudent ? firestoreString(fields, 'religion') : '',
+        nationality: linkedToStudent ? firestoreString(fields, 'nationality') : '',
+        grade: firestoreString(fields, 'grade'),
+        status: firestoreString(fields, 'status'),
+        parentInfo: { parentName: parentFields.parentName?.stringValue || '' },
+        hasSiblings: linkedToStudent ? siblingCodes.length > 0 : studentCodes.length > 1,
+      });
+    }
+    return jsonResponse({ students }, 200, env);
+  } catch (error) {
+    return jsonResponse({ error: error.message || 'تعذر تحميل بيانات الأسرة.' }, error.status || 401, env);
+  }
+}
+
+async function handleStudentPortalAttendance(request, env) {
+  try {
+    const user = await verifyAuth(request, env);
+    if (!['student', 'parent'].includes(user.role) || !user.schoolId) {
+      return jsonResponse({ error: 'This account cannot access family attendance records' }, 403, env);
+    }
+
+    const body = await request.json();
+    const studentCode = String(body.studentCode || '').trim();
+    if (!/^\d{6,12}$/.test(studentCode)) {
+      return jsonResponse({ error: 'Invalid student code' }, 400, env);
+    }
+    if (user.role === 'student' && user.studentCode !== studentCode) {
+      return jsonResponse({ error: 'Students may only access their own attendance records' }, 403, env);
+    }
+    if (user.role === 'parent' && !user.emailVerified) {
+      return jsonResponse({ error: 'Verify the guardian email before accessing student records' }, 403, env);
+    }
+
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const studentUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(user.schoolId)}/students/${encodeURIComponent(`stu_${studentCode}`)}`;
+    const studentResponse = await fetch(studentUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+    if (!studentResponse.ok) return jsonResponse({ error: 'Linked student record was not found' }, 404, env);
+    const studentDocument = await studentResponse.json();
+    const fields = studentDocument.fields || {};
+    const parentFields = fields.parentInfo?.mapValue?.fields || {};
+    const isLinkedStudent = user.role === 'student' &&
+      firestoreString(fields, 'authUid') === user.uid &&
+      firestoreString(fields, 'email').toLowerCase() === user.email;
+    const isLinkedParent = user.role === 'parent' && (
+      firestoreString(fields, 'linkedParentUid') === user.uid ||
+      (parentFields.parentUid?.stringValue || '') === user.uid ||
+      (parentFields.parentEmail?.stringValue || '').toLowerCase() === user.email
+    );
+    if (!isLinkedStudent && !isLinkedParent) {
+      return jsonResponse({ error: 'This account is not linked to the requested student' }, 403, env);
+    }
+
+    const attendanceCollection = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(user.schoolId)}/attendance`;
+    const records = [];
+    let pageToken = '';
+    let scannedDocuments = 0;
+    do {
+      const pageUrl = new URL(attendanceCollection);
+      pageUrl.searchParams.set('pageSize', '1000');
+      if (pageToken) pageUrl.searchParams.set('pageToken', pageToken);
+      const pageResponse = await fetch(pageUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+      if (!pageResponse.ok) throw new Error('Could not load attendance history');
+      const page = await pageResponse.json();
+      const documents = page.documents || [];
+      scannedDocuments += documents.length;
+      if (scannedDocuments > 10000) {
+        return jsonResponse({ error: 'Attendance history is too large to load safely; contact the school administrator' }, 503, env);
+      }
+
+      for (const document of documents) {
+        const batch = decodeFirestoreMap(document.fields || {});
+        const batchRecords = Array.isArray(batch.records) ? batch.records : batch.studentCode ? [batch] : [];
+        for (const record of batchRecords) {
+          if (String(record.studentCode || '') !== studentCode) continue;
+          records.push({
+            ...record,
+            date: record.date || batch.date || '',
+            classId: record.classId || batch.classId || '',
+            phase: record.phase || batch.phase || 'class',
+            lessonId: record.lessonId || batch.lessonId || '',
+          });
+        }
+      }
+      pageToken = page.nextPageToken || '';
+    } while (pageToken);
+
+    records.sort((left, right) => String(right.date).localeCompare(String(left.date)));
+    return jsonResponse({ records }, 200, env);
+  } catch (error) {
+    return jsonResponse({ error: error.message || 'Could not load attendance history' }, error.status || 401, env);
+  }
+}
+
+function decodeFirestoreMap(fields) {
+  return Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, decodeFirestoreValue(value)]));
+}
+
+function decodeFirestoreValue(value) {
+  if ('stringValue' in value) return value.stringValue;
+  if ('integerValue' in value) return Number(value.integerValue);
+  if ('doubleValue' in value) return value.doubleValue;
+  if ('booleanValue' in value) return value.booleanValue;
+  if ('timestampValue' in value) return value.timestampValue;
+  if ('nullValue' in value) return null;
+  if ('arrayValue' in value) return (value.arrayValue.values || []).map(decodeFirestoreValue);
+  if ('mapValue' in value) return decodeFirestoreMap(value.mapValue.fields || {});
+  return null;
+}
+
+function encodeFirestoreMap(fields) {
+  return Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, encodeFirestoreValue(value)]));
+}
+
+function encodeFirestoreValue(value) {
+  if (value === null || value === undefined) return { nullValue: null };
+  if (typeof value === 'string') return { stringValue: value };
+  if (typeof value === 'boolean') return { booleanValue: value };
+  if (typeof value === 'number') return Number.isInteger(value) ? { integerValue: String(value) } : { doubleValue: value };
+  if (Array.isArray(value)) return { arrayValue: { values: value.map(encodeFirestoreValue) } };
+  if (typeof value === 'object') return { mapValue: { fields: encodeFirestoreMap(value) } };
+  return { nullValue: null };
+}
+
+async function handleCompleteFirstLogin(request, env) {
+  try {
+    const user = await verifyAuth(request, env);
+    if (user.role !== 'student' || !user.mustChangePassword) {
+      return jsonResponse({ error: 'This account does not require an initial password change' }, 403, env);
+    }
+    const body = await request.json();
+    const newPassword = String(body.newPassword || '');
+    if (newPassword.length < 12 || !/[a-z]/.test(newPassword) || !/[A-Z]/.test(newPassword) ||
+        !/\d/.test(newPassword) || !/[^A-Za-z0-9]/.test(newPassword)) {
+      return jsonResponse({ error: 'Use at least 12 characters with upper/lowercase letters, a number, and a symbol' }, 400, env);
+    }
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const updateResponse = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:update`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ localId: user.uid, password: newPassword, returnSecureToken: false }),
+    });
+    if (!updateResponse.ok) return jsonResponse({ error: 'Firebase could not update the password' }, 502, env);
+
+    const profileUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${encodeURIComponent(user.uid)}`;
+    const profileResponse = await fetch(`${profileUrl}?updateMask.fieldPaths=passwordChangeRequired&updateMask.fieldPaths=passwordChangedAt`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: {
+        passwordChangeRequired: { booleanValue: false },
+        passwordChangedAt: { timestampValue: new Date().toISOString() },
+      } }),
+    });
+    if (!profileResponse.ok) return jsonResponse({ error: 'Password changed, but account setup could not be finalized; sign in again and retry' }, 502, env);
+    return jsonResponse({ success: true }, 200, env);
+  } catch (error) {
+    return jsonResponse({ error: error.message || 'Initial password change failed' }, error.status || 401, env);
   }
 }
 
@@ -512,7 +1924,8 @@ function jsonResponse(data, status = 200, env = null) {
 }
 
 function getCorsOrigin(env) {
-  const origin = env?.CORS_ORIGIN;
-  return origin && origin !== '*' ? origin : 'null';
+  const requestOrigin = env?.REQUEST_ORIGIN || '';
+  const allowedOrigins = String(env?.CORS_ORIGIN || '').split(',').map((origin) => origin.trim()).filter(Boolean);
+  return requestOrigin && allowedOrigins.includes(requestOrigin) ? requestOrigin : 'null';
 }
 

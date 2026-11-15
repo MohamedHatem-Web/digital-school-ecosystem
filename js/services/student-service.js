@@ -7,180 +7,87 @@ import {
   db,
   collection,
   doc,
+  getDoc,
   getDocs,
   query,
   where,
   setDoc,
+  deleteDoc,
   updateDoc,
   serverTimestamp,
+  writeBatch,
 } from '../firebase.js';
 import { getCurrentUser } from '../auth.js';
 import { DEFAULT_SCHOOL_ID } from './school-service.js';
 import { recordAuditEvent } from './audit-service.js';
+import { getFamilyStudentRecords, linkStudentToFamilyAccount } from './account-service.js';
+import { getSchoolClasses } from './academic-service.js';
 
 const CACHE_KEY_PREFIX = 'dse_students_';
-const CACHE_VERSION = 'v7';
+const CACHE_VERSION = 'v8';
+const ALLOWED_SECOND_LANGUAGES = new Set(['فرنساوي', 'ألماني', 'إيطالي']);
 const getCacheKey = (schoolId, user = getCurrentUser()) => {
-  const identity = user && ['student', 'parent'].includes(user.role)
-    ? `${user.role}_${user.uid || user.email || 'unknown'}`
-    : user?.role || 'public';
+  const identity = user?.role === 'teacher'
+    ? `teacher_${user.uid || user.email || 'unknown'}_${user.classId || 'unassigned'}`
+    : user && ['student', 'parent'].includes(user.role)
+      ? `${user.role}_${user.uid || user.email || 'unknown'}`
+      : user?.role || 'public';
   return `${CACHE_KEY_PREFIX}${CACHE_VERSION}_${schoolId}_${identity}`;
 };
 
 async function fetchStudentRecords(schoolId, user) {
   const studentsRef = collection(db, 'schools', schoolId, 'students');
-  let snapshots;
-
-  if (user?.role === 'student' && user.email) {
-    snapshots = [await getDocs(query(studentsRef, where('email', '==', user.email)))];
-  } else if (user?.role === 'parent') {
-    const filters = [];
-    if (user.email) filters.push(where('parentInfo.parentEmail', '==', user.email));
-    if (user.uid) {
-      filters.push(where('parentInfo.parentUid', '==', user.uid));
-      filters.push(where('linkedParentUid', '==', user.uid));
-    }
-    snapshots = await Promise.all(filters.map(filter => getDocs(query(studentsRef, filter))));
-  } else {
-    snapshots = [await getDocs(studentsRef)];
-  }
+  if (user?.role === 'teacher' && !user.classId) return [];
+  const snapshots = user?.role === 'teacher'
+    ? await getDocs(query(studentsRef, where('classId', '==', user.classId)))
+    : await getDocs(studentsRef);
 
   const records = new Map();
-  snapshots.forEach(snapshot => snapshot.forEach((studentDoc) => {
+  snapshots.forEach((studentDoc) => {
     records.set(studentDoc.id, sanitizeStudentRecord({ id: studentDoc.id, ...studentDoc.data() }, schoolId));
-  }));
+  });
   return [...records.values()];
 }
 
 /**
  * Authoritative record sanitizer to prevent stale Firestore records or old caches from overwriting correct sibling identities
  */
+export function generateOfficialStudentEmail(code, domain = 'cairo7.moe.edu.eg') {
+  const cleanCode = String(code || '').trim().replace(/[^0-9]/g, '');
+  if (!cleanCode) return '';
+  return `${cleanCode}@${domain}`;
+}
+
 export function sanitizeStudentRecord(student, schoolId = DEFAULT_SCHOOL_ID) {
   if (!student) return student;
-  if (student.code === '2026102' || student.id === 'stu_2026102' || (student.name && student.name.includes('مريم'))) {
-    student.id = 'stu_2026102';
-    student.code = '2026102';
-    student.name = 'مريم أحمد المنشاوي';
-    student.grade = 'الصف الأول الثانوي — فصل 1/2';
-    student.email = 'mariam@dse.edu.eg';
-    student.nationalId = student.nationalId || '30805120104567';
-    student.status = student.status || 'enrolled';
-    student.registeredDate = student.registeredDate || '2026-09-22';
-    student.notes = student.notes || 'طالبة متفوقة وملف القيد معتمد ومكتمل المستندات';
-    student.parentInfo = {
-      parentName: 'أ. أحمد المنشاوي',
-      parentEmail: 'parent@dse.edu.eg',
-      parentNationalId: '27508150101234',
-      parentPhone: '01098765432',
-      verifiedAt: '2026-09-22',
-    };
-    try {
-      const docRef = doc(db, 'schools', schoolId, 'students', 'stu_2026102');
-      setDoc(docRef, {
-        id: 'stu_2026102',
-        code: '2026102',
-        name: 'مريم أحمد المنشاوي',
-        grade: 'الصف الأول الثانوي — فصل 1/2',
-        email: 'mariam@dse.edu.eg',
-        nationalId: '30805120104567',
-        status: 'enrolled',
-        parentInfo: student.parentInfo,
-      }, { merge: true }).catch(() => {});
-    } catch (e) {}
-  } else if (student.code === '2026101' || student.id === 'stu_2026101' || (student.name && student.name.includes('يوسف'))) {
-    student.id = 'stu_2026101';
-    student.code = '2026101';
-    student.name = 'يوسف أحمد المنشاوي';
-    student.grade = 'الصف الأول الثانوي — فصل 1/1';
-    student.email = 'student@dse.edu.eg';
-    student.nationalId = student.nationalId || '30801010102345';
-    student.status = student.status || 'enrolled';
-    student.parentInfo = {
-      parentName: 'أ. أحمد المنشاوي',
-      parentEmail: 'parent@dse.edu.eg',
-      parentNationalId: '27508150101234',
-      parentPhone: '01098765432',
-      verifiedAt: '2026-09-20',
-    };
-  } else if (!student.code && student.id) {
+
+  student.id = student.id || `stu_${String(student.code || '').trim()}`;
+  student.code = String(student.code || '').trim() || (student.id ? student.id.replace(/\D/g, '') : '');
+  student.name = String(student.name || '').trim() || 'طالب غير مسجل';
+  student.grade = student.grade || 'غير محدد';
+  student.email = student.email || generateOfficialStudentEmail(student.code) || (student.code ? `${student.code}@dse.edu.eg` : '');
+  student.status = student.status || 'enrolled';
+  student.nationalId = student.nationalId || '';
+  student.secondLanguage = student.secondLanguage || '';
+  student.parentInfo = student.parentInfo || {
+    parentName: '',
+    parentPhone: '',
+    parentEmail: '',
+  };
+  student.parentInfo.parentName = student.parentInfo.parentName || 'غير مسجل';
+  student.parentInfo.parentPhone = student.parentInfo.parentPhone || student.parentInfo.phone || '';
+  student.parentInfo.parentEmail = String(student.parentInfo.parentEmail || '').trim().toLowerCase();
+
+  if (!student.code && student.id) {
     const numPart = student.id.replace(/\D/g, '');
     if (numPart) student.code = numPart;
   }
+
   return student;
 }
 
-export const DEFAULT_STUDENTS = [
-  {
-    id: 'stu_2026101',
-    name: 'يوسف أحمد المنشاوي',
-    code: '2026101',
-    nationalId: '30801010102345',
-    grade: 'الصف الأول الثانوي — فصل 1/1',
-    status: 'enrolled',
-    email: 'student@dse.edu.eg',
-    registeredDate: '2026-09-20',
-    notes: 'طالب متفوق مقيد رسمياً بالصف الأول الثانوي',
-    docs: [
-      { title: 'شهادة الميلاد المميكنة (PDF)', url: '#', date: '2026-09-21' },
-      { title: 'إقرار استلام التابلت المدرسي والتأمين', url: '#', date: '2026-10-15' }
-    ],
-    familyId: 'fam_2026101',
-    siblingCodes: ['2026102'],
-    parentInfo: {
-      parentName: 'أ. أحمد المنشاوي',
-      parentEmail: 'parent@dse.edu.eg',
-      parentNationalId: '27508150101234',
-      parentPhone: '01098765432',
-      verifiedAt: '2026-09-20',
-    },
-    schoolId: DEFAULT_SCHOOL_ID,
-  },
-  {
-    id: 'stu_2026102',
-    name: 'مريم أحمد المنشاوي',
-    code: '2026102',
-    nationalId: '30805120104567',
-    grade: 'الصف الأول الثانوي — فصل 1/2',
-    status: 'enrolled',
-    email: 'mariam@dse.edu.eg',
-    registeredDate: '2026-09-22',
-    notes: 'طالبة متفوقة وملف القيد معتمد ومكتمل المستندات',
-    docs: [
-      { title: 'شهادة الميلاد المميكنة (PDF)', url: '#', date: '2026-09-22' }
-    ],
-    familyId: 'fam_2026101',
-    siblingCodes: ['2026101'],
-    parentInfo: {
-      parentName: 'أ. أحمد المنشاوي',
-      parentEmail: 'parent@dse.edu.eg',
-      parentNationalId: '27508150101234',
-      parentPhone: '01098765432',
-      verifiedAt: '2026-09-22',
-    },
-    schoolId: DEFAULT_SCHOOL_ID,
-  },
-  {
-    id: 'stu_2026103',
-    name: 'زياد محمود عبد الرحمن',
-    code: '2026103',
-    nationalId: '30811040108901',
-    grade: 'الصف الأول الثانوي — فصل 1/1',
-    status: 'enrolled',
-    registeredDate: '2026-09-25',
-    notes: 'تم فحص الرقم القومي واعتماد استمارة القيد',
-    docs: [],
-    familyId: 'fam_2026103',
-    siblingCodes: [],
-    parentInfo: {
-      parentName: 'أ. محمود عبد الرحمن سالم',
-      parentEmail: 'affairs@dse.edu.eg',
-      parentNationalId: '27609200105432',
-      parentPhone: '01234567890',
-      verifiedAt: '2026-09-25',
-    },
-    schoolId: DEFAULT_SCHOOL_ID,
-  }
-];
+export const DEFAULT_STUDENTS = [];
+
 
 /**
  * Fetch all students enrolled in a specific school
@@ -188,16 +95,16 @@ export const DEFAULT_STUDENTS = [
 export async function getStudents(schoolId = DEFAULT_SCHOOL_ID) {
   const currentUser = getCurrentUser();
   const cacheKey = getCacheKey(schoolId, currentUser);
-  
-  // Purge any stale cache keys across versions
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith(CACHE_KEY_PREFIX) && k !== cacheKey) {
-        localStorage.removeItem(k);
-      }
+
+  if (['student', 'parent'].includes(currentUser?.role)) {
+    try {
+      const familyRecords = await getFamilyStudentRecords();
+      return familyRecords.map((student) => sanitizeStudentRecord(student, schoolId));
+    } catch (error) {
+      console.warn('Family student records request failed:', error);
+      return [];
     }
-  } catch (e) { /* ignore */ }
+  }
 
   let cachedList = null;
   const cachedStr = localStorage.getItem(cacheKey);
@@ -212,60 +119,37 @@ export async function getStudents(schoolId = DEFAULT_SCHOOL_ID) {
   }
 
   // Cache-first: return immediately for 0ms render, refresh Firestore in background
-  if (cachedList) {
+  if (cachedList && !['student', 'parent'].includes(currentUser?.role)) {
     try {
       fetchStudentRecords(schoolId, currentUser)
         .then((list) => {
           localStorage.setItem(cacheKey, JSON.stringify(list));
         })
-        .catch(() => {});
+        .catch((error) => console.warn('Firestore student cache refresh notice:', error));
     } catch (e) { /* ignore */ }
     return cachedList;
   }
 
-  // If clean mode is enabled for real school operation, return clean empty list
-  if (localStorage.getItem(`dse_clean_mode_${schoolId}`) === 'true') {
-    localStorage.setItem(cacheKey, JSON.stringify([]));
-    return [];
-  }
-
-  // Provision initial authoritative school records if entirely empty
-  let initialList = DEFAULT_STUDENTS.map(s => sanitizeStudentRecord({ ...s, schoolId }, schoolId));
+  // Clean mode disables demo seeding; it must not hide real Firestore records.
+  let initialList = [];
   if (currentUser?.role === 'student') {
-    initialList = initialList.filter(student => student.email === currentUser.email);
+    initialList = initialList.filter(Boolean);
   } else if (currentUser?.role === 'parent') {
-    initialList = initialList.filter(student =>
-      student.parentInfo?.parentEmail === currentUser.email ||
-      student.parentInfo?.parentUid === currentUser.uid ||
-      student.linkedParentUid === currentUser.uid
-    );
+    initialList = initialList.filter(Boolean);
   }
   localStorage.setItem(cacheKey, JSON.stringify(initialList));
 
-  if (['student', 'parent'].includes(currentUser?.role)) {
-    try {
-      const remoteList = await Promise.race([
-        fetchStudentRecords(schoolId, currentUser),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Student records timed out')), 2500)),
-      ]);
-      localStorage.setItem(cacheKey, JSON.stringify(remoteList));
-      return remoteList;
-    } catch (error) {
-      return initialList;
-    }
-  }
-
-  // Sync to Firestore asynchronously
   try {
-    for (const student of initialList) {
-      const docRef = doc(db, 'schools', schoolId, 'students', student.id);
-      setDoc(docRef, { ...student, createdAt: serverTimestamp() }, { merge: true }).catch(() => {});
-    }
-  } catch (e) {
-    // ignore
+    const remoteList = await Promise.race([
+      fetchStudentRecords(schoolId, currentUser),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Student records timed out')), 2500)),
+    ]);
+    localStorage.setItem(cacheKey, JSON.stringify(remoteList));
+    return remoteList;
+  } catch (error) {
+    console.warn('Firestore getStudents notice:', error);
+    return initialList;
   }
-
-  return initialList;
 }
 
 /**
@@ -285,18 +169,34 @@ export async function updateStudent(updatePayload, schoolId = DEFAULT_SCHOOL_ID)
   }
 
   const current = existing[targetIndex];
+  const secondLanguage = String(updatePayload.secondLanguage ?? current.secondLanguage ?? '').trim();
+  if (!ALLOWED_SECOND_LANGUAGES.has(secondLanguage)) {
+    throw new Error('اختر اللغة الأجنبية الثانية: فرنساوي أو ألماني أو إيطالي.');
+  }
   const nidCalc = updatePayload.nationalId ? extractStudentDetailsFromNID(updatePayload.nationalId) : null;
 
   const updatedStudent = {
     ...current,
     name: cleanName,
+    email: generateOfficialStudentEmail(cleanCode),
     nationalId: updatePayload.nationalId !== undefined ? String(updatePayload.nationalId).trim() : current.nationalId,
     birthDate: updatePayload.birthDate !== undefined ? updatePayload.birthDate : (nidCalc ? nidCalc.birthDate : current.birthDate),
     ageOct1: updatePayload.ageOct1 !== undefined ? updatePayload.ageOct1 : (nidCalc ? nidCalc.ageOct1 : current.ageOct1),
     gender: updatePayload.gender !== undefined ? updatePayload.gender : (nidCalc ? nidCalc.gender : current.gender),
     religion: updatePayload.religion !== undefined ? updatePayload.religion : current.religion,
+    secondLanguage,
+    nationality: updatePayload.nationality !== undefined ? updatePayload.nationality : current.nationality,
     address: updatePayload.address !== undefined ? updatePayload.address : current.address,
     studentPhone: updatePayload.studentPhone !== undefined ? updatePayload.studentPhone : current.studentPhone,
+    registeredDate: updatePayload.registeredDate !== undefined ? updatePayload.registeredDate : current.registeredDate,
+    academicYear: updatePayload.academicYear !== undefined ? updatePayload.academicYear : current.academicYear,
+    admissionType: updatePayload.admissionType !== undefined ? updatePayload.admissionType : current.admissionType,
+    previousSchool: updatePayload.previousSchool !== undefined ? updatePayload.previousSchool : current.previousSchool,
+    transferDestinationSchool: updatePayload.transferDestinationSchool !== undefined ? updatePayload.transferDestinationSchool : current.transferDestinationSchool,
+    transferDate: updatePayload.transferDate !== undefined ? updatePayload.transferDate : current.transferDate,
+    tuitionStatus: updatePayload.tuitionStatus !== undefined ? updatePayload.tuitionStatus : current.tuitionStatus,
+    tuitionAmount: updatePayload.tuitionAmount !== undefined ? updatePayload.tuitionAmount : current.tuitionAmount,
+    tuitionReceiptNumber: updatePayload.tuitionReceiptNumber !== undefined ? updatePayload.tuitionReceiptNumber : current.tuitionReceiptNumber,
     grade: updatePayload.grade || current.grade,
     status: updatePayload.status || current.status,
     notes: updatePayload.notes !== undefined ? updatePayload.notes : current.notes,
@@ -308,7 +208,7 @@ export async function updateStudent(updatePayload, schoolId = DEFAULT_SCHOOL_ID)
     const docRef = doc(db, 'schools', schoolId, 'students', updatedStudent.id || `stu_${cleanCode}`);
     await setDoc(docRef, { ...updatedStudent, updatedAt: serverTimestamp() }, { merge: true });
   } catch (err) {
-    console.warn('Firestore updateStudent write notice:', err);
+    throw new Error(`تعذر حفظ تعديل بيانات الطالب على خادم المدرسة: ${err.message || 'تحقق من الاتصال والصلاحيات.'}`);
   }
 
   existing[targetIndex] = updatedStudent;
@@ -330,18 +230,22 @@ export const createStudent = registerStudent;
 export async function deleteStudent(studentId, schoolId = DEFAULT_SCHOOL_ID) {
   const existing = await getStudents(schoolId);
   const target = existing.find(s => s.id === studentId || s.code === studentId);
-  const updated = existing.filter(s => s.id !== studentId && s.code !== studentId);
+  if (!target) throw new Error('ملف الطالب غير موجود في سجل المدرسة الحالي.');
+  try {
+    await deleteDoc(doc(db, 'schools', schoolId, 'students', target.id || `stu_${target.code}`));
+  } catch (err) {
+    throw new Error(`تعذر حذف ملف الطالب من خادم المدرسة: ${err.message || 'تحقق من الاتصال والصلاحيات.'}`);
+  }
+  const updated = existing.filter(s => s.id !== target.id && s.code !== target.code);
   localStorage.setItem(getCacheKey(schoolId), JSON.stringify(updated));
 
-  if (target) {
-    await recordAuditEvent({
-      action: 'شطب أو أرشفة ملف قيد طالب',
-      target: `${target.name} (كود: ${target.code})`,
-      details: `تمت الأرشفة بواسطة الإدارة`,
-      operatorRole: 'student_affairs',
-      schoolId,
-    });
-  }
+  await recordAuditEvent({
+    action: 'شطب أو أرشفة ملف قيد طالب',
+    target: `${target.name} (كود: ${target.code})`,
+    details: 'تم الحذف بعد تأكيد الكتابة على خادم المدرسة',
+    operatorRole: 'student_affairs',
+    schoolId,
+  });
   return true;
 }
 
@@ -399,8 +303,25 @@ export async function registerStudent(studentPayload, schoolId = DEFAULT_SCHOOL_
   if (!cleanCode || !cleanName) {
     throw new Error('يرجى استيفاء اسم الطالب وكود القيد بوزارة التربية والتعليم.');
   }
+  if (!String(studentPayload.grade || '').trim()) {
+    throw new Error('يرجى اختيار صف وفصل معتمدين من الهيكل المدرسي.');
+  }
+  if (!ALLOWED_SECOND_LANGUAGES.has(String(studentPayload.secondLanguage || '').trim())) {
+    throw new Error('اختر اللغة الأجنبية الثانية: فرنساوي أو ألماني أو إيطالي.');
+  }
 
-  // Check uniqueness of student code
+  const studentId = `stu_${cleanCode}`;
+  let existingStudentSnapshot;
+  try {
+    existingStudentSnapshot = await getDoc(doc(db, 'schools', schoolId, 'students', studentId));
+  } catch (error) {
+    throw new Error(`تعذر التحقق من عدم تكرار كود الطالب على خادم المدرسة: ${error.message || 'تحقق من الاتصال والصلاحيات.'}`);
+  }
+  if (existingStudentSnapshot.exists()) {
+    throw new Error(`كود الطالب (${cleanCode}) مسجل بالفعل مسبقاً في هذه المدرسة.`);
+  }
+
+  // Cache is supplementary; the authoritative duplicate check is the server read above.
   const existing = await getStudents(schoolId);
   if (existing.some((s) => s.code === cleanCode)) {
     throw new Error(`كود الطالب (${cleanCode}) مسجل بالفعل مسبقاً في هذه المدرسة.`);
@@ -440,7 +361,6 @@ export async function registerStudent(studentPayload, schoolId = DEFAULT_SCHOOL_
   const gender = studentPayload.gender || (nidCalc ? nidCalc.gender : 'ذكر');
   const ageOct1 = studentPayload.ageOct1 || (nidCalc ? nidCalc.ageOct1 : '');
 
-  const studentId = `stu_${cleanCode}`;
   const studentData = {
     id: studentId,
     name: cleanName,
@@ -450,43 +370,69 @@ export async function registerStudent(studentPayload, schoolId = DEFAULT_SCHOOL_
     ageOct1,
     gender,
     religion: studentPayload.religion || 'مسلم',
+    secondLanguage: studentPayload.secondLanguage || '',
+    nationality: studentPayload.nationality || 'مصري',
     address: studentPayload.address || 'القاهرة الجديدة',
     studentPhone: studentPayload.studentPhone || '',
-    grade: studentPayload.grade || 'الصف الأول الثانوي — فصل 1/1',
+    grade: String(studentPayload.grade).trim(),
     status: studentPayload.status || 'enrolled',
+    admissionType: studentPayload.admissionType || (studentPayload.status === 'transferred' ? 'transfer_in' : studentPayload.status === 'transferred_out' ? 'transfer_out' : 'new'),
+    academicYear: studentPayload.academicYear || '2026/2027',
+    previousSchool: studentPayload.previousSchool || '',
+    transferDestinationSchool: studentPayload.transferDestinationSchool || '',
+    transferDate: studentPayload.transferDate || '',
+    tuitionStatus: studentPayload.tuitionStatus || 'unrecorded',
+    tuitionAmount: Number(studentPayload.tuitionAmount) || 0,
+    tuitionReceiptNumber: studentPayload.tuitionReceiptNumber || '',
     schoolId,
-    email: studentPayload.email || `${cleanCode}@dse.edu.eg`,
+    email: studentPayload.email || generateOfficialStudentEmail(cleanCode),
     registeredDate: studentPayload.registeredDate || new Date().toISOString().split('T')[0],
     notes: studentPayload.notes || '',
     docs: [],
     familyId: resolvedFamilyId,
     siblingCodes: siblingCodesList,
     parentInfo: resolvedParentInfo,
+    accountStatus: 'pending_activation',
+    registeredDate: studentPayload.registeredDate || new Date().toISOString().split('T')[0],
   };
 
+  const studentDocRef = doc(db, 'schools', schoolId, 'students', studentId);
   try {
-    const docRef = doc(db, 'schools', schoolId, 'students', studentId);
-    await setDoc(docRef, {
+    await setDoc(studentDocRef, {
       ...studentData,
       createdAt: serverTimestamp(),
     });
   } catch (err) {
-    console.warn('Firestore registerStudent write notice:', err);
+    throw new Error(`تعذر اعتماد القيد على خادم المدرسة، ولم يُسجل الطالب رسمياً: ${err.message || 'تحقق من الاتصال والصلاحيات.'}`);
   }
 
+  let familyLinkPending = false;
+  try {
+    await linkStudentToFamilyAccount({ studentCode: cleanCode, schoolId });
+  } catch (error) {
+    familyLinkPending = true;
+    console.warn('Parent family link will need a retry:', error.message);
+  }
+
+  const registeredStudent = { ...studentData };
+
   // Update local cache
-  const updatedList = [studentData, ...existing.filter((s) => s.code !== cleanCode)];
+  const updatedList = [registeredStudent, ...existing.filter((s) => s.code !== cleanCode)];
   localStorage.setItem(getCacheKey(schoolId), JSON.stringify(updatedList));
 
   await recordAuditEvent({
     action: 'تسجيل وقيد ملف طالب رسمي بوزارة التربية والتعليم',
     target: `${cleanName} (كود: ${cleanCode})`,
-    details: `المرحلة: ${studentData.grade} | الرقم القومي: ${cleanNid || '—'}${studentPayload.siblingCode ? ` | ارتباط شقيق: ${studentPayload.siblingCode}` : ''}`,
+    details: `المرحلة: ${studentData.grade} | تم حفظ ملف القيد، وحساب الطالب ينتظر موافقة ولي الأمر وتفعيله${studentPayload.siblingCode ? ` | ارتباط شقيق: ${studentPayload.siblingCode}` : ''}`,
     operatorRole: 'student_affairs',
     schoolId,
   });
 
-  return studentData;
+  return {
+    ...registeredStudent,
+    accountEmail: studentData.email,
+    familyLinkPending,
+  };
 }
 
 /**
@@ -506,9 +452,15 @@ export async function bulkImportStudents(studentsList = [], schoolId = DEFAULT_S
     const s = studentsList[i];
     const code = String(s.code || '').trim();
     const name = String(s.name || '').trim();
+    const grade = String(s.grade || '').trim();
+    const secondLanguage = String(s.secondLanguage || '').trim();
 
-    if (!code || !name) {
-      errors.push(`السطر ${i + 1}: الاسم وكود الطالب مطلوبان.`);
+    if (!code || !name || !grade || !secondLanguage) {
+      errors.push(`السطر ${i + 1}: الاسم وكود الطالب والصف واللغة الثانية مطلوبة.`);
+      continue;
+    }
+    if (!ALLOWED_SECOND_LANGUAGES.has(secondLanguage)) {
+      errors.push(`السطر ${i + 1}: اللغة الثانية يجب أن تكون فرنساوي أو ألماني أو إيطالي.`);
       continue;
     }
     if (existingCodes.has(code)) {
@@ -529,12 +481,22 @@ export async function bulkImportStudents(studentsList = [], schoolId = DEFAULT_S
       ageOct1: s.ageOct1 || (nidCalc ? nidCalc.ageOct1 : ''),
       gender: s.gender || (nidCalc ? nidCalc.gender : 'ذكر'),
       religion: s.religion || 'مسلم',
+      secondLanguage,
+      nationality: s.nationality || 'مصري',
       address: s.address || 'القاهرة الجديدة',
       studentPhone: s.studentPhone || '',
-      grade: s.grade || 'الصف الأول الثانوي — فصل 1/1',
+      grade,
       status: s.status || 'enrolled',
+      admissionType: s.admissionType || (s.status === 'transferred' ? 'transfer_in' : s.status === 'transferred_out' ? 'transfer_out' : 'new'),
+      academicYear: s.academicYear || '2026/2027',
+      previousSchool: s.previousSchool || '',
+      transferDestinationSchool: s.transferDestinationSchool || '',
+      transferDate: s.transferDate || '',
+      tuitionStatus: s.tuitionStatus || 'unrecorded',
+      tuitionAmount: Number(s.tuitionAmount) || 0,
+      tuitionReceiptNumber: s.tuitionReceiptNumber || '',
       schoolId,
-      email: s.email || `${code}@dse.edu.eg`,
+      email: s.email || generateOfficialStudentEmail(code),
       registeredDate: new Date().toISOString().split('T')[0],
       notes: s.notes || 'تم القيد عبر استيراد كشف رسمي مجمع',
       docs: [],
@@ -546,15 +508,17 @@ export async function bulkImportStudents(studentsList = [], schoolId = DEFAULT_S
         parentNationalId: s.parentNationalId || s.parentInfo?.parentNationalId || '',
         parentRelation: s.parentRelation || 'أب',
         parentJob: s.parentJob || '',
+        parentAddress: s.parentAddress || '',
       },
     };
 
-    newStudents.push(studentRecord);
-
     try {
       const docRef = doc(db, 'schools', schoolId, 'students', studentId);
-      setDoc(docRef, { ...studentRecord, createdAt: serverTimestamp() }).catch(() => {});
-    } catch (e) {}
+      await setDoc(docRef, { ...studentRecord, createdAt: serverTimestamp() });
+      newStudents.push(studentRecord);
+    } catch (e) {
+      errors.push(`السطر ${i + 1}: تعذر الحفظ على خادم المدرسة (${e.message || 'خطأ صلاحيات أو اتصال'}).`);
+    }
   }
 
   if (newStudents.length > 0) {
@@ -575,6 +539,95 @@ export async function bulkImportStudents(studentsList = [], schoolId = DEFAULT_S
     totalAttempted: studentsList.length,
     errors,
   };
+}
+
+export async function saveClassAllocation(allocation, currentStudents = [], schoolId = DEFAULT_SCHOOL_ID) {
+  if (!allocation?.classes?.length || !allocation.assignments?.length) {
+    throw new Error('لا يوجد توزيع صالح للحفظ. راجع بيانات الطلاب أولاً.');
+  }
+
+  const classes = await getSchoolClasses(schoolId);
+  const previousClasses = classes.filter((item) =>
+    item.allocationManaged &&
+    item.grade === allocation.grade &&
+    item.academicYear === allocation.academicYear);
+  const previousClassIds = new Set(previousClasses.map((item) => item.id));
+  const nextClassIds = new Set(allocation.classes.map((item) => item.id));
+  const assignmentsByCode = new Map(allocation.assignments.map((item) => [String(item.code), item]));
+  const assignedCodes = new Set(assignmentsByCode.keys());
+  const studentsToClear = currentStudents.filter((student) =>
+    previousClassIds.has(student.classId) && !assignedCodes.has(String(student.code || student.studentCode || '')));
+
+  if (assignmentsByCode.size !== allocation.assignments.length) {
+    throw new Error('توجد أكواد طلاب مكررة داخل خطة التوزيع؛ لم يتم حفظ أي تغيير.');
+  }
+  if (allocation.classes.length + allocation.assignments.length + studentsToClear.length > 450) {
+    throw new Error('عدد الطلاب أكبر من الحد الآمن للحفظ في عملية واحدة. نفّذ التوزيع على صف أصغر.');
+  }
+
+  const batch = writeBatch(db);
+  const now = serverTimestamp();
+  allocation.classes.forEach((classRecord) => {
+    batch.set(doc(db, 'schools', schoolId, 'classes', classRecord.id), {
+      ...classRecord,
+      schoolId,
+      updatedAt: now,
+    });
+  });
+  allocation.assignments.forEach((assignment) => {
+    batch.update(doc(db, 'schools', schoolId, 'students', `stu_${assignment.code}`), {
+      classId: assignment.classId,
+      className: assignment.className,
+      grade: assignment.grade,
+      gradeName: assignment.gradeName,
+      secondLanguage: assignment.secondLanguage,
+      religion: assignment.religion,
+      academicYear: assignment.academicYear,
+      updatedAt: now,
+    });
+  });
+  studentsToClear.forEach((student) => {
+    const gradeName = student.gradeName || String(student.grade || '').split(/\s*[—–-]\s*/)[0].trim();
+    batch.update(doc(db, 'schools', schoolId, 'students', student.id || `stu_${student.code}`), {
+      classId: '',
+      className: '',
+      grade: gradeName,
+      gradeName,
+      updatedAt: now,
+    });
+  });
+  previousClasses.filter((item) => !nextClassIds.has(item.id)).forEach((item) => {
+    batch.delete(doc(db, 'schools', schoolId, 'classes', item.id));
+  });
+
+  try {
+    await batch.commit();
+  } catch (error) {
+    throw new Error(`تعذر حفظ توزيع الفصول؛ لم يتم اعتماد التغييرات: ${error.message || 'تحقق من الصلاحيات والاتصال.'}`);
+  }
+
+  const updatedStudents = currentStudents.map((student) => {
+    const code = String(student.code || student.studentCode || '');
+    const assignment = assignmentsByCode.get(code);
+    if (assignment) return { ...student, ...assignment };
+    if (previousClassIds.has(student.classId)) {
+      const gradeName = student.gradeName || String(student.grade || '').split(/\s*[—–-]\s*/)[0].trim();
+      return { ...student, grade: gradeName, gradeName, classId: '', className: '' };
+    }
+    return student;
+  });
+  const retainedClasses = classes.filter((item) => !previousClassIds.has(item.id));
+  localStorage.setItem(`${CACHE_KEY_PREFIX}${CACHE_VERSION}_${schoolId}_${getCurrentUser()?.role || 'public'}`, JSON.stringify(updatedStudents));
+  localStorage.setItem(`dse_academic_classes_${schoolId}`, JSON.stringify([...allocation.classes, ...retainedClasses]));
+
+  await recordAuditEvent({
+    action: 'توزيع الطلاب على الفصول حسب اللغة والديانة والنوع',
+    target: `${allocation.grade} — ${allocation.academicYear}`,
+    details: `${allocation.eligibleCount} طالبًا في ${allocation.classes.length} فصلًا، بحد أقصى 25 طالبًا من كل نوع.`,
+    operatorRole: 'student_affairs',
+    schoolId,
+  });
+  return { ...allocation, clearedCount: studentsToClear.length };
 }
 
 /**

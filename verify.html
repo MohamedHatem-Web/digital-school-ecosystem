@@ -6,8 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>التحقق الرقمي الفوري — المنظومة الرقمية الموحدة للمؤسسات التعليمية</title>
   <link rel="stylesheet" href="./css/tokens.css?v=11.0">
-  <link rel="stylesheet" href="./css/base.css?v=11.0">
-  <link rel="stylesheet" href="./css/components.css?v=11.0">
+  <link rel="stylesheet" href="./css/base.css?v=11.1">
+  <link rel="stylesheet" href="./css/components.css?v=17.2">
   <link rel="manifest" href="./manifest.webmanifest">
   <meta name="theme-color" content="#0a1628">
   <style>
@@ -110,6 +110,7 @@
     .verify-input-group {
       display: flex;
       gap: var(--space-2);
+      flex-wrap: wrap;
       margin-bottom: var(--space-4);
     }
     .verify-input-group input {
@@ -127,6 +128,32 @@
       direction: ltr;
       background: var(--bg-surface-subtle);
       color: var(--text-primary);
+    }
+    .verify-camera-panel {
+      display: none;
+      padding: var(--space-3);
+      margin-bottom: var(--space-4);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      background: var(--bg-surface-subtle);
+    }
+    .verify-camera-panel.is-open { display: block; }
+    .verify-camera-panel video {
+      display: block;
+      width: 100%;
+      max-height: 320px;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      border-radius: var(--radius-sm);
+      background: #000;
+    }
+    .verify-camera-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-2);
+      flex-wrap: wrap;
+      margin-top: var(--space-2);
     }
     .verify-input-group input:focus {
       border-color: #2563eb;
@@ -260,6 +287,15 @@
       <div class="verify-input-group">
         <input type="text" id="token-input" placeholder="مثال: GP-2026-001-YAM" autocomplete="off">
         <button type="button" id="verify-btn" class="btn btn-primary">🔍 تحقق</button>
+        <button type="button" id="verify-camera-btn" class="btn btn-outline" aria-expanded="false">📷 مسح QR</button>
+      </div>
+
+      <div id="verify-camera-panel" class="verify-camera-panel" aria-live="polite">
+        <video id="verify-camera" playsinline muted></video>
+        <div class="verify-camera-controls">
+          <span id="verify-camera-status" role="status">وجّه الكاميرا إلى رمز QR للمستند.</span>
+          <button type="button" id="verify-camera-stop" class="btn btn-outline btn-sm">إيقاف الكاميرا</button>
+        </div>
       </div>
 
       <div class="verify-loading" id="verify-loading">
@@ -284,7 +320,7 @@
   </div>
 
   <script type="module">
-    import { verifyGatePassByToken } from './js/services/gate-pass-service.js';
+    import { getVerifiedDocument, VERIFIABLE_DOCUMENT_TYPES } from './js/services/qr-service.js';
 
     const tokenInput = document.getElementById('token-input');
     const verifyBtn = document.getElementById('verify-btn');
@@ -295,15 +331,18 @@
     const resultMsg = document.getElementById('result-msg');
     const resultDetails = document.getElementById('result-details');
     const detailsTable = document.getElementById('details-table');
-
-    const DOC_TYPES = {
-      gate_pass: 'تصريح خروج مبكر',
-      enrollment: 'إفادة قيد رسمية',
-      tablet_receipt: 'محضر استلام تابلت',
-      attendance_cert: 'شهادة انتظام حضور',
-      transfer_cert: 'مستند تحويل مدرسي',
-      disciplinary: 'إنذار سلوكي',
-    };
+    const themeToggle = document.getElementById('verify-theme-toggle');
+    const themeIcon = themeToggle?.querySelector('.theme-icon-badge');
+    const cameraButton = document.getElementById('verify-camera-btn');
+    const cameraPanel = document.getElementById('verify-camera-panel');
+    const cameraVideo = document.getElementById('verify-camera');
+    const cameraStatus = document.getElementById('verify-camera-status');
+    const cameraStopButton = document.getElementById('verify-camera-stop');
+    let cameraStream = null;
+    let cameraControls = null;
+    let cameraFrame = 0;
+    let cameraActive = false;
+    let cameraDetectionPending = false;
 
     function formatDateTime(isoStr) {
       if (!isoStr) return '—';
@@ -329,54 +368,192 @@
       }
     }
 
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, (character) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+      })[character]);
+    }
+
+    function setTheme(theme) {
+      const selectedTheme = theme === 'dark' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', selectedTheme);
+      try { localStorage.setItem('dse_theme', selectedTheme); } catch (error) {}
+      if (themeIcon) themeIcon.textContent = selectedTheme === 'dark' ? '☀️' : '🌙';
+      if (themeToggle) {
+        themeToggle.setAttribute('aria-label', selectedTheme === 'dark' ? 'التبديل إلى الوضع النهاري' : 'التبديل إلى الوضع الليلي');
+        themeToggle.title = selectedTheme === 'dark' ? 'التبديل إلى الوضع النهاري' : 'التبديل إلى الوضع الليلي';
+      }
+      const themeColor = document.querySelector('meta[name="theme-color"]');
+      if (themeColor) themeColor.content = selectedTheme === 'dark' ? '#0a1628' : '#f0f4fc';
+    }
+
+    function stopQrScanner() {
+      cameraActive = false;
+      if (cameraFrame) cancelAnimationFrame(cameraFrame);
+      cameraFrame = 0;
+      cameraControls?.stop();
+      cameraControls = null;
+      cameraStream?.getTracks().forEach((track) => track.stop());
+      cameraStream = null;
+      if (cameraVideo) cameraVideo.srcObject = null;
+      cameraPanel?.classList.remove('is-open');
+      cameraButton?.setAttribute('aria-expanded', 'false');
+      if (cameraButton) cameraButton.textContent = '📷 مسح QR';
+    }
+
+    async function startQrScanner() {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        cameraPanel?.classList.add('is-open');
+        cameraStatus.textContent = 'الكاميرا غير متاحة. تأكد من استخدام اتصال آمن والسماح للمتصفح بالكاميرا.';
+        return;
+      }
+
+      cameraPanel?.classList.add('is-open');
+      cameraButton?.setAttribute('aria-expanded', 'true');
+      cameraStatus.textContent = 'جارٍ طلب إذن الكاميرا...';
+      try {
+        let detector = null;
+        let fallbackReader = null;
+        if ('BarcodeDetector' in window) {
+          const supportedFormats = await BarcodeDetector.getSupportedFormats();
+          if (supportedFormats.includes('qr_code')) detector = new BarcodeDetector({ formats: ['qr_code'] });
+        }
+        if (!detector) {
+          cameraStatus.textContent = 'جارٍ تحميل قارئ QR المتوافق مع هذا المتصفح...';
+          const { BrowserQRCodeReader } = await import('https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm');
+          fallbackReader = new BrowserQRCodeReader();
+        }
+
+        if (fallbackReader) {
+          cameraActive = true;
+          cameraStatus.textContent = 'وجّه الكاميرا إلى رمز QR للمستند.';
+          cameraControls = await fallbackReader.decodeFromVideoDevice(undefined, cameraVideo, (result, error, controls) => {
+            if (controls && !cameraControls) cameraControls = controls;
+            if (!cameraActive || !result) return;
+            const rawValue = result.getText().trim();
+            let token = rawValue;
+            try { token = new URL(rawValue, window.location.href).searchParams.get('token') || rawValue; } catch (parseError) {}
+            tokenInput.value = token.trim().toUpperCase();
+            cameraStatus.textContent = 'تمت قراءة الرمز، جارٍ التحقق...';
+            stopQrScanner();
+            doVerify();
+          });
+          return;
+        }
+
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: { ideal: 'environment' } },
+        });
+        cameraVideo.srcObject = cameraStream;
+        await cameraVideo.play();
+        cameraActive = true;
+        cameraStatus.textContent = 'وجّه الكاميرا إلى رمز QR للمستند.';
+
+        const scanFrame = async () => {
+          if (!cameraActive) return;
+          if (cameraVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && !cameraDetectionPending) {
+            cameraDetectionPending = true;
+            try {
+              const codes = await detector.detect(cameraVideo);
+              const rawValue = codes[0]?.rawValue?.trim();
+              if (rawValue) {
+                let token = rawValue;
+                try { token = new URL(rawValue, window.location.href).searchParams.get('token') || rawValue; } catch (error) {}
+                tokenInput.value = token.trim().toUpperCase();
+                cameraStatus.textContent = 'تمت قراءة الرمز، جارٍ التحقق...';
+                stopQrScanner();
+                doVerify();
+                return;
+              }
+            } catch (error) {
+              cameraStatus.textContent = 'لم يتمكن المتصفح من قراءة الرمز. ثبّت الكاميرا على الرمز وحاول مجددًا.';
+            } finally {
+              cameraDetectionPending = false;
+            }
+          }
+          cameraFrame = requestAnimationFrame(scanFrame);
+        };
+        cameraFrame = requestAnimationFrame(scanFrame);
+      } catch (error) {
+        stopQrScanner();
+        cameraPanel?.classList.add('is-open');
+        cameraButton?.setAttribute('aria-expanded', 'true');
+        cameraStatus.textContent = error.name === 'NotAllowedError'
+          ? 'لم يتم منح إذن الكاميرا. اسمح للمتصفح باستخدام الكاميرا ثم حاول مجددًا.'
+          : error.message || 'تعذر تشغيل الكاميرا.';
+      }
+    }
+
+    const initialTheme = (() => {
+      try { return localStorage.getItem('dse_theme') || 'light'; } catch (error) { return 'light'; }
+    })();
+    setTheme(initialTheme);
+    themeToggle?.addEventListener('click', () => {
+      setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    });
+    cameraButton?.addEventListener('click', () => {
+      if (cameraActive) stopQrScanner();
+      else startQrScanner();
+    });
+    cameraStopButton?.addEventListener('click', stopQrScanner);
+    window.addEventListener('pagehide', stopQrScanner);
     async function doVerify() {
       const token = tokenInput.value.trim().toUpperCase();
       if (!token) { tokenInput.focus(); return; }
 
       resultArea.style.display = 'none';
       loadingEl.style.display = 'block';
+      verifyBtn.disabled = true;
 
-      const urlParams = new URLSearchParams(window.location.search);
-      const docType = urlParams.get('type') || (token.startsWith('GP-') ? 'gate_pass' : 'unknown');
-
-      await new Promise(r => setTimeout(r, 800));
-
-      if (docType === 'gate_pass' || token.startsWith('GP-')) {
-        const result = await verifyGatePassByToken(token);
-        if (result.valid && !result.used) {
-          const p = result.pass;
-          showResult('success', '✅', 'مستند رسمي صحيح ومعتمد', result.message,
-            `<tr><td>نوع المستند:</td><td>🚪 تصريح خروج مبكر</td></tr>
-             <tr><td>اسم الطالب:</td><td><strong>${p.studentName}</strong></td></tr>
-             <tr><td>كود الطالب:</td><td><code>${p.studentCode}</code></td></tr>
-             <tr><td>الفصل:</td><td>${p.studentClass || '—'}</td></tr>
-             <tr><td>سبب الخروج:</td><td>${p.reasonLabel}</td></tr>
-             <tr><td>ولي الأمر:</td><td>${p.parentName || '—'}</td></tr>
-             <tr><td>معتمد بواسطة:</td><td>${p.approvedBy || '—'}</td></tr>
-             <tr><td>تاريخ الاعتماد:</td><td>${formatDateTime(p.approvedAt)}</td></tr>
-             <tr><td>رمز التحقق:</td><td><code style="letter-spacing:2px;">${p.qrToken}</code></td></tr>`);
-        } else if (result.valid && result.used) {
-          const p = result.pass;
-          showResult('warning', '⚠️', 'تصريح مستخدم مسبقاً', result.message,
-            `<tr><td>اسم الطالب:</td><td><strong>${p.studentName}</strong></td></tr>
-             <tr><td>تم الخروج في:</td><td>${formatDateTime(p.securityExitTime)}</td></tr>
-             <tr><td>معتمد بواسطة:</td><td>${p.approvedBy || '—'}</td></tr>
-             <tr><td>الحالة:</td><td><span style="color:#b45309;font-weight:700;">تم الاستخدام — لا يمكن إعادة الاستخدام</span></td></tr>`);
-        } else {
-          showResult('danger', '❌', 'مستند غير صالح', result.message);
+      try {
+        const documentRecord = await getVerifiedDocument(token);
+        if (!documentRecord) {
+          showResult('danger', '❌', 'المستند غير مسجل', 'لم يُعثر على سجل إصدار لهذا الرمز. لا يكفي شكل الرمز لإثبات صحة المستند.');
+          return;
         }
-      } else if (['ENR-','TAB-','ATT-','TRF-','DSC-'].some(px => token.startsWith(px))) {
-        const prefix = token.split('-')[0];
-        const typeKey = { ENR: 'enrollment', TAB: 'tablet_receipt', ATT: 'attendance_cert', TRF: 'transfer_cert', DSC: 'disciplinary' }[prefix] || 'unknown';
-        showResult('success', '✅', 'مستند رسمي صحيح ومعتمد',
-          `تم التحقق من صحة المستند من نوع: ${DOC_TYPES[typeKey] || 'مستند رسمي'}`,
-          `<tr><td>نوع المستند:</td><td>${DOC_TYPES[typeKey] || 'مستند رسمي'}</td></tr>
-           <tr><td>رمز التحقق:</td><td><code style="letter-spacing:2px;">${token}</code></td></tr>
-           <tr><td>الحالة:</td><td><span style="color:#15803d;font-weight:700;">✅ صادر رسمياً ومعتمد</span></td></tr>
-           <tr><td>المؤسسة:</td><td>المدرسة الثانوية الرسمية الرقمية — إدارة القاهرة الجديدة</td></tr>`);
-      } else {
-        showResult('danger', '❌', 'رمز تحقق غير معروف',
-          'لم يتم العثور على مستند مرتبط بهذا الرمز. تأكد من صحة الرمز المدخل.');
+
+        const requestedType = new URLSearchParams(window.location.search).get('type');
+        if (requestedType && requestedType !== documentRecord.documentType) {
+          showResult('danger', '❌', 'نوع المستند لا يطابق الرمز', 'الرابط لا يطابق نوع المستند المسجل.');
+          return;
+        }
+
+        const typeLabel = VERIFIABLE_DOCUMENT_TYPES[documentRecord.documentType]?.label || 'مستند رسمي';
+        const details = [
+          ['نوع المستند', typeLabel],
+          ['اسم الطالب', documentRecord.studentName || '—'],
+          ['كود الطالب', documentRecord.studentCode || '—'],
+          ['الصف والفصل', [documentRecord.grade, documentRecord.className].filter(Boolean).join(' — ') || '—'],
+          ['العام الدراسي', documentRecord.academicYear || '—'],
+          ['المدرسة', documentRecord.schoolName || '—'],
+          ['تاريخ الإصدار', formatDateTime(documentRecord.issuedAt)],
+          ['جهة الإصدار', documentRecord.issuerName || 'إدارة المدرسة'],
+          ['رمز التحقق', token],
+        ].map(([label, value]) => `<tr><td>${escapeHtml(label)}:</td><td>${escapeHtml(value)}</td></tr>`).join('');
+
+        if (documentRecord.status === 'valid') {
+          showResult('success', '✅', 'مستند مسجل وصادر', 'تم العثور على سجل إصدار مطابق في قاعدة التحقق.', details);
+        } else if (documentRecord.status === 'pending') {
+          showResult('warning', '⏳', 'المستند بانتظار الاعتماد', 'تم تسجيل الطلب، لكنه غير معتمد للاستخدام.', details);
+        } else if (documentRecord.status === 'used') {
+          showResult('warning', '⚠️', 'تم استخدام المستند', 'الرمز صحيح لكنه استُخدم أو أُغلق مسبقًا.', details);
+        } else {
+          showResult('danger', '❌', 'المستند ملغى', 'سجل الإصدار موجود لكن المستند لم يعد صالحًا.', details);
+        }
+      } catch (error) {
+        console.error('Document verification failed:', error);
+        const permissionDenied = error?.code === 'permission-denied' || String(error?.message || '').includes('Missing or insufficient permissions');
+        showResult(
+          permissionDenied ? 'warning' : 'danger',
+          '⚠️',
+          permissionDenied ? 'خدمة التحقق غير مفعّلة على الخادم' : 'تعذر التحقق الآن',
+          permissionDenied
+            ? 'قواعد التحقق لم تُنشر على Firebase بعد. تواصل مع إدارة النظام لتفعيل التحقق الرقمي.'
+            : 'تعذر الاتصال بسجل التحقق. أعد المحاولة عند توفر الاتصال.',
+        );
+      } finally {
+        verifyBtn.disabled = false;
       }
     }
 

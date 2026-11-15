@@ -97,9 +97,9 @@ export async function uploadMediaImage(file, options = {}) {
   }
 
   // Strict role check
-  const allowedRoles = ['director', 'super_admin', 'tech_specialist'];
+  const allowedRoles = ['director', 'super_admin', 'tech_specialist', 'student_affairs', 'social_affairs'];
   if (!allowedRoles.includes(currentUser.role)) {
-    throw new Error('غير مصرح لك برفع الوسائط. هذه الصلاحية مقتصرة على الإدارة ومسؤول التطوير التكنولوجي.');
+    throw new Error('غير مصرح لك برفع الوسائط. هذه الصلاحية مقتصرة على الإدارة والأخصائيين ومسؤول التطوير التكنولوجي.');
   }
 
   const workerUrl = MEDIA_CONFIG.workerGatewayUrl;
@@ -173,7 +173,7 @@ export async function deleteMediaImage(publicId, schoolId) {
   const currentUser = getCurrentUser();
   if (!currentUser) throw new Error('Unauthenticated');
 
-  const allowedRoles = ['director', 'super_admin', 'tech_specialist'];
+  const allowedRoles = ['director', 'super_admin', 'tech_specialist', 'student_affairs', 'social_affairs'];
   if (!allowedRoles.includes(currentUser.role)) {
     throw new Error('Unauthorized');
   }

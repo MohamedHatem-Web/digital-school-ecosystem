@@ -114,6 +114,69 @@ async function loadSubSection(sectionKey) {
   }
 }
 
+function bindCmsImageUpload({ fileInputId, buttonId, valueId, previewId, placeholderId, assetType }) {
+  const fileInput = document.getElementById(fileInputId);
+  const uploadBtn = document.getElementById(buttonId);
+  const imageValue = document.getElementById(valueId);
+  const preview = document.getElementById(previewId);
+  const placeholder = document.getElementById(placeholderId);
+  if (!fileInput || !uploadBtn || !imageValue || !preview || !placeholder) return;
+
+  const defaultLabel = uploadBtn.textContent;
+  uploadBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    const previousUrl = imageValue.value;
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'جارٍ ضغط الصورة...';
+    try {
+      const compressedFile = await compressMediaImage(file);
+      const uploaded = await uploadMediaImage(compressedFile, {
+        assetType,
+        onStatus: (status) => { uploadBtn.textContent = status; },
+        onProgress: (progress) => { uploadBtn.textContent = `جارٍ الرفع إلى Cloudinary ${progress}%`; },
+      });
+      imageValue.value = uploaded.secureUrl;
+      preview.src = uploaded.secureUrl;
+      preview.style.display = 'block';
+      placeholder.style.display = 'none';
+    } catch (error) {
+      imageValue.value = previousUrl;
+      fileInput.value = '';
+      showToast(error.message || 'تعذر رفع الصورة.', 'error');
+    } finally {
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = imageValue.value ? '✓ تم رفع الصورة' : defaultLabel;
+    }
+  });
+}
+
+function setCmsImagePreview(valueId, previewId, placeholderId, imageUrl = '') {
+  const imageValue = document.getElementById(valueId);
+  const preview = document.getElementById(previewId);
+  const placeholder = document.getElementById(placeholderId);
+  if (!imageValue || !preview || !placeholder) return;
+  imageValue.value = imageUrl;
+  preview.src = imageUrl;
+  preview.style.display = imageUrl ? 'block' : 'none';
+  placeholder.style.display = imageUrl ? 'none' : 'block';
+}
+
+function escapeCmsHtml(value) {
+  return String(value || '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[char]);
+}
+
+function showCmsUpdateStatus(result, successMessage) {
+  if (result?.syncStatus === 'pending') {
+    showToast('تم حفظ التعديل على هذا الجهاز، وستتم مزامنته مع الخادم عند عودة الاتصال.', 'warning');
+    return;
+  }
+  showToast(successMessage);
+}
+
 // --------------------------------------------------------------------------
 // 1. Leadership Subview (With Photo Upload, Move Up/Down & Rank Validation)
 // --------------------------------------------------------------------------
@@ -323,34 +386,48 @@ async function renderLeadershipSub(container) {
   // Move Up / Move Down buttons (Instant rank swap)
   container.querySelectorAll('.ldr-move-up').forEach(btn => {
     btn.addEventListener('click', async () => {
+      btn.disabled = true;
       const id = btn.dataset.id;
       const idx = list.findIndex(l => l.id === id);
-      if (idx > 0) {
-        const current = list[idx];
-        const prev = list[idx - 1];
-        const tempOrder = current.sortOrder || (idx + 1);
-        const prevOrder = prev.sortOrder || idx;
-        await updateCmsContent(current.id, { sortOrder: prevOrder });
-        await updateCmsContent(prev.id, { sortOrder: tempOrder === prevOrder ? tempOrder + 1 : tempOrder });
-        showToast('✓ تم تقديم الترتيب للأعلى بنجاح');
-        await renderLeadershipSub(container);
+      try {
+        if (idx > 0) {
+          const current = list[idx];
+          const prev = list[idx - 1];
+          const tempOrder = current.sortOrder || (idx + 1);
+          const prevOrder = prev.sortOrder || idx;
+          const firstUpdate = await updateCmsContent(current.id, { sortOrder: prevOrder });
+          const secondUpdate = await updateCmsContent(prev.id, { sortOrder: tempOrder === prevOrder ? tempOrder + 1 : tempOrder });
+          showCmsUpdateStatus(firstUpdate?.syncStatus === 'pending' || secondUpdate?.syncStatus === 'pending' ? { syncStatus: 'pending' } : secondUpdate, 'تم تقديم الترتيب للأعلى.');
+          await renderLeadershipSub(container);
+        }
+      } catch (error) {
+        showToast(error.message || 'تعذر تحديث ترتيب القيادة.', 'error');
+      } finally {
+        btn.disabled = false;
       }
     });
   });
 
   container.querySelectorAll('.ldr-move-down').forEach(btn => {
     btn.addEventListener('click', async () => {
+      btn.disabled = true;
       const id = btn.dataset.id;
       const idx = list.findIndex(l => l.id === id);
-      if (idx < list.length - 1) {
-        const current = list[idx];
-        const next = list[idx + 1];
-        const tempOrder = current.sortOrder || (idx + 1);
-        const nextOrder = next.sortOrder || (idx + 2);
-        await updateCmsContent(current.id, { sortOrder: nextOrder });
-        await updateCmsContent(next.id, { sortOrder: tempOrder === nextOrder ? tempOrder - 1 : tempOrder });
-        showToast('✓ تم تأخير الترتيب للأسفل بنجاح');
-        await renderLeadershipSub(container);
+      try {
+        if (idx < list.length - 1) {
+          const current = list[idx];
+          const next = list[idx + 1];
+          const tempOrder = current.sortOrder || (idx + 1);
+          const nextOrder = next.sortOrder || (idx + 2);
+          const firstUpdate = await updateCmsContent(current.id, { sortOrder: nextOrder });
+          const secondUpdate = await updateCmsContent(next.id, { sortOrder: tempOrder === nextOrder ? tempOrder - 1 : tempOrder });
+          showCmsUpdateStatus(firstUpdate?.syncStatus === 'pending' || secondUpdate?.syncStatus === 'pending' ? { syncStatus: 'pending' } : secondUpdate, 'تم تأخير الترتيب للأسفل.');
+          await renderLeadershipSub(container);
+        }
+      } catch (error) {
+        showToast(error.message || 'تعذر تحديث ترتيب القيادة.', 'error');
+      } finally {
+        btn.disabled = false;
       }
     });
   });
@@ -380,7 +457,7 @@ async function renderLeadershipSub(container) {
 
     try {
       if (editingLeaderId) {
-        await updateCmsContent(editingLeaderId, {
+        const result = await updateCmsContent(editingLeaderId, {
           title,
           summary: role,
           role,
@@ -388,7 +465,7 @@ async function renderLeadershipSub(container) {
           content,
           imageUrl,
         }, { requireRemote: true });
-        showToast('✓ تم حفظ تعديلات عضو القيادة بنجاح.');
+        showCmsUpdateStatus(result, 'تم حفظ تعديلات عضو القيادة بنجاح.');
       } else {
         await createCmsContent({
           category: 'leadership',
@@ -529,26 +606,17 @@ async function renderNewsSub(container) {
     </div>
   `;
 
-  // Image Upload Logic
-  const fileInput = document.getElementById('news-photo-file');
-  const uploadBtn = document.getElementById('news-upload-btn');
+  bindCmsImageUpload({
+    fileInputId: 'news-photo-file',
+    buttonId: 'news-upload-btn',
+    valueId: 'news-photo-val',
+    previewId: 'news-img-preview',
+    placeholderId: 'news-img-placeholder',
+    assetType: 'news',
+  });
   const photoVal = document.getElementById('news-photo-val');
   const previewImg = document.getElementById('news-img-preview');
   const placeholder = document.getElementById('news-img-placeholder');
-
-  uploadBtn?.addEventListener('click', () => fileInput?.click());
-  fileInput?.addEventListener('change', () => {
-    const file = fileInput.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      photoVal.value = e.target.result;
-      previewImg.src = e.target.result;
-      previewImg.style.display = 'block';
-      placeholder.style.display = 'none';
-    };
-    reader.readAsDataURL(file);
-  });
 
   // Edit News Logic
   const formTitle = document.getElementById('news-form-title');
@@ -561,9 +629,7 @@ async function renderNewsSub(container) {
     formTitle.textContent = 'نشر خبر أو بيان رسمي للطلاب وأولياء الأمور';
     submitBtn.textContent = 'نشر على الموقع العام فوراً';
     cancelBtn.style.display = 'none';
-    photoVal.value = '';
-    previewImg.style.display = 'none';
-    placeholder.style.display = 'block';
+    setCmsImagePreview('news-photo-val', 'news-img-preview', 'news-img-placeholder');
   }
 
   cancelBtn?.addEventListener('click', resetNewsForm);
@@ -583,16 +649,7 @@ async function renderNewsSub(container) {
       document.getElementById('news-date').value = item.date || new Date().toISOString().split('T')[0];
       document.getElementById('news-body').value = item.summary || item.content || '';
 
-      if (item.imageUrl) {
-        photoVal.value = item.imageUrl;
-        previewImg.src = item.imageUrl;
-        previewImg.style.display = 'block';
-        placeholder.style.display = 'none';
-      } else {
-        photoVal.value = '';
-        previewImg.style.display = 'none';
-        placeholder.style.display = 'block';
-      }
+      setCmsImagePreview('news-photo-val', 'news-img-preview', 'news-img-placeholder', item.imageUrl || '');
 
       document.getElementById('news-form').scrollIntoView({ behavior: 'smooth' });
     });
@@ -607,14 +664,14 @@ async function renderNewsSub(container) {
 
     try {
       if (editingNewsId) {
-        await updateCmsContent(editingNewsId, {
+        const result = await updateCmsContent(editingNewsId, {
           title,
           summary,
           content: summary,
           date,
           imageUrl,
         });
-        showToast('✓ تم حفظ تعديلات الخبر بنجاح.');
+        showCmsUpdateStatus(result, 'تم حفظ تعديلات الخبر بنجاح.');
       } else {
         await createCmsContent({
           category: 'news',
@@ -734,26 +791,15 @@ async function renderActivitiesSub(container) {
     </div>
   `;
 
-  // Image upload
-  const fileInput = document.getElementById('act-photo-file');
-  const uploadBtn = document.getElementById('act-upload-btn');
-  const photoVal = document.getElementById('act-photo-val');
-  const previewImg = document.getElementById('act-img-preview');
-  const placeholder = document.getElementById('act-img-placeholder');
-
-  uploadBtn?.addEventListener('click', () => fileInput?.click());
-  fileInput?.addEventListener('change', () => {
-    const file = fileInput.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      photoVal.value = e.target.result;
-      previewImg.src = e.target.result;
-      previewImg.style.display = 'block';
-      placeholder.style.display = 'none';
-    };
-    reader.readAsDataURL(file);
+  bindCmsImageUpload({
+    fileInputId: 'act-photo-file',
+    buttonId: 'act-upload-btn',
+    valueId: 'act-photo-val',
+    previewId: 'act-img-preview',
+    placeholderId: 'act-img-placeholder',
+    assetType: 'activities',
   });
+  const photoVal = document.getElementById('act-photo-val');
 
   // Edit logic
   const formTitle = document.getElementById('act-form-title');
@@ -766,9 +812,7 @@ async function renderActivitiesSub(container) {
     formTitle.textContent = 'إضافة نشاط مدرسي أو معرض';
     submitBtn.textContent = 'إضافة النشاط للموقع';
     cancelBtn.style.display = 'none';
-    photoVal.value = '';
-    previewImg.style.display = 'none';
-    placeholder.style.display = 'block';
+    setCmsImagePreview('act-photo-val', 'act-img-preview', 'act-img-placeholder');
   }
 
   cancelBtn?.addEventListener('click', resetActForm);
@@ -787,16 +831,7 @@ async function renderActivitiesSub(container) {
       document.getElementById('act-title').value = item.title || '';
       document.getElementById('act-desc').value = item.summary || item.desc || '';
 
-      if (item.imageUrl) {
-        photoVal.value = item.imageUrl;
-        previewImg.src = item.imageUrl;
-        previewImg.style.display = 'block';
-        placeholder.style.display = 'none';
-      } else {
-        photoVal.value = '';
-        previewImg.style.display = 'none';
-        placeholder.style.display = 'block';
-      }
+      setCmsImagePreview('act-photo-val', 'act-img-preview', 'act-img-placeholder', item.imageUrl || '');
 
       document.getElementById('act-form').scrollIntoView({ behavior: 'smooth' });
     });
@@ -810,8 +845,8 @@ async function renderActivitiesSub(container) {
 
     try {
       if (editingActId) {
-        await updateCmsContent(editingActId, { title, summary, desc: summary, imageUrl });
-        showToast('✓ تم حفظ تعديل النشاط بنجاح.');
+        const result = await updateCmsContent(editingActId, { title, summary, desc: summary, imageUrl });
+        showCmsUpdateStatus(result, 'تم حفظ تعديل النشاط بنجاح.');
       } else {
         await createCmsContent({ category: 'activities', title, summary, desc: summary, imageUrl, status: 'published' });
         showToast('✓ تم إضافة النشاط بنجاح.');
@@ -864,6 +899,18 @@ async function renderCalendarSub(container) {
                 <input type="date" id="cal-date" class="form-control" required>
               </div>
             </div>
+            <div class="form-group" style="margin-bottom: var(--space-3);">
+              <label class="form-label">صورة الموعد (اختياري)</label>
+              <div style="display:flex; align-items:center; gap:var(--space-3); flex-wrap:wrap;">
+                <div style="width:60px;height:40px;border-radius:var(--radius-sm);background:var(--bg-surface-subtle);border:1px solid var(--border-light);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">
+                  <span id="cal-img-placeholder">📅</span>
+                  <img id="cal-img-preview" src="" alt="معاينة صورة الموعد" style="display:none;width:100%;height:100%;object-fit:cover;">
+                </div>
+                <input type="file" id="cal-photo-file" accept="image/*" style="display:none;">
+                <input type="hidden" id="cal-photo-val" value="">
+                <button type="button" id="cal-upload-btn" class="btn btn-outline btn-sm">📸 اختيار صورة الموعد</button>
+              </div>
+            </div>
             <div style="display:flex; justify-content:flex-end;">
               <button type="submit" id="cal-submit-btn" class="btn btn-primary btn-sm">تثبيت في التقويم المدرسي</button>
             </div>
@@ -896,6 +943,15 @@ async function renderCalendarSub(container) {
     </div>
   `;
 
+  bindCmsImageUpload({
+    fileInputId: 'cal-photo-file',
+    buttonId: 'cal-upload-btn',
+    valueId: 'cal-photo-val',
+    previewId: 'cal-img-preview',
+    placeholderId: 'cal-img-placeholder',
+    assetType: 'calendar',
+  });
+
   const formTitle = document.getElementById('cal-form-title');
   const submitBtn = document.getElementById('cal-submit-btn');
   const cancelBtn = document.getElementById('cal-cancel-edit-btn');
@@ -906,6 +962,7 @@ async function renderCalendarSub(container) {
     formTitle.textContent = 'إضافة موعد أو فعالية بالتقويم الدراسي';
     submitBtn.textContent = 'تثبيت في التقويم المدرسي';
     cancelBtn.style.display = 'none';
+    setCmsImagePreview('cal-photo-val', 'cal-img-preview', 'cal-img-placeholder');
   }
 
   cancelBtn?.addEventListener('click', resetCalForm);
@@ -923,6 +980,7 @@ async function renderCalendarSub(container) {
 
       document.getElementById('cal-title').value = item.title || '';
       document.getElementById('cal-date').value = item.date || '';
+      setCmsImagePreview('cal-photo-val', 'cal-img-preview', 'cal-img-placeholder', item.imageUrl || '');
       document.getElementById('cal-form').scrollIntoView({ behavior: 'smooth' });
     });
   });
@@ -931,13 +989,14 @@ async function renderCalendarSub(container) {
     e.preventDefault();
     const title = document.getElementById('cal-title').value.trim();
     const date = document.getElementById('cal-date').value;
+    const imageUrl = document.getElementById('cal-photo-val').value;
 
     try {
       if (editingCalId) {
-        await updateCmsContent(editingCalId, { title, date });
-        showToast('✓ تم حفظ تعديل الموعد بنجاح.');
+        const result = await updateCmsContent(editingCalId, { title, date, imageUrl });
+        showCmsUpdateStatus(result, 'تم حفظ تعديل الموعد بنجاح.');
       } else {
-        await createCmsContent({ category: 'calendar', title, date, status: 'published' });
+        await createCmsContent({ category: 'calendar', title, date, imageUrl, status: 'published' });
         showToast('✓ تم إضافة الحدث للتقويم بنجاح.');
       }
       resetCalForm();
@@ -967,43 +1026,114 @@ async function renderCalendarSub(container) {
 // --------------------------------------------------------------------------
 async function renderProfileSub(container) {
   const profile = (await getSchoolProfile()) || {};
+  const branding = profile.branding || {};
   container.innerHTML = `
     <div class="panel">
       <div class="panel-header"><h3 class="panel-title" style="margin:0;">🏫 تكوين هوية وبيانات المدرسة الرسمية</h3></div>
       <div class="panel-body">
         <form id="prof-sub-form">
-          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-4);">
+          <div class="form-group" style="margin-bottom:var(--space-4);">
+            <label class="form-label">شعار المدرسة الرسمي</label>
+            <div style="display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;">
+              <div style="width:64px;height:64px;border-radius:var(--radius-sm);background:var(--bg-surface-subtle);border:1px solid var(--border-light);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">
+                <span id="sub-p-logo-placeholder">🏫</span>
+                <img id="sub-p-logo-preview" src="" alt="معاينة شعار المدرسة" style="display:none;width:100%;height:100%;object-fit:contain;">
+              </div>
+              <input type="file" id="sub-p-logo-file" accept="image/jpeg,image/png,image/webp" style="display:none;">
+              <input type="hidden" id="sub-p-logo-val" value="">
+              <button type="button" class="btn btn-outline btn-sm" id="sub-p-logo-upload">📸 رفع شعار المدرسة</button>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:var(--space-4);margin-bottom:var(--space-4);">
             <div class="form-group">
               <label class="form-label" for="sub-p-name">اسم المدرسة الرسمي *</label>
-              <input type="text" id="sub-p-name" class="form-control" value="${profile.nameAr || ''}" required>
+              <input type="text" id="sub-p-name" class="form-control" value="${escapeCmsHtml(profile.nameAr)}" required>
             </div>
             <div class="form-group">
               <label class="form-label" for="sub-p-admin">الإدارة التعليمية *</label>
-              <input type="text" id="sub-p-admin" class="form-control" value="${profile.administration || ''}" required>
+              <input type="text" id="sub-p-admin" class="form-control" value="${escapeCmsHtml(profile.administration)}" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="sub-p-directorate">المديرية التعليمية</label>
+              <input type="text" id="sub-p-directorate" class="form-control" value="${escapeCmsHtml(profile.directorate)}">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="sub-p-name-en">اسم المدرسة بالإنجليزية</label>
+              <input type="text" id="sub-p-name-en" class="form-control" value="${escapeCmsHtml(profile.nameEn)}">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="sub-p-address">العنوان والمقر</label>
+              <input type="text" id="sub-p-address" class="form-control" value="${escapeCmsHtml(profile.address)}">
             </div>
             <div class="form-group">
               <label class="form-label" for="sub-p-phone">رقم الهاتف</label>
-              <input type="text" id="sub-p-phone" class="form-control" value="${profile.phone || ''}">
+              <input type="tel" id="sub-p-phone" class="form-control" value="${escapeCmsHtml(profile.phone)}">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="sub-p-email">البريد الرسمي</label>
+              <input type="email" id="sub-p-email" class="form-control" value="${escapeCmsHtml(profile.email)}">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="sub-p-year">العام الدراسي</label>
+              <input type="text" id="sub-p-year" class="form-control" value="${escapeCmsHtml(profile.academicYear || '2026/2027')}">
             </div>
           </div>
           <div class="form-group" style="margin-bottom: var(--space-4);">
-            <label class="form-label" for="sub-p-story">عن المدرسة ورؤيتها</label>
-            <textarea id="sub-p-story" class="form-control" rows="3">${profile.aboutStory || ''}</textarea>
+            <label class="form-label" for="sub-p-story">نبذة عن المدرسة</label>
+            <textarea id="sub-p-story" class="form-control" rows="3">${escapeCmsHtml(profile.aboutStory)}</textarea>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--space-4);margin-bottom:var(--space-4);">
+            <div class="form-group">
+              <label class="form-label" for="sub-p-vision">الرؤية</label>
+              <textarea id="sub-p-vision" class="form-control" rows="3">${escapeCmsHtml(profile.vision)}</textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="sub-p-mission">الرسالة</label>
+              <textarea id="sub-p-mission" class="form-control" rows="3">${escapeCmsHtml(profile.mission)}</textarea>
+            </div>
           </div>
           <div style="display:flex; justify-content:flex-end;">
-            <button type="submit" class="btn btn-primary btn-md">اعتماد وتحديث هوية المدرسة</button>
+            <button type="submit" id="sub-p-submit" class="btn btn-primary btn-md">اعتماد وتحديث هوية المدرسة</button>
           </div>
         </form>
       </div>
     </div>
   `;
+
+  bindCmsImageUpload({
+    fileInputId: 'sub-p-logo-file',
+    buttonId: 'sub-p-logo-upload',
+    valueId: 'sub-p-logo-val',
+    previewId: 'sub-p-logo-preview',
+    placeholderId: 'sub-p-logo-placeholder',
+    assetType: 'branding',
+  });
+  setCmsImagePreview('sub-p-logo-val', 'sub-p-logo-preview', 'sub-p-logo-placeholder', branding.logoUrl || '');
+
   document.getElementById('prof-sub-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const nameAr = document.getElementById('sub-p-name').value.trim();
-    const administration = document.getElementById('sub-p-admin').value.trim();
-    const phone = document.getElementById('sub-p-phone').value.trim();
-    const aboutStory = document.getElementById('sub-p-story').value.trim();
-    await updateSchoolProfile({ nameAr, administration, phone, aboutStory });
-    showToast('✓ تم حفظ بيانات المدرسة وتحديث الموقع العام بنجاح.');
+    const submitButton = document.getElementById('sub-p-submit');
+    submitButton.disabled = true;
+    try {
+      await updateSchoolProfile({
+        nameAr: document.getElementById('sub-p-name').value.trim(),
+        nameEn: document.getElementById('sub-p-name-en').value.trim(),
+        administration: document.getElementById('sub-p-admin').value.trim(),
+        directorate: document.getElementById('sub-p-directorate').value.trim(),
+        address: document.getElementById('sub-p-address').value.trim(),
+        phone: document.getElementById('sub-p-phone').value.trim(),
+        email: document.getElementById('sub-p-email').value.trim(),
+        academicYear: document.getElementById('sub-p-year').value.trim(),
+        aboutStory: document.getElementById('sub-p-story').value.trim(),
+        vision: document.getElementById('sub-p-vision').value.trim(),
+        mission: document.getElementById('sub-p-mission').value.trim(),
+        branding: { ...branding, logoUrl: document.getElementById('sub-p-logo-val').value.trim() },
+      });
+      showToast('تم حفظ هوية المدرسة على خادم المدرسة.');
+    } catch (error) {
+      showToast(error.message || 'تعذر حفظ هوية المدرسة.', 'error');
+    } finally {
+      submitButton.disabled = false;
+    }
   });
 }

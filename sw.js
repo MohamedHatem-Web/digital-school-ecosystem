@@ -3,7 +3,7 @@
 // Full Offline & Cross-Page Install Engine with Offline Fallback
 // ==========================================================================
 
-const CACHE_NAME = 'dse-pwa-v12.0-prod';
+const CACHE_NAME = 'dse-pwa-v17.3-prod';
 const CORE_ASSETS = [
   '/',
   '/index.html',
@@ -14,6 +14,8 @@ const CORE_ASSETS = [
   '/css/components.css',
   '/css/public-site.css',
   '/css/dashboard.css',
+  '/dashboard/tech-devices.html',
+  '/dashboard/admin-overview.html?embedded=tech',
 ];
 
 self.addEventListener('install', (event) => {
@@ -52,7 +54,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   const isHtml = req.headers.get('accept')?.includes('text/html') || url.pathname.endsWith('.html');
-  const isDynamicScript = url.pathname.startsWith('/js/services/') || url.pathname.includes('auth.js') || url.pathname.includes('student-service.js');
+  const isDynamicScript = url.pathname.endsWith('.js');
 
   // Network-First with cache & offline.html fallback for HTML navigations
   if (isHtml) {

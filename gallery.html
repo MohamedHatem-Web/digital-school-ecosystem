@@ -6,9 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>معرض الأنشطة والألبومات المدرسية — منظومة المدرسة الرقمية</title>
   <link rel="stylesheet" href="css/tokens.css?v=11.0">
-  <link rel="stylesheet" href="css/base.css?v=11.0">
-  <link rel="stylesheet" href="css/components.css?v=11.0">
-  <link rel="stylesheet" href="css/public-site.css?v=11.0">
+  <link rel="stylesheet" href="css/base.css?v=11.1">
+  <link rel="stylesheet" href="css/components.css?v=17.2">
+  <link rel="stylesheet" href="css/public-site.css?v=17.2">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#0a1628">
   <meta name="mobile-web-app-capable" content="yes">
@@ -127,7 +127,7 @@
     <button class="lightbox-nav-btn lightbox-prev-btn" id="public-lightbox-prev">&#10095;</button>
     <button class="lightbox-nav-btn lightbox-next-btn" id="public-lightbox-next">&#10094;</button>
     <div class="lightbox-content">
-      <img src="" alt="" class="lightbox-image" id="public-lightbox-img">
+      <img alt="" class="lightbox-image" id="public-lightbox-img">
       <div class="lightbox-caption" id="public-lightbox-caption"></div>
     </div>
   </div>
@@ -154,18 +154,8 @@
       </div>
 
       <div>
-        <h4 class="footer-col-title">البوابات الإدارية</h4>
-        <ul class="footer-links-list">
-          <li><a href="login.html">مكتب المدير</a></li>
-          <li><a href="login.html">التطوير التكنولوجي والتابلت</a></li>
-          <li><a href="login.html">شؤون الطلاب والقيد</a></li>
-          <li><a href="login.html">بوابة المعلم وولي الأمر</a></li>
-        </ul>
-      </div>
-
-      <div>
         <h4 class="footer-col-title">بيانات التواصل المعتمدة</h4>
-        <p style="font-size: var(--text-xs); color: #94a3b8; line-height: var(--leading-relaxed);">
+        <p id="footer-contact-text" style="font-size: var(--text-xs); color: #94a3b8; line-height: var(--leading-relaxed);">
           لم تُسجل بيانات تواصل رسمية بعد، يمكن لإدارة المدرسة تسجيل المقر والهواتف من لوحة التحكم.
         </p>
       </div>
@@ -339,6 +329,6 @@
     // Initial fetch
     loadPublicGallery();
   </script>
-  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=11.0');}</script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=17.3');}</script>
 </body>
 </html>

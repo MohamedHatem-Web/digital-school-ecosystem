@@ -4,7 +4,8 @@
 // ==========================================================================
 
 import { getCurrentUser, logout, ROLES_METADATA, updateUserProfile } from './auth.js';
-import { auth, onAuthStateChanged, doc, getDoc, db } from './firebase.js';
+import { auth, authPersistenceReady, onAuthStateChanged, doc, getDoc, db, signOut } from './firebase.js';
+import { changeOwnPassword } from './services/account-service.js';
 
 /**
  * Validates route access against user's verified role and Firebase Auth session.
@@ -17,14 +18,12 @@ export function checkRouteAccess(allowedRoles = []) {
   const loginUrl = isInsideDashboard ? '../login.html' : 'login.html';
   const unauthorizedUrl = isInsideDashboard ? 'unauthorized.html' : 'dashboard/unauthorized.html';
 
-  // Mutual family access: students and parents share access to both student and parent portals
-  let effectiveRoles = [...allowedRoles];
-  if (effectiveRoles.includes('student') && !effectiveRoles.includes('parent')) {
-    effectiveRoles.push('parent');
+  if (cachedUser?.passwordChangeRequired) {
+    window.location.replace(`${loginUrl}?forcePasswordChange=1`);
+    return false;
   }
-  if (effectiveRoles.includes('parent') && !effectiveRoles.includes('student')) {
-    effectiveRoles.push('student');
-  }
+
+  const effectiveRoles = [...allowedRoles];
 
   // Mutual administrative access: director and social_affairs share supervisory dashboards
   if (effectiveRoles.includes('director') && !effectiveRoles.includes('social_affairs')) {
@@ -39,8 +38,9 @@ export function checkRouteAccess(allowedRoles = []) {
 
   if (!cachedUser) {
     // If not in cache, wait for Firebase Auth state to resolve
-    onAuthStateChanged(auth, async (firebaseUser) => {
+    onAuthReady(async (firebaseUser) => {
       if (!firebaseUser) {
+        clearCachedSession();
         window.location.replace(loginUrl);
         return;
       }
@@ -48,9 +48,30 @@ export function checkRouteAccess(allowedRoles = []) {
       // Fetch user role from Firestore
       try {
         const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-        const userData = userDoc.exists() ? userDoc.data() : { role: 'director' };
+        if (!userDoc.exists()) {
+          await rejectUnprovisionedSession(loginUrl);
+          return;
+        }
+        const userData = userDoc.data();
         const role = userData.role || 'director';
 
+        if (userData.passwordChangeRequired) {
+          const profile = {
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName || userData.displayName || 'طالب',
+            ...userData,
+          };
+          localStorage.setItem('dse_user_session', JSON.stringify(profile));
+          sessionStorage.setItem('dse_user_session', JSON.stringify(profile));
+          window.location.replace(`${loginUrl}?forcePasswordChange=1`);
+          return;
+        }
+
+        if (!ROLES_METADATA[role] || !userData.schoolId || (userData.status && userData.status !== 'active')) {
+          await rejectUnprovisionedSession(loginUrl);
+          return;
+        }
         if (effectiveRoles.length > 0 && !effectiveRoles.includes(role)) {
           window.location.replace(unauthorizedUrl);
           return;
@@ -59,14 +80,22 @@ export function checkRouteAccess(allowedRoles = []) {
         updateUserInterface({
           uid: firebaseUser.uid,
           email: firebaseUser.email,
+          ...userData,
           displayName: userData.displayName || firebaseUser.displayName,
           role,
           schoolId: userData.schoolId || 'sch_cairo_sec_01',
         });
       } catch (err) {
         console.error('Auth verification error:', err);
+        if (isTemporaryAuthCheckError(err)) {
+          showAuthRetryNotice(err);
+          return;
+        }
         window.location.replace(loginUrl);
       }
+    }, (error) => {
+      if (isTemporaryAuthCheckError(error)) showAuthRetryNotice(error);
+      else window.location.replace(loginUrl);
     });
     return false;
   }
@@ -81,40 +110,111 @@ export function checkRouteAccess(allowedRoles = []) {
   updateUserInterface(cachedUser);
 
   // Step 2: Asynchronously verify against live Firebase Auth session
-  onAuthStateChanged(auth, async (firebaseUser) => {
+  onAuthReady(async (firebaseUser) => {
     if (!firebaseUser) {
-      // If we already have a validated cached user session, keep user logged in smoothly
-      if (!cachedUser) {
-        localStorage.removeItem('dse_user_session');
-        sessionStorage.removeItem('dse_user_session');
-        window.location.replace(loginUrl);
+      if (cachedUser && navigator.onLine === false) {
+        showAuthRetryNotice(Object.assign(new Error('Firebase Auth is unavailable offline.'), { code: 'network-request-failed' }));
+        return;
       }
+      clearCachedSession();
+      window.location.replace(loginUrl);
       return;
     }
 
     try {
       const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-      if (userDoc.exists()) {
-        const liveData = userDoc.data();
-        const role = liveData.role || 'director';
-        if (effectiveRoles.length > 0 && !effectiveRoles.includes(role)) {
-          window.location.replace(unauthorizedUrl);
-          return;
-        }
-        const updated = {
-          ...cachedUser,
-          ...liveData,
-        };
+      if (!userDoc.exists()) {
+        await rejectUnprovisionedSession(loginUrl);
+        return;
+      }
+      const liveData = userDoc.data();
+      const role = liveData.role || 'director';
+      if (liveData.passwordChangeRequired) {
+        const updated = { ...cachedUser, ...liveData, passwordChangeRequired: true };
         localStorage.setItem('dse_user_session', JSON.stringify(updated));
         sessionStorage.setItem('dse_user_session', JSON.stringify(updated));
-        updateUserInterface(updated);
+        window.location.replace(`${loginUrl}?forcePasswordChange=1`);
+        return;
       }
+      if (!ROLES_METADATA[role] || !liveData.schoolId || (liveData.status && liveData.status !== 'active')) {
+        await rejectUnprovisionedSession(loginUrl);
+        return;
+      }
+      if (effectiveRoles.length > 0 && !effectiveRoles.includes(role)) {
+        window.location.replace(unauthorizedUrl);
+        return;
+      }
+      const updated = {
+        ...cachedUser,
+        ...liveData,
+        role,
+      };
+      localStorage.setItem('dse_user_session', JSON.stringify(updated));
+      sessionStorage.setItem('dse_user_session', JSON.stringify(updated));
+      updateUserInterface(updated);
     } catch (e) {
       console.warn('Live session validation notice (keeping cached session active):', e);
     }
+  }, (error) => {
+    console.warn('Firebase Auth restore notice (keeping cached session active):', error);
+    showAuthRetryNotice(error);
   });
 
   return true;
+}
+
+function onAuthReady(callback, onError) {
+  Promise.resolve(authPersistenceReady)
+    .then(() => (typeof auth.authStateReady === 'function' ? auth.authStateReady() : undefined))
+    .then(() => onAuthStateChanged(auth, callback))
+    .catch(onError);
+}
+
+function clearCachedSession() {
+  localStorage.removeItem('dse_user_session');
+  sessionStorage.removeItem('dse_user_session');
+  document.cookie = 'dse_user_session=; path=/; max-age=0; SameSite=Lax';
+  document.cookie = 'dse_role=; path=/; max-age=0; SameSite=Lax';
+  document.cookie = 'dse_user_name=; path=/; max-age=0; SameSite=Lax';
+}
+
+function isTemporaryAuthCheckError(error) {
+  return navigator.onLine === false || [
+    'unavailable',
+    'deadline-exceeded',
+    'network-request-failed',
+    'auth/network-request-failed',
+  ].includes(error?.code);
+}
+
+function showAuthRetryNotice(error) {
+  let notice = document.getElementById('auth-verification-retry-notice');
+  if (!notice) {
+    notice = document.createElement('section');
+    notice.id = 'auth-verification-retry-notice';
+    notice.setAttribute('role', 'alert');
+    notice.style.cssText = 'position:fixed;inset:12px 12px auto;z-index:20000;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border:1px solid var(--color-warning-border,#d97706);border-radius:8px;background:var(--color-warning-bg,#fffbeb);color:var(--color-warning-text,#92400e);box-shadow:0 8px 24px rgba(0,0,0,.18);';
+    const message = document.createElement('span');
+    message.textContent = 'تعذر التحقق من الحساب بسبب الاتصال بالخادم. لم يتم تسجيل خروجك؛ تحقق من الاتصال ثم أعد المحاولة.';
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'btn btn-warning btn-sm';
+    retry.textContent = 'إعادة المحاولة';
+    retry.addEventListener('click', () => window.location.reload());
+    notice.append(message, retry);
+    document.body.appendChild(notice);
+  }
+  notice.dataset.errorCode = error?.code || 'network';
+}
+
+async function rejectUnprovisionedSession(loginUrl) {
+  clearCachedSession();
+  try {
+    await signOut(auth);
+  } catch (error) {
+    console.warn('Invalid session sign-out notice:', error);
+  }
+  window.location.replace(loginUrl);
 }
 
 /**
@@ -149,11 +249,11 @@ function updateUserInterface(user) {
     const isFamilyUser = user.role === 'student' || user.role === 'parent' || user.email === 'student@dse.edu.eg' || user.email === 'parent@dse.edu.eg';
 
     if (isFamilyUser && isParentPortal) {
-      resolvedName = 'أ. أحمد المنشاوي';
-      resolvedRoleTitle = 'ولي أمر معتمد';
+      resolvedName = user.displayName || 'ولي الأمر';
+      resolvedRoleTitle = 'ولي أمر';
     } else if (isFamilyUser && isStudentPortal) {
-      resolvedName = 'يوسف أحمد المنشاوي';
-      resolvedRoleTitle = 'طالب بالصف الأول الثانوي';
+      resolvedName = user.displayName || 'الطالب';
+      resolvedRoleTitle = 'طالب';
     } else if (user.email && knownStaffNames[user.email]) {
       resolvedName = knownStaffNames[user.email];
     } else if (!resolvedName || resolvedName === 'طالب' || resolvedName === 'ولي أمر' || resolvedName === 'مستخدم المنظومة') {
@@ -309,6 +409,8 @@ function updateUserInterface(user) {
       } // closes else (canEdit)
     } // closes if (profileWidget)
 
+    ensureSelfPasswordChange(profileWidget);
+
     // Attach logout handlers
     const logoutBtns = document.querySelectorAll('.logout-btn');
     logoutBtns.forEach((btn) => {
@@ -327,4 +429,102 @@ function updateUserInterface(user) {
   } else {
     applyUI();
   }
+}
+
+function ensureSelfPasswordChange(profileWidget) {
+  if (!profileWidget) return;
+  let button = profileWidget.querySelector('.self-password-change-btn');
+  if (button) return;
+
+  button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'self-password-change-btn';
+  button.title = 'تغيير كلمة المرور';
+  button.setAttribute('aria-label', 'تغيير كلمة المرور');
+  button.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:36px;padding:0 10px;border:1px solid var(--border-light);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--text-primary);cursor:pointer;font-size:12px;white-space:nowrap;';
+  button.textContent = 'تغيير كلمة المرور';
+  const logoutButton = profileWidget.querySelector('.logout-btn');
+  profileWidget.insertBefore(button, logoutButton || null);
+
+  if (!document.getElementById('self-password-change-modal')) {
+    document.body.insertAdjacentHTML('beforeend', `
+      <div id="self-password-change-modal" class="modal-backdrop" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,.78);backdrop-filter:blur(4px);z-index:12000;align-items:center;justify-content:center;padding:var(--space-4);">
+        <section class="panel" style="max-width:480px;width:100%;">
+          <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);">
+            <h2 class="panel-title" style="margin:0;">تغيير كلمة المرور</h2>
+            <button type="button" id="self-password-change-close" class="btn btn-outline btn-sm" aria-label="إغلاق">إغلاق</button>
+          </div>
+          <form id="self-password-change-form" class="panel-body" style="display:grid;gap:var(--space-3);">
+            <div class="form-group"><label class="form-label" for="self-password-current">كلمة المرور الحالية</label><input id="self-password-current" class="form-control" type="password" autocomplete="current-password" required></div>
+            <div class="form-group"><label class="form-label" for="self-password-new">كلمة المرور الجديدة</label><input id="self-password-new" class="form-control" type="password" minlength="12" autocomplete="new-password" required><small style="color:var(--text-muted);">12 حرفًا على الأقل، مع حرف كبير وصغير ورقم ورمز.</small></div>
+            <div class="form-group"><label class="form-label" for="self-password-confirm">تأكيد كلمة المرور الجديدة</label><input id="self-password-confirm" class="form-control" type="password" minlength="12" autocomplete="new-password" required></div>
+            <p id="self-password-change-status" role="status" aria-live="polite" style="min-height:1.5em;margin:0;font-size:var(--text-xs);"></p>
+            <div style="display:flex;justify-content:flex-end;"><button id="self-password-change-submit" type="submit" class="btn btn-primary btn-md">حفظ كلمة المرور</button></div>
+          </form>
+        </section>
+      </div>
+    `);
+
+    const modal = document.getElementById('self-password-change-modal');
+    const form = document.getElementById('self-password-change-form');
+    const status = document.getElementById('self-password-change-status');
+    const submit = document.getElementById('self-password-change-submit');
+    const close = () => {
+      modal.style.display = 'none';
+      form.reset();
+      status.textContent = '';
+    };
+    document.getElementById('self-password-change-close').addEventListener('click', close);
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) close();
+    });
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const currentPassword = document.getElementById('self-password-current').value;
+      const newPassword = document.getElementById('self-password-new').value;
+      const confirmation = document.getElementById('self-password-confirm').value;
+      if (newPassword !== confirmation) {
+        status.textContent = 'كلمتا المرور الجديدتان غير متطابقتين.';
+        status.style.color = 'var(--color-danger-text)';
+        return;
+      }
+      if (newPassword.length < 12 || !/[a-z]/.test(newPassword) || !/[A-Z]/.test(newPassword) ||
+        !/\d/.test(newPassword) || !/[^A-Za-z0-9]/.test(newPassword)) {
+        status.textContent = 'استخدم 12 حرفًا على الأقل، مع حرف كبير وصغير ورقم ورمز.';
+        status.style.color = 'var(--color-danger-text)';
+        return;
+      }
+      if (newPassword === currentPassword) {
+        status.textContent = 'اختر كلمة مرور مختلفة عن الحالية.';
+        status.style.color = 'var(--color-danger-text)';
+        return;
+      }
+
+      submit.disabled = true;
+      status.textContent = 'جارٍ التحقق من كلمة المرور الحالية...';
+      status.style.color = 'var(--text-muted)';
+      try {
+        await changeOwnPassword(currentPassword, newPassword);
+        status.textContent = 'تم تغيير كلمة المرور بنجاح.';
+        status.style.color = 'var(--color-success-text)';
+        form.reset();
+        setTimeout(close, 1200);
+      } catch (error) {
+        status.textContent = error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential'
+          ? 'كلمة المرور الحالية غير صحيحة.'
+          : error.code === 'auth/requires-recent-login'
+            ? 'سجل الدخول مرة أخرى ثم أعد المحاولة.'
+            : 'تعذر تغيير كلمة المرور. تحقق من البيانات والاتصال ثم أعد المحاولة.';
+        status.style.color = 'var(--color-danger-text)';
+      } finally {
+        submit.disabled = false;
+      }
+    });
+  }
+
+  button.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    document.getElementById('self-password-change-modal').style.display = 'flex';
+  });
 }

@@ -32,21 +32,56 @@ service cloud.firestore {
       );
     }
 
-    function isLinkedStudentOrParent(schoolId) {
+    function canReadStudentCode(schoolId, studentCode) {
       return isAuthenticated() && belongsToSchool(schoolId) && (
-        (('email' in request.auth.token) &&
-         ('email' in resource.data) &&
-         resource.data.email == request.auth.token.email) ||
-        (('email' in request.auth.token) &&
-         ('parentInfo' in resource.data) &&
-         ('parentEmail' in resource.data.parentInfo) &&
-         resource.data.parentInfo.parentEmail == request.auth.token.email) ||
-        (('parentInfo' in resource.data) &&
-         ('parentUid' in resource.data.parentInfo) &&
-         resource.data.parentInfo.parentUid == request.auth.uid) ||
-        (('linkedParentUid' in resource.data) &&
-         resource.data.linkedParentUid == request.auth.uid)
+        (getUserDoc().role == 'student' && getUserDoc().studentCode == studentCode) ||
+        (getUserDoc().role == 'parent' &&
+          getUserDoc().linkedStudentCodes is list &&
+          getUserDoc().linkedStudentCodes.hasAny([studentCode]))
       );
+    }
+
+    function teacherCanReadClass(schoolId, classId) {
+      return classId is string &&
+        hasRole(schoolId, ['teacher']) &&
+        getUserDoc().classId == classId;
+    }
+
+    function teacherCanReadStudentCode(schoolId, studentCode) {
+      let studentPath = /databases/$(database)/documents/schools/$(schoolId)/students/$("stu_" + studentCode);
+      return studentCode is string &&
+        hasRole(schoolId, ['teacher']) &&
+        exists(studentPath) &&
+        get(studentPath).data.keys().hasAny(['classId']) &&
+        get(studentPath).data.classId is string &&
+        teacherCanReadClass(schoolId, get(studentPath).data.classId);
+    }
+
+    match /documentVerifications/{token} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.resource.data.token == token &&
+        request.resource.data.documentType in [
+          'gate_pass', 'enrollment', 'tablet_receipt', 'attendance_cert',
+          'transfer_cert', 'disciplinary', 'student', 'honor_certificate', 'report_card', 'warning'
+        ] &&
+        request.resource.data.status in ['pending', 'valid'] &&
+        request.resource.data.schoolId is string &&
+        request.resource.data.keys().hasOnly([
+          'token', 'documentType', 'documentTitle', 'studentName', 'studentCode',
+          'grade', 'className', 'schoolName', 'academicYear', 'schoolId',
+          'issuerName', 'issuerRole', 'issuedAt', 'status', 'serverCreatedAt'
+        ]) && hasRole(request.resource.data.schoolId, [
+          'director', 'student_affairs', 'teacher', 'social_affairs', 'tech_specialist', 'super_admin'
+        ]);
+      allow update: if hasRole(resource.data.schoolId, [
+          'director', 'student_affairs', 'teacher', 'social_affairs', 'tech_specialist', 'super_admin'
+        ]) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'approvedAt', 'usedAt', 'revokedAt', 'updatedAt'
+        ]) &&
+        request.resource.data.status in ['pending', 'valid', 'used', 'revoked'];
+      allow delete: if false;
     }
 
     // 1. User Profiles Collection
@@ -64,12 +99,12 @@ service cloud.firestore {
     match /schools/{schoolId} {
       // Public school identity (name, logo, colors) can be read publicly for the website
       allow read: if true;
-      allow write: if hasRole(schoolId, ['director', 'super_admin']);
+      allow write: if hasRole(schoolId, ['director', 'tech_specialist', 'super_admin']);
 
       // A. Academic Structure (Stages, Classes, Subjects)
       match /classes/{classId} {
         allow read: if belongsToSchool(schoolId);
-        allow write: if hasRole(schoolId, ['director', 'super_admin']);
+        allow write: if hasRole(schoolId, ['director', 'student_affairs', 'super_admin']);
       }
 
       match /subjects/{subjectId} {
@@ -79,13 +114,17 @@ service cloud.firestore {
 
       // B. Students Registry & Digital Records
       match /students/{studentId} {
-        allow read: if hasRole(schoolId, ['director', 'student_affairs', 'teacher', 'social_affairs']) || isLinkedStudentOrParent(schoolId);
+        allow read: if hasRole(schoolId, ['director', 'student_affairs', 'social_affairs', 'tech_specialist', 'super_admin']) ||
+          (resource.data.keys().hasAny(['classId']) && resource.data.classId is string &&
+           teacherCanReadClass(schoolId, resource.data.classId));
         allow write: if hasRole(schoolId, ['student_affairs', 'director', 'super_admin']);
       }
 
       // C. Devices & Inventory (Tablets & IMEI)
       match /devices/{deviceId} {
-        allow read: if belongsToSchool(schoolId);
+        allow read: if hasRole(schoolId, ['director', 'tech_specialist', 'student_affairs', 'social_affairs', 'super_admin']) ||
+          (resource.data.keys().hasAny(['assignedStudentCode']) && resource.data.assignedStudentCode is string && teacherCanReadStudentCode(schoolId, resource.data.assignedStudentCode)) ||
+          (resource.data.keys().hasAny(['assignedStudentCode']) && resource.data.assignedStudentCode is string && canReadStudentCode(schoolId, resource.data.assignedStudentCode));
         allow write: if hasRole(schoolId, ['tech_specialist', 'director', 'super_admin']);
       }
 
@@ -96,8 +135,20 @@ service cloud.firestore {
 
       // D. Attendance & Absence
       match /attendance/{attendanceId} {
-        allow read: if belongsToSchool(schoolId);
-        allow write: if hasRole(schoolId, ['teacher', 'director', 'super_admin']);
+        allow read: if hasRole(schoolId, ['director', 'student_affairs', 'social_affairs', 'tech_specialist', 'super_admin']) ||
+          (resource.data.keys().hasAny(['classId']) && resource.data.classId is string &&
+           teacherCanReadClass(schoolId, resource.data.classId));
+        allow create: if hasRole(schoolId, ['student_affairs', 'director', 'super_admin']) ||
+          teacherCanReadClass(schoolId, request.resource.data.classId);
+        allow update: if hasRole(schoolId, ['student_affairs', 'director', 'super_admin']) ||
+          (teacherCanReadClass(schoolId, resource.data.classId) &&
+           teacherCanReadClass(schoolId, request.resource.data.classId));
+        allow delete: if hasRole(schoolId, ['student_affairs', 'director', 'super_admin']) ||
+          teacherCanReadClass(schoolId, resource.data.classId);
+      }
+
+      match /attendanceExcuses/{excuseId} {
+        allow read, write: if hasRole(schoolId, ['student_affairs', 'director', 'super_admin']);
       }
 
       // E. Assessments, Exams & Grades
@@ -107,8 +158,16 @@ service cloud.firestore {
       }
 
       match /grades/{gradeId} {
-        allow read: if belongsToSchool(schoolId);
-        allow write: if hasRole(schoolId, ['teacher', 'director', 'super_admin']);
+        allow read: if hasRole(schoolId, ['director', 'super_admin']) ||
+          (resource.data.keys().hasAny(['studentCode']) && resource.data.studentCode is string && teacherCanReadStudentCode(schoolId, resource.data.studentCode)) ||
+          (resource.data.keys().hasAny(['studentCode']) && resource.data.studentCode is string && canReadStudentCode(schoolId, resource.data.studentCode));
+        allow create: if hasRole(schoolId, ['director', 'super_admin']) ||
+          (request.resource.data.studentCode is string && teacherCanReadStudentCode(schoolId, request.resource.data.studentCode));
+        allow update: if hasRole(schoolId, ['director', 'super_admin']) ||
+          (resource.data.studentCode is string && request.resource.data.studentCode == resource.data.studentCode &&
+           teacherCanReadStudentCode(schoolId, resource.data.studentCode));
+        allow delete: if hasRole(schoolId, ['director', 'super_admin']) ||
+          (resource.data.studentCode is string && teacherCanReadStudentCode(schoolId, resource.data.studentCode));
       }
 
       // F. Social Affairs & Sensitive Student Cases (Strictly Confidential)
@@ -117,10 +176,24 @@ service cloud.firestore {
         allow write: if hasRole(schoolId, ['social_affairs', 'director', 'super_admin']);
       }
 
+      match /disciplinaryActions/{actionId} {
+        allow read, write: if hasRole(schoolId, ['social_affairs', 'director', 'tech_specialist', 'super_admin']);
+      }
+
+      match /socialIncidents/{incidentId} {
+        allow read, write: if hasRole(schoolId, ['social_affairs', 'director', 'tech_specialist', 'super_admin']);
+      }
+
       // G. Notifications & School Dismissal Events
       match /notifications/{notificationId} {
-        allow read: if belongsToSchool(schoolId);
-        allow write: if hasRole(schoolId, ['director', 'teacher', 'social_affairs', 'super_admin']);
+        allow read: if hasRole(schoolId, ['director', 'student_affairs', 'social_affairs', 'tech_specialist', 'super_admin']) ||
+          (resource.data.keys().hasAny(['targetStudentCode']) && resource.data.targetStudentCode is string && teacherCanReadStudentCode(schoolId, resource.data.targetStudentCode)) ||
+          (resource.data.keys().hasAll(['targetRole', 'targetStudentCode']) && resource.data.targetRole == 'parent' &&
+           resource.data.targetStudentCode is string && resource.data.targetStudentCode != '' &&
+           canReadStudentCode(schoolId, resource.data.targetStudentCode));
+        allow create: if hasRole(schoolId, ['director', 'student_affairs', 'social_affairs', 'tech_specialist', 'super_admin']) ||
+          (request.resource.data.targetStudentCode is string && teacherCanReadStudentCode(schoolId, request.resource.data.targetStudentCode));
+        allow update, delete: if hasRole(schoolId, ['director', 'student_affairs', 'social_affairs', 'tech_specialist', 'super_admin']);
       }
 
       match /dismissals/{dismissalId} {
@@ -128,16 +201,78 @@ service cloud.firestore {
         allow write: if hasRole(schoolId, ['director', 'super_admin']);
       }
 
+      // Gate passes contain sensitive early-exit details; keep access within school staff.
+      match /gate_passes/{passId} {
+        allow read: if hasRole(schoolId, ['director', 'student_affairs', 'tech_specialist', 'social_affairs']);
+        allow create: if hasRole(schoolId, ['director', 'student_affairs']) &&
+          request.resource.data.schoolId == schoolId &&
+          request.resource.data.status == 'pending' &&
+          request.resource.data.studentCode is string &&
+          request.resource.data.studentName is string &&
+          request.resource.data.reason is string &&
+          request.resource.data.companionName is string;
+        allow update: if (
+            hasRole(schoolId, ['director', 'student_affairs']) &&
+            request.resource.data.status in ['approved', 'rejected'] &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status', 'approvedBy', 'approvedAt', 'rejectedBy', 'rejectedAt',
+              'rejectionReason', 'updatedAt'
+            ])
+          ) || (
+            hasRole(schoolId, ['director', 'tech_specialist']) &&
+            request.resource.data.status == 'used' &&
+            request.resource.data.securityConfirmedExit == true &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status', 'securityConfirmedExit', 'securityExitTime', 'exitTime', 'updatedAt'
+            ])
+          );
+        allow delete: if false;
+      }
+
+      match /messages/{messageId} {
+        allow read: if belongsToSchool(schoolId) && (
+          resource.data.senderId == request.auth.uid ||
+          resource.data.senderEmail == request.auth.token.email ||
+          resource.data.recipientId == request.auth.uid ||
+          resource.data.recipientId == getUserDoc().role ||
+          resource.data.recipientRole == getUserDoc().role ||
+          resource.data.recipientEmail == request.auth.token.email ||
+          (resource.data.recipientId == 'all_staff' &&
+            getUserDoc().role in ['director', 'social_affairs', 'tech_specialist', 'student_affairs', 'teacher']) ||
+          (resource.data.recipientId == 'teachers' && getUserDoc().role == 'teacher')
+        );
+        allow create: if belongsToSchool(schoolId) &&
+          request.resource.data.schoolId == schoolId &&
+          request.resource.data.senderId == request.auth.uid &&
+          request.resource.data.senderRole == getUserDoc().role &&
+          request.resource.data.subject is string &&
+          request.resource.data.body is string &&
+          request.resource.data.recipientId is string &&
+          request.resource.data.recipientRole is string;
+        allow update: if belongsToSchool(schoolId) &&
+          resource.data.senderId != request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']) &&
+          resource.data.readBy is list &&
+          request.resource.data.readBy is list &&
+          request.resource.data.readBy.hasAll(resource.data.readBy) &&
+          ((resource.data.readBy.hasAny([request.auth.uid]) &&
+              request.resource.data.readBy.size() == resource.data.readBy.size()) ||
+            (!resource.data.readBy.hasAny([request.auth.uid]) &&
+              request.resource.data.readBy.size() == resource.data.readBy.size() + 1 &&
+              request.resource.data.readBy.hasAny([request.auth.uid])));
+        allow delete: if false;
+      }
+
       // H. Public CMS Content (News, Activities, Leadership, Announcements)
       match /cmsContent/{contentId} {
         // Public can read published items; draft items restricted to staff
-        allow read: if true;
+        allow read: if resource.data.status == 'published' || hasRole(schoolId, ['tech_specialist', 'director', 'super_admin']);
         allow write: if hasRole(schoolId, ['tech_specialist', 'director', 'super_admin']);
       }
 
       // I. Operational Audit Trail (Immutable)
       match /auditLogs/{logId} {
-        allow read: if hasRole(schoolId, ['director', 'super_admin']);
+        allow read: if hasRole(schoolId, ['director', 'tech_specialist', 'student_affairs', 'social_affairs', 'super_admin']);
         allow create: if belongsToSchool(schoolId);
         allow update, delete: if false; // strictly immutable audit trail
       }
@@ -149,7 +284,10 @@ service cloud.firestore {
         allow write: if hasRole(schoolId, ['tech_specialist', 'director', 'super_admin']);
 
         match /images/{imageId} {
-          allow read: if true;
+          allow read: if hasRole(schoolId, ['tech_specialist', 'director', 'super_admin']) || (
+            exists(/databases/$(database)/documents/schools/$(schoolId)/albums/$(albumId)) &&
+            get(/databases/$(database)/documents/schools/$(schoolId)/albums/$(albumId)).data.status == 'published'
+          );
           allow write: if hasRole(schoolId, ['tech_specialist', 'director', 'super_admin']);
         }
       }

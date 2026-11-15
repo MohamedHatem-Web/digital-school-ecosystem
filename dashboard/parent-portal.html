@@ -6,8 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>بوابة ولي الأمر — منظومة المدرسة الرقمية</title>
   <link rel="stylesheet" href="../css/tokens.css?v=11.0">
-  <link rel="stylesheet" href="../css/base.css?v=11.0">
-  <link rel="stylesheet" href="../css/components.css?v=11.0">
+  <link rel="stylesheet" href="../css/base.css?v=11.1">
+  <link rel="stylesheet" href="../css/components.css?v=17.2">
   <link rel="stylesheet" href="../css/dashboard.css?v=11.0">
   <link rel="manifest" href="../manifest.webmanifest">
   <meta name="theme-color" content="#0a1628">
@@ -84,7 +84,7 @@
           <div class="user-profile-widget" style="cursor: default;" title="حساب رسمي معتمد — للعرض والمتابعة فقط">
             <div class="user-avatar" id="topbar-user-avatar">أ</div>
             <div class="user-text-info">
-              <span class="user-name" id="topbar-user-name">أ. أحمد المنشاوي</span>
+              <span class="user-name" id="topbar-user-name">ولي الأمر</span>
               <span class="user-role-title" id="topbar-user-role">ولي أمر معتمد</span>
             </div>
             <a href="#" class="logout-action-btn logout-btn" title="تسجيل الخروج">
@@ -141,6 +141,24 @@
               </div>
             </div>
           </div>
+
+          <section class="panel" aria-labelledby="parent-notifications-title">
+            <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;">
+              <h2 class="panel-title" id="parent-notifications-title" style="margin:0;">إشعارات المدرسة للأبناء</h2>
+              <span class="badge badge-warning" id="parent-notifications-count">0 إشعارات</span>
+            </div>
+            <div class="panel-body" id="parent-notifications-container" aria-live="polite">
+              <p style="margin:0;color:var(--text-muted);">جارٍ تحميل الإشعارات...</p>
+            </div>
+          </section>
+
+          <section class="panel" id="parent-activation-requests-panel" style="display:none;">
+            <div class="panel-header">
+              <h3 class="panel-title">طلبات تفعيل حسابات الأبناء</h3>
+              <span class="badge badge-warning" id="parent-activation-request-count">0</span>
+            </div>
+            <div class="panel-body" id="parent-activation-requests-container" aria-live="polite"></div>
+          </section>
 
           <!-- Linked Children Panel -->
           <div class="panel">
@@ -206,7 +224,7 @@
                   </div>
                   <div class="form-group">
                     <label class="form-label" for="parent-msg-subject">موضوع الرسالة *</label>
-                    <input type="text" id="parent-msg-subject" class="form-control" placeholder="مثال: متابعة مستوى الطالب يوسف، استفسار عن مواعيد الاختبارات..." required>
+                    <input type="text" id="parent-msg-subject" class="form-control" placeholder="مثال: متابعة مستوى الطالب أو الاستفسار عن مواعيد الاختبارات..." required>
                   </div>
                 </div>
 
@@ -291,16 +309,19 @@
     import { getCurrentUser } from '../js/auth.js';
     import { DEFAULT_SCHOOL_ID, getSchoolProfile } from '../js/services/school-service.js';
     import { getStudents } from '../js/services/student-service.js';
-    import { getSchoolDismissals } from '../js/services/notification-service.js';
+    import { getSchoolDismissals, subscribeToParentNotifications } from '../js/services/notification-service.js';
     import { getStudentGrades } from '../js/services/grade-service.js';
+    import { getStudentAttendanceHistory } from '../js/services/attendance-service.js';
     import { getMessages, sendMessage, markMessageAsRead, getAllowedRecipients } from '../js/services/messaging-service.js';
+    import { getStudentActivationRequests, reviewStudentActivation } from '../js/services/account-service.js';
 
     checkRouteAccess(['parent', 'director', 'super_admin']);
     initComponents();
     initI18n();
 
-    const currentUser = getCurrentUser() || { displayName: 'أ. أحمد المنشاوي', role: 'parent', email: 'parent@dse.edu.eg' };
+    const currentUser = getCurrentUser() || { displayName: 'ولي الأمر', role: 'parent', email: '' };
     const schoolId = currentUser.schoolId || DEFAULT_SCHOOL_ID;
+    let stopParentNotifications = () => {};
 
     // View Switching
     const viewMain = document.getElementById('view-parent-main');
@@ -450,7 +471,7 @@
       await sendMessage({
         senderId: currentUser.uid || currentUser.email || 'parent_01',
         senderEmail: currentUser.email || 'parent@dse.edu.eg',
-        senderName: currentUser.displayName || 'أ. أحمد المنشاوي',
+        senderName: currentUser.displayName || 'ولي الأمر',
         senderRole: 'parent',
         recipientId: rec.value,
         recipientRole: opt.dataset.role || 'teacher',
@@ -494,6 +515,49 @@
       }
     }
 
+    function loadParentNotifications(studentCodes) {
+      const container = document.getElementById('parent-notifications-container');
+      const count = document.getElementById('parent-notifications-count');
+      if (!container) return;
+      stopParentNotifications();
+      if (!studentCodes.length) {
+        container.textContent = 'لا توجد أبناء مرتبطون بالحساب لعرض إشعاراتهم.';
+        if (count) count.textContent = '0 إشعارات';
+        return;
+      }
+
+      container.textContent = 'جارٍ تحميل الإشعارات...';
+      try {
+        stopParentNotifications = subscribeToParentNotifications(studentCodes, (notices) => {
+          const recentNotices = notices.slice(0, 20);
+          if (count) count.textContent = `${notices.length} إشعارات`;
+          if (!recentNotices.length) {
+            container.textContent = 'لا توجد إشعارات مدرسية جديدة للأبناء المرتبطين بالحساب.';
+            return;
+          }
+          container.replaceChildren(...recentNotices.map((notice) => {
+            const item = document.createElement('article');
+            item.style.cssText = 'padding:var(--space-3);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);background:var(--bg-surface-subtle);margin-bottom:var(--space-2);';
+            const heading = document.createElement('strong');
+            heading.textContent = notice.title || 'إشعار من المدرسة';
+            const body = document.createElement('p');
+            body.style.cssText = 'margin:4px 0;color:var(--text-secondary);';
+            body.textContent = notice.body || '';
+            const date = document.createElement('small');
+            date.style.color = 'var(--text-muted)';
+            date.textContent = notice.date ? new Date(notice.date).toLocaleString('ar-EG') : '';
+            item.append(heading, body, date);
+            return item;
+          }));
+        }, (error) => {
+          container.textContent = error.message || 'تعذر متابعة إشعارات الأبناء مباشرة.';
+        }, schoolId);
+      } catch (error) {
+        container.textContent = error.message || 'تعذر تحميل إشعارات الأبناء.';
+      }
+    }
+    window.addEventListener('beforeunload', () => stopParentNotifications());
+
     // 2. Load linked children — filter by parent relationship
     async function loadParentChildren() {
       try {
@@ -505,36 +569,15 @@
         // Filter: match by parent email, uid, or parentInfo
         const parentEmail = currentUser?.email || '';
         const parentUid = currentUser?.uid || '';
-        const parentName = currentUser?.displayName || '';
 
-        // Check if specific children were chosen/stored from login session
-        let sessionChildrenCodes = null;
-        try {
-          const rawCodes = localStorage.getItem('dse_parent_children_codes');
-          if (rawCodes) sessionChildrenCodes = JSON.parse(rawCodes);
-        } catch (e) {}
-
-        let linkedStudents = [];
-
-        if (Array.isArray(sessionChildrenCodes) && sessionChildrenCodes.length > 0) {
-          linkedStudents = students.filter(s => sessionChildrenCodes.includes(s.code));
-        }
-
-        if (linkedStudents.length === 0) {
-          // Dynamic matching: parent email, phone, name, or UID
-          linkedStudents = students.filter((s) => {
-            if (parentUid && s.parentInfo?.parentUid === parentUid) return true;
-            if (parentEmail && s.parentInfo?.parentEmail === parentEmail) return true;
-            if (parentName && s.parentInfo?.parentName && (s.parentInfo.parentName === parentName || s.parentInfo.parentName.includes(parentName))) return true;
-            if (parentUid && s.linkedParentUid === parentUid) return true;
-            return false;
-          });
-
-          // Standard fallback for the official demo parent account
-          if (parentEmail === 'parent@dse.edu.eg' || (!linkedStudents.length && !sessionChildrenCodes)) {
-            linkedStudents = students.filter(s => ['2026101', '2026102'].includes(s.code));
-          }
-        }
+        // The student service returns only records linked to this authenticated parent.
+        const linkedStudents = students.filter((s) => {
+          if (parentUid && s.parentInfo?.parentUid === parentUid) return true;
+          if (parentEmail && s.parentInfo?.parentEmail === parentEmail) return true;
+          if (parentUid && s.linkedParentUid === parentUid) return true;
+          return false;
+        });
+        loadParentNotifications(linkedStudents.map((student) => student.code));
 
         if (linkedStudents.length > 0) {
           countBadge.textContent = `${linkedStudents.length} طالب`;
@@ -591,7 +634,13 @@
                 ${[1,2,3].map(() => `<div style="padding: var(--space-4); background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);"><div class="skeleton-line" style="height:14px;width:40%;margin-bottom:8px"></div><div class="skeleton-line" style="height:20px;width:60%"></div></div>`).join('')}
               </div>`;
 
-            const grades = await getStudentGrades(child.code, schoolId);
+            const [grades, attendanceHistory] = await Promise.all([
+              getStudentGrades(child.code, schoolId),
+              getStudentAttendanceHistory(child.code, schoolId),
+            ]);
+            const dailyAttendance = attendanceHistory.filter((record) => record.phase === 'arrival');
+            const escapedDays = new Set(attendanceHistory.filter((record) => record.status === 'escaped').map((record) => record.date)).size;
+            const absentCount = dailyAttendance.filter((record) => ['absent', 'absent_unexcused', 'absent_excused'].includes(record.status)).length;
 
             weeklyContainer.innerHTML = `
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-4);">
@@ -608,16 +657,27 @@
                   <small style="color: var(--text-muted);">${grades.length > 0 ? 'تقدير: ممتاز' : 'لم تُرصد درجات بعد'}</small>
                 </div>
                 <div style="padding: var(--space-4); background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);">
-                  <div style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: var(--space-1);">⚖️ الملاحظات السلوكية:</div>
-                  <div style="font-size: var(--text-base); font-weight: 700; color: var(--color-primary-800);">لا توجد مخالفات</div>
-                  <small style="color: var(--text-muted);">سجل انضباط سليم</small>
+                  <div style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: var(--space-1);">📋 الحضور والغياب:</div>
+                  <div style="font-size: var(--text-base); font-weight: 700; color: var(--color-primary-800);">${dailyAttendance.length} أيام بوابة · ${absentCount} غياب</div>
+                  <small style="color:var(--color-danger-text);">${escapedDays} أيام هروب مؤكدة</small>
                 </div>
+              </div>
+              <div class="table-wrap" style="border:none;">
+                <table class="data-table"><thead><tr><th>التاريخ</th><th>الفصل</th><th>مرحلة الرصد</th><th>الحالة</th></tr></thead>
+                  <tbody>${attendanceHistory.length ? attendanceHistory.map((record) => {
+                    const labels = { present: 'حاضر', absent: 'غائب', absent_unexcused: 'غائب دون عذر', absent_excused: 'غائب بعذر', late: 'متأخر', escaped: 'هروب من المدرسة' };
+                    const badgeClass = record.escapeReview === 'pending' ? 'badge-warning' : record.status === 'escaped' ? 'badge-danger' : ['absent', 'absent_unexcused', 'absent_excused'].includes(record.status) ? 'badge-warning' : 'badge-success';
+                    const statusLabel = record.escapeReview === 'pending' ? 'غياب الحصة قيد المراجعة' : labels[record.status] || 'غير محدد';
+                    const attendancePhase = record.phase === 'arrival' ? 'البوابة / شؤون الطلاب' : record.phase === 'lesson' ? `الحصة ${record.lessonId || '1'}` : 'الفصل';
+                    return `<tr><td>${record.date || '—'}</td><td>${record.classId || '—'}</td><td>${attendancePhase}</td><td><span class="badge ${badgeClass}">${statusLabel}</span></td></tr>`;
+                  }).join('') : '<tr><td colspan="4" style="text-align:center;padding:var(--space-4);color:var(--text-muted);">لا توجد سجلات حضور معتمدة مرتبطة بهذا الطالب.</td></tr>'}</tbody>
+                </table>
               </div>
               ${grades.length > 0 ? `
               <div style="padding: var(--space-3); border-inline-start: 4px solid var(--color-accent-700); background: var(--bg-surface-subtle); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;">
                 <strong>توصية المعلم والمرشد التربوي للأسبوع:</strong>
                 <p style="font-size: var(--text-xs); color: var(--text-secondary); margin-top: 2px;">
-                  ${grades[0].feedback || 'الطالب متفوق ومنتظم في إتمام الواجبات المدرسية والمشاركة الصفية، ويُنصح بمواصلة المذاكرة المستمرة.'}
+                  ${grades[0].feedback || 'لا توجد ملاحظات مسجلة لهذا التقييم.'}
                 </p>
               </div>` : ''}
             `;
@@ -625,15 +685,73 @@
 
           renderChildCards();
           await loadChildReport(selectedChildCode);
+        } else {
+          countBadge.style.display = 'none';
+          container.innerHTML = '<div class="empty-state" style="border:none;padding:var(--space-6);"><h3 class="empty-state-title">لا يوجد أبناء مرتبطون بهذا الحساب</h3><p class="empty-state-desc">تواصل مع شؤون الطلاب لربط حساب ولي الأمر بملف الطالب الرسمي.</p></div>';
+          weeklyContainer.innerHTML = '<div class="empty-state" style="border:none;padding:var(--space-6);"><p class="empty-state-desc">لا تتوفر تقارير أو سجلات حضور حتى يتم ربط طالب بالحساب.</p></div>';
         }
       } catch (e) {
         console.warn('Parent children load error:', e);
       }
     }
 
+    async function loadStudentActivationRequests() {
+      const panel = document.getElementById('parent-activation-requests-panel');
+      const container = document.getElementById('parent-activation-requests-container');
+      const count = document.getElementById('parent-activation-request-count');
+      if (!panel || !container || currentUser.role !== 'parent') return;
+      try {
+        const result = await getStudentActivationRequests();
+        const requests = Array.isArray(result.requests) ? result.requests : [];
+        panel.style.display = requests.length ? 'block' : 'none';
+        count.textContent = String(requests.length);
+        container.replaceChildren();
+        for (const request of requests) {
+          const row = document.createElement('div');
+          row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap;padding:var(--space-3) 0;border-bottom:1px solid var(--border-light);';
+          const detail = document.createElement('div');
+          const studentName = document.createElement('strong');
+          studentName.textContent = request.studentName || 'طالب مسجل';
+          const studentGrade = document.createElement('div');
+          studentGrade.style.cssText = 'font-size:var(--text-xs);color:var(--text-muted);margin-top:4px;';
+          studentGrade.textContent = `كود ${request.studentCode || '—'} · ${request.grade || 'الفصل غير محدد'}`;
+          detail.append(studentName, studentGrade);
+
+          const actions = document.createElement('div');
+          actions.style.cssText = 'display:flex;gap:var(--space-2);';
+          for (const [decision, label, style] of [
+            ['approve', 'موافقة', 'btn btn-primary btn-sm'],
+            ['reject', 'رفض', 'btn btn-outline btn-sm'],
+          ]) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = style;
+            button.textContent = label;
+            button.addEventListener('click', async () => {
+              button.disabled = true;
+              try {
+                await reviewStudentActivation(request.requestId, decision);
+                await loadStudentActivationRequests();
+              } catch (error) {
+                button.disabled = false;
+                showToast(error.message || 'تعذر حفظ قرار ولي الأمر.', 'error');
+              }
+            });
+            actions.append(button);
+          }
+          row.append(detail, actions);
+          container.append(row);
+        }
+      } catch (error) {
+        panel.style.display = 'block';
+        container.textContent = error.message || 'تعذر تحميل طلبات التفعيل.';
+      }
+    }
+
     loadDismissalBanner();
     loadParentChildren();
+    loadStudentActivationRequests();
   </script>
-  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=11.0');}</script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=17.3');}</script>
 </body>
 </html>

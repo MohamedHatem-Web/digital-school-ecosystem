@@ -4,13 +4,31 @@
   <meta charset="UTF-8">
   <script>(function(){try{var t=localStorage.getItem('dse_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
   <title>مكتب مدير المدرسة — منظومة المدرسة الرقمية</title>
   <link rel="stylesheet" href="../css/tokens.css?v=11.0">
-  <link rel="stylesheet" href="../css/base.css?v=11.0">
-  <link rel="stylesheet" href="../css/components.css?v=11.0">
+  <link rel="stylesheet" href="../css/base.css?v=11.1">
+  <link rel="stylesheet" href="../css/components.css?v=17.2">
   <link rel="stylesheet" href="../css/dashboard.css?v=11.0">
   <link rel="manifest" href="../manifest.webmanifest">
   <meta name="theme-color" content="#0a1628">
+  <style>
+    body.embedded-admin-view .dashboard-sidebar,
+    body.embedded-admin-view .dashboard-topbar,
+    body.embedded-admin-view .dashboard-overlay { display: none !important; }
+    body.embedded-admin-view,
+    body.embedded-admin-view .dashboard-layout,
+    body.embedded-admin-view .dashboard-main {
+      min-height: 0 !important;
+      height: auto !important;
+    }
+    body.embedded-admin-view .dashboard-main { margin: 0 !important; }
+    body.embedded-admin-view .dashboard-workspace {
+      flex: 0 0 auto !important;
+      min-height: 0 !important;
+      padding: var(--space-4) !important;
+    }
+  </style>
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="المدرسة الرقمية">
@@ -54,13 +72,13 @@
             <span class="sidebar-icon">🛡️</span>
             <span>سجل النشاطات الشامل</span>
           </a>
-
-          <!-- القسم الثاني: الموقع العام والهيكل -->
-          <div class="sidebar-section-title">🏛️ إدارة الموقع العام</div>
           <a href="#cms-hub" class="sidebar-link" id="nav-cms-link">
             <span class="sidebar-icon">🏛️</span>
             <span>إدارة المحتوى والهيكل</span>
           </a>
+
+          <!-- القسم الثاني: الموقع العام والهيكل -->
+          <div class="sidebar-section-title">🏛️ إدارة الموقع العام</div>
           <a href="#gallery" class="sidebar-link" id="nav-gallery-link">
             <span class="sidebar-icon">📸</span>
             <span>معرض الصور والوسائط (Cloudinary)</span>
@@ -71,6 +89,14 @@
           <a href="#students" class="sidebar-link" id="nav-students-link">
             <span class="sidebar-icon">🎓</span>
             <span>شؤون الطلاب والقيد</span>
+          </a>
+          <a href="#student-inquiry" class="sidebar-link" id="nav-student-inquiry-link">
+            <span class="sidebar-icon">🔎</span>
+            <span>ملف الطالب والاستعلام</span>
+          </a>
+          <a href="#attendance" class="sidebar-link" id="nav-attendance-link">
+            <span class="sidebar-icon">📋</span>
+            <span>الحضور اليومي (دفتر 5 سلوك)</span>
           </a>
           <a href="#social" class="sidebar-link" id="nav-social-link">
             <span class="sidebar-icon">🤝</span>
@@ -90,9 +116,9 @@
 
           <!-- القسم الخامس: صيانة المنظومة والبيانات -->
           <div class="sidebar-section-title">⚙️ صيانة المنظومة والبيانات</div>
-          <a href="#system-data" class="sidebar-link" id="nav-system-data-link">
-            <span class="sidebar-icon">⚙️</span>
-            <span>تهيئة وتصفير بيانات المنظومة</span>
+          <a href="#accounts" class="sidebar-link" id="nav-accounts-link" style="display:none;">
+            <span class="sidebar-icon">👥</span>
+            <span>إنشاء حساب موظف</span>
           </a>
         </div>
       </nav>
@@ -136,7 +162,8 @@
       </header>
 
       <main class="dashboard-workspace" id="admin-workspace">
-        <div id="view-admin-main" style="display: flex; flex-direction: column; gap: var(--space-6);">
+        <div id="view-admin-main" class="portal-tab-view" style="display: flex; flex-direction: column; gap: var(--space-6);">
+          <div id="admin-attendance-alerts"></div>
 
           <!-- Page Header & Action Bar -->
           <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-4);">
@@ -396,78 +423,6 @@
             </div>
           </div>
 
-          <!-- Public Website CMS Management -->
-          <div class="panel">
-            <div class="panel-header">
-              <div>
-                <h3 class="panel-title">إدارة ونشر محتوى الموقع العام (CMS)</h3>
-                <p style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">
-                  نشر البيانات الرسمية، الأخبار والأنشطة لزوار الموقع العام للمدرسة فوراً.
-                </p>
-              </div>
-              <button type="button" id="toggle-cms-form-btn" class="btn btn-primary btn-sm">+ نشر بيان أو خبر رسمي</button>
-            </div>
-            <div class="panel-body">
-              <div id="cms-form-panel" style="display: none; padding: var(--space-4); background: var(--bg-surface-subtle); border: 1px solid var(--border-light); border-radius: var(--radius-sm); margin-bottom: var(--space-4);">
-                <form id="new-cms-form">
-                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-3);">
-                    <div class="form-group" style="grid-column: span 2;">
-                      <label class="form-label" for="cms-title">عنوان الخبر أو البيان الرسمي <span class="required">*</span></label>
-                      <input type="text" id="cms-title" class="form-control" placeholder="مثال: إعلان فتح باب استلام تابلت الصف الأول الثانوي" required>
-                    </div>
-                    <div class="form-group">
-                      <label class="form-label" for="cms-category">تصنيف المحتوى <span class="required">*</span></label>
-                      <select id="cms-category" class="form-control">
-                        <option value="news">بيانات رسمية وأخبار</option>
-                        <option value="activities">أنشطة طلابية ومعارض</option>
-                        <option value="announcements">تنبيهات إدارية هامة</option>
-                        <option value="leadership">القيادة المدرسية</option>
-                      </select>
-                    </div>
-                    <div class="form-group">
-                      <label class="form-label" for="cms-status">حالة النشر</label>
-                      <select id="cms-status" class="form-control">
-                        <option value="published">نشر فوري بالموقع العام</option>
-                        <option value="draft">حفظ كمسودة للإدارة فقط</option>
-                      </select>
-                    </div>
-                    <div class="form-group" style="grid-column: span 2;">
-                      <label class="form-label" for="cms-summary">الموجز أو نص البيان <span class="required">*</span></label>
-                      <textarea id="cms-summary" rows="3" class="form-control" placeholder="اكتب تفاصيل الإعلان الرسمي الموجه للطلاب وأولياء الأمور..." required></textarea>
-                    </div>
-                  </div>
-                  <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-3);">
-                    <button type="button" id="cancel-cms-btn" class="btn btn-sm">إلغاء</button>
-                    <button type="submit" class="btn btn-primary btn-sm">نشر على الموقع العام</button>
-                  </div>
-                </form>
-              </div>
-
-              <div id="cms-empty-state" class="empty-state" style="border: none; display: none;">
-                <div class="empty-state-icon">📢</div>
-                <h4 class="empty-state-title">لا توجد منشورات على الموقع العام حالياً</h4>
-                <p class="empty-state-desc">استخدم الزر أعلاه لإضافة أول بيان رسمي أو خبر للطلاب وأولياء الأمور.</p>
-              </div>
-
-              <div class="table-wrap" id="cms-table-wrap">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>تاريخ النشر</th>
-                      <th>التصنيف</th>
-                      <th>عنوان المحتوى</th>
-                      <th>حالة العرض</th>
-                      <th>إجراءات</th>
-                    </tr>
-                  </thead>
-                  <tbody id="cms-table-body">
-                    <!-- Populated dynamically -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
           <!-- School Profile Setup Panel (Allows entering the real school identity!) -->
           <div class="panel">
             <div class="panel-header">
@@ -483,6 +438,7 @@
               <div id="profile-saved-alert" class="alert alert-success" style="display: none;">
                 ✓ تم حفظ واعتماد بيانات المدرسة بنجاح وتحديث الموقع العام.
               </div>
+              <div id="profile-error-alert" class="alert alert-danger" role="alert" style="display: none;"></div>
 
               <form id="school-profile-form">
                 <!-- School Logo Customization Box -->
@@ -496,13 +452,13 @@
                       </svg>
                     </div>
                     <div>
-                      <div style="font-weight: 700; font-size: var(--text-sm); color: var(--text-primary); margin-bottom: 2px;">شعار المدرسة الرسمي المعتمد (Institutional Logo)</div>
+                      <div style="font-weight: 700; font-size: var(--text-sm); color: var(--text-primary); margin-bottom: 2px;">شعار المدرسة الرسمي المعتمد</div>
                       <div style="font-size: var(--text-xs); color: var(--text-muted);">يظهر فورياً مكان الشعار الافتراضي في الهيدر، الفوتر، لوحات التحكم، وقسم الهيرو.</div>
                     </div>
                   </div>
 
                   <div style="display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap;">
-                    <input type="file" id="prof-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display: none;">
+                    <input type="file" id="prof-logo-file" accept="image/png,image/jpeg,image/webp" style="display: none;">
                     <button type="button" class="btn btn-outline btn-sm" id="prof-logo-upload-btn">
                       📸 اختيار صورة الشعار
                     </button>
@@ -1061,12 +1017,19 @@
 
         <!-- View 7: Student Affairs & Registry -->
         <div id="view-students" class="portal-tab-view" style="display: none; flex-direction: column; gap: var(--space-5);"></div>
+        <div id="view-student-inquiry" class="portal-tab-view" style="display: none; flex-direction: column; gap: var(--space-5);"></div>
+
+        <!-- View: Daily Gate Attendance Register (دفتر 5 سلوك) -->
+        <div id="view-attendance" class="portal-tab-view" style="display: none; flex-direction: column; gap: var(--space-5);"></div>
 
         <!-- View 8: Social Affairs & Discipline -->
         <div id="view-social" class="portal-tab-view" style="display: none; flex-direction: column; gap: var(--space-5);"></div>
 
         <!-- View 9: Gate Pass Management -->
         <div id="view-gate-pass" class="portal-tab-view" style="display: none; flex-direction: column; gap: var(--space-5);"></div>
+
+        <!-- System Data and Account Management Views -->
+        <div id="view-accounts" class="portal-tab-view" style="display:none;flex-direction:column;gap:var(--space-5);"></div>
       </main>
     </div>
   </div>
@@ -1074,7 +1037,7 @@
   <!-- Audit Log Details Modal -->
   <div class="modal-backdrop" id="audit-detail-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; padding: var(--space-4);">
     <div style="background: var(--bg-surface); border-radius: var(--radius-md); max-width: 580px; width: 100%; border: 1px solid var(--border-default); box-shadow: var(--shadow-xl); overflow: hidden;">
-      <div style="background: var(--color-primary-950); color: #ffffff; padding: var(--space-4) var(--space-5); display: flex; justify-content: space-between; align-items: center;">
+      <div class="audit-modal-header" style="background: #172542; color: #ffffff; padding: var(--space-4) var(--space-5); display: flex; justify-content: space-between; align-items: center;">
         <div style="display: flex; align-items: center; gap: var(--space-2);">
           <span>🛡️</span>
           <h3 style="margin: 0; font-size: var(--text-base); color: #ffffff;">تفاصيل العملية وسجل التوثيق</h3>
@@ -1123,17 +1086,12 @@
     </div>
   </div>
 
-  <!-- View 10: System Data Maintenance & Production Preparation -->
-  <div id="view-system-data" class="portal-tab-view" style="display: none; flex-direction: column; gap: var(--space-5);">
-    <!-- Dynamically populated by renderSystemDataManagementView -->
-  </div>
-
   <script type="module">
     import { checkRouteAccess } from '../js/router-guard.js';
     import { initComponents, showToast, showConfirmModal } from '../js/components.js?v=11.0';
     import { initI18n } from '../js/i18n.js';
     import { getCurrentUser } from '../js/auth.js';
-    import { getSchoolProfile, saveSchoolProfile, purgeDemoData, restoreDemoData } from '../js/services/school-service.js';
+    import { DEFAULT_SCHOOL_ID, getSchoolProfile, saveSchoolProfile } from '../js/services/school-service.js';
     import { getTabletBatches, getTabletDevices } from '../js/services/tablet-service.js';
     import { getAuditLogs, recordAuditEvent, filterAuditLogs, exportAuditLogsToCsv, AUDIT_ROLES_MAP, AUDIT_CATEGORIES_MAP } from '../js/services/audit-service.js';
     import { getCmsItems, createCmsItem, deleteCmsItem } from '../js/services/cms-service.js';
@@ -1147,15 +1105,40 @@
     import { renderGalleryView } from '../js/views/gallery-view.js';
     import { renderTabletsView } from '../js/views/tablets-view.js';
     import { renderStudentsView } from '../js/views/students-view.js';
+    import { renderStudentInquiryView } from '../js/views/student-inquiry-view.js';
+    import { renderAttendanceView } from '../js/views/attendance-view.js';
     import { renderSocialView } from '../js/views/social-view.js';
     import { renderGatePassView } from '../js/views/gate-pass-view.js';
+    import { renderAttendanceAlerts } from '../js/views/attendance-alerts-view.js';
+    import { renderAccountManagementView } from '../js/views/account-management-view.js';
+    import { renderCmsView } from '../js/views/cms-view.js';
+
+    if (new URLSearchParams(window.location.search).has('embedded')) {
+      document.body.classList.add('embedded-admin-view');
+    }
 
     // Verify access for administrative roles (Director, Social Affairs, Tech Specialist, Super Admin)
     checkRouteAccess(['director', 'social_affairs', 'tech_specialist', 'super_admin']);
     initComponents();
     initI18n();
 
+    const isEmbeddedAdminView = new URLSearchParams(window.location.search).has('embedded');
+    if (isEmbeddedAdminView) {
+      window.addEventListener('storage', (event) => {
+        if (event.key === 'dse_theme' && ['dark', 'light'].includes(event.newValue)) {
+          document.documentElement.setAttribute('data-theme', event.newValue);
+        }
+      });
+      window.addEventListener('message', (event) => {
+        if (event.origin !== window.location.origin) return;
+        if (event.data?.type === 'dse-theme-sync' && ['dark', 'light'].includes(event.data.theme)) {
+          document.documentElement.setAttribute('data-theme', event.data.theme);
+        }
+      });
+    }
+
     const currentUser = getCurrentUser() || { displayName: 'مدير المدرسة', role: 'director', email: 'director@dse.edu.eg' };
+    const activeSchoolId = currentUser.schoolId || DEFAULT_SCHOOL_ID;
 
     // --------------------------------------------------------------------------
     // State variables
@@ -1165,6 +1148,9 @@
     let loadedMessages = [];
     const initializedViews = new Set();
     let cmsHubLoadPromise = null;
+    const accountsNavLink = document.getElementById('nav-accounts-link');
+    const canManageAccounts = ['director', 'tech_specialist', 'super_admin'].includes(currentUser.role);
+    if (accountsNavLink && canManageAccounts) accountsNavLink.style.display = 'flex';
 
     // --------------------------------------------------------------------------
     // Tab & View Navigation Routing (Single Page Application Hub)
@@ -1176,10 +1162,12 @@
       gallery: document.getElementById('view-gallery'),
       tablets: document.getElementById('view-tablets'),
       students: document.getElementById('view-students'),
+      'student-inquiry': document.getElementById('view-student-inquiry'),
+      attendance: document.getElementById('view-attendance'),
       social: document.getElementById('view-social'),
       'gate-pass': document.getElementById('view-gate-pass'),
       messages: document.getElementById('view-messages'),
-      'system-data': document.getElementById('view-system-data'),
+      accounts: document.getElementById('view-accounts'),
     };
 
     const sidebarLinks = {
@@ -1189,14 +1177,18 @@
       gallery: document.getElementById('nav-gallery-link'),
       tablets: document.getElementById('nav-tablets-link'),
       students: document.getElementById('nav-students-link'),
+      'student-inquiry': document.getElementById('nav-student-inquiry-link'),
+      attendance: document.getElementById('nav-attendance-link'),
       social: document.getElementById('nav-social-link'),
       'gate-pass': document.getElementById('nav-gate-pass-link'),
       messages: document.getElementById('nav-messages-link'),
-      'system-data': document.getElementById('nav-system-data-link'),
+      accounts: accountsNavLink,
     };
 
     async function switchView(tabKey) {
-      const activeKey = views[tabKey] ? tabKey : 'overview';
+      window.scrollTo(0, 0);
+      const activeKey = views[tabKey] && (tabKey !== 'accounts' || canManageAccounts) ? tabKey : 'overview';
+      if (isEmbeddedAdminView) window.scrollTo(0, 0);
       Object.keys(views).forEach((k) => {
         if (views[k]) views[k].style.display = k === activeKey ? 'flex' : 'none';
         if (sidebarLinks[k]) {
@@ -1208,206 +1200,18 @@
       if (initializedViews.has(activeKey)) return;
       if (activeKey === 'overview') await loadOverviewDynamicSections();
       if (activeKey === 'audit-logs') await loadAuditLogsSection();
-      if (activeKey === 'cms-hub') await loadCmsHubSection();
+      if (activeKey === 'cms-hub') await renderCmsView(views['cms-hub']);
       if (activeKey === 'gallery') await renderGalleryView(views.gallery);
       if (activeKey === 'tablets') await renderTabletsView(views.tablets);
       if (activeKey === 'students') await renderStudentsView(views.students);
+      if (activeKey === 'student-inquiry') await renderStudentInquiryView(views['student-inquiry']);
+      if (activeKey === 'attendance') await renderAttendanceView(views.attendance);
       if (activeKey === 'social') await renderSocialView(views.social);
       if (activeKey === 'gate-pass') await renderGatePassView(views['gate-pass']);
       if (activeKey === 'messages') await loadMessagesSection();
-      if (activeKey === 'system-data') await renderSystemDataManagementView();
+      if (activeKey === 'accounts') await renderAccountManagementView(views.accounts);
       initializedViews.add(activeKey);
-    }
-
-    async function renderSystemDataManagementView() {
-      const container = views['system-data'];
-      if (!container) return;
-
-      const isCleanMode = localStorage.getItem('dse_clean_mode_sch_cairo_sec_01') === 'true';
-
-      container.innerHTML = `
-        <div style="display: flex; flex-direction: column; gap: var(--space-5);">
-          <!-- Header -->
-          <div>
-            <h1 style="font-size: var(--text-2xl); font-weight: 800; color: var(--color-primary-950); margin-bottom: var(--space-1);">
-              ⚙️ تهيئة وإدارة بيانات المنظومة والإنتاج الفعلي
-            </h1>
-            <p style="font-size: var(--text-sm); color: var(--text-muted); margin: 0;">
-              التحكم في وضع تشغيل المنظومة: التبديل بين البيانات التجريبية (Demo Seed) والبدء الفعلي بالبيانات الحقيقية للمدرسة.
-            </p>
-          </div>
-
-          <!-- Operational Status Card -->
-          <div class="panel" style="border-inline-start: 4px solid ${isCleanMode ? '#10b981' : '#f59e0b'};">
-            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-2);">
-              <h3 class="panel-title" style="margin: 0;">حالة قاعدة البيانات التشغيلية</h3>
-              <span class="badge ${isCleanMode ? 'badge-success' : 'badge-warning'}" style="font-size: var(--text-sm); font-weight: 700;">
-                ${isCleanMode ? '🟢 وضع الإنتاج الحقيقي (Clean Mode) — جاهز لتسجيل بيانات المدرسة' : '🟡 وضع العرض التجريبي (Demo Mode) — بيانات افتراضية للاختبار'}
-              </span>
-            </div>
-            <div class="panel-body">
-              <p style="font-size: var(--text-sm); color: var(--text-secondary); line-height: 1.6; margin: 0;">
-                ${isCleanMode 
-                  ? 'المنظومة مهيأة حالياً لوضع العمل الحقيقي. جميع السجلات التي يتم قيدها بواسطة شؤون الطلاب، مسؤول التطوير، والمعلمين هي سجلات فعلية معتمدة.'
-                  : 'المنظومة تحتوي حالياً على حزمة بيانات تجريبية (طلاب افتراضيين، عهدة تابلت تجريبية، تقييمات نموذجية) لغايات العرض والتدريب. يمكنك تصفيرها للبدء الحقيقي في أي وقت.'}
-              </p>
-            </div>
-          </div>
-
-          <!-- Three Column Action Cards -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4);">
-            <!-- Danger Action: Purge to Clean -->
-            <div class="panel" style="border: 1px solid rgba(239, 68, 68, 0.3); background: var(--bg-surface);">
-              <div class="panel-header" style="background: rgba(239, 68, 68, 0.05);">
-                <h3 class="panel-title" style="color: #ef4444; margin: 0;">🗑️ تصفير السجلات والبدء الحقيقي</h3>
-              </div>
-              <div class="panel-body" style="display: flex; flex-direction: column; justify-content: space-between; gap: var(--space-4);">
-                <p style="font-size: var(--text-xs); color: var(--text-muted); line-height: 1.6; margin: 0;">
-                  يقوم هذا الإجراء بمسح كافة سجلات الطلاب التجريبية، وعهد التابلت، والدرجات، والتصاريح التجريبية، لتصبح المنظومة نظيفة تماماً للعام الدراسي الفعلي. 
-                  <br><strong style="color: var(--color-primary-950);">ملاحظة هامة:</strong> تظل حسابات هيئة التدريس والإدارة المدرسية محفوظة بالكامل.
-                </p>
-                <div>
-                  <button type="button" id="btn-purge-demo-data" class="btn btn-danger btn-md" style="width: 100%; font-weight: 700; background: #dc2626; color: #fff; border: none;">
-                    تصفير السجلات والبدء بالبيانات الحقيقية ⚠️
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Restore Action: Seed Demo -->
-            <div class="panel" style="border: 1px solid var(--border-light); background: var(--bg-surface);">
-              <div class="panel-header" style="background: var(--bg-surface-subtle);">
-                <h3 class="panel-title" style="margin: 0;">🔄 استعادة البيانات التجريبية (Demo)</h3>
-              </div>
-              <div class="panel-body" style="display: flex; flex-direction: column; justify-content: space-between; gap: var(--space-4);">
-                <p style="font-size: var(--text-xs); color: var(--text-muted); line-height: 1.6; margin: 0;">
-                  في حال رغبتكم في تجربة المنظومة أو تدريب الكوادر المدرسية عليها بنماذج افتراضية كاملة (عائلة المنشاوي، أجهزة التابلت، التقييمات، والجداول)، يمكنك استعادة حزمة الاختبار بضغطة زر واحدة.
-                </p>
-                <div>
-                  <button type="button" id="btn-restore-demo-data" class="btn btn-outline btn-md" style="width: 100%; font-weight: 700;">
-                    إعادة تحميل البيانات التجريبية للاختبار 🔄
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Backup & Restore Action -->
-            <div class="panel" style="border: 1px solid rgba(59, 130, 246, 0.3); background: var(--bg-surface);">
-              <div class="panel-header" style="background: rgba(59, 130, 246, 0.05);">
-                <h3 class="panel-title" style="color: #2563eb; margin: 0;">💾 النسخ الاحتياطي واسترجاع البيانات</h3>
-              </div>
-              <div class="panel-body" style="display: flex; flex-direction: column; justify-content: space-between; gap: var(--space-4);">
-                <p style="font-size: var(--text-xs); color: var(--text-muted); line-height: 1.6; margin: 0;">
-                  يمكنك تصدير نسخة احتياطية مشفرة وشاملة لكافة بيانات المدرسة (ملفات الطلاب، عهد التابلت، الهوية الرسمية، والمحتوى) كملف JSON وحفظه على جهازك، أو استرجاعه في ثوانٍ.
-                </p>
-                <div style="display: flex; flex-direction: column; gap: var(--space-2);">
-                  <button type="button" id="btn-backup-system-data" class="btn btn-primary btn-md" style="width: 100%; font-weight: 700;">
-                    📥 تصدير نسخة احتياطية كاملة (JSON)
-                  </button>
-                  <input type="file" id="input-restore-backup-file" accept=".json" style="display: none;">
-                  <button type="button" id="btn-restore-from-backup" class="btn btn-outline btn-md" style="width: 100%; font-weight: 700;">
-                    📤 استرجاع قاعدة البيانات من ملف
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-
-      // Wire Purge button
-      document.getElementById('btn-purge-demo-data')?.addEventListener('click', async () => {
-        const ok = await showConfirmModal({
-          title: 'تصفير وحذف البيانات التجريبية',
-          message: 'هل أنت متأكد من رغبتك في تصفير البيانات التجريبية وبدء التشغيل الحقيقي للمدرسة؟ سيتم تفريغ قوائم الطلاب وأجهزة التابلت لتسجيل طلابكم الحقيقيين.',
-          confirmText: 'نعم، تصفير والبدء الحقيقي',
-          danger: true,
-        });
-        if (!ok) return;
-
-        await purgeDemoData();
-        showToast('✓ تم تصفير البيانات بنجاح! المنظومة الآن في وضع العمل الحقيقي (Clean Mode).');
-        setTimeout(() => window.location.reload(), 800);
-      });
-
-      // Wire Restore button
-      document.getElementById('btn-restore-demo-data')?.addEventListener('click', async () => {
-        const ok = await showConfirmModal({
-          title: 'استعادة البيانات التجريبية',
-          message: 'هل ترغب في إعادة تحميل حزمة البيانات التجريبية النموذجية (الطلاب، الأجهزة، والتقييمات للاختبار)؟',
-          confirmText: 'استعادة البيانات التجريبية',
-        });
-        if (!ok) return;
-
-        await restoreDemoData();
-        showToast('✓ تمت استعادة البيانات التجريبية النموذجية بنجاح!');
-        setTimeout(() => window.location.reload(), 800);
-      });
-
-      // Wire Backup Download (JSON)
-      document.getElementById('btn-backup-system-data')?.addEventListener('click', () => {
-        const backupData = {
-          dse_version: '2.0_vanilla',
-          exportedAt: new Date().toISOString(),
-          schoolId: 'sch_cairo_sec_01',
-          data: {},
-        };
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith('dse_')) {
-            backupData.data[key] = localStorage.getItem(key);
-          }
-        }
-        const jsonStr = JSON.stringify(backupData, null, 2);
-        const blob = new Blob([jsonStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        const dateTag = new Date().toISOString().split('T')[0];
-        a.href = url;
-        a.download = `نسخة_احتياطية_المدرسة_الرقمية_${dateTag}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        showToast('✓ تم إنشاء وتنزيل ملف النسخة الاحتياطية بنجاح.');
-      });
-
-      // Wire Backup Restore from file
-      const restoreFileInput = document.getElementById('input-restore-backup-file');
-      document.getElementById('btn-restore-from-backup')?.addEventListener('click', () => {
-        restoreFileInput?.click();
-      });
-
-      restoreFileInput?.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = async (evt) => {
-          try {
-            const parsed = JSON.parse(evt.target.result);
-            if (!parsed.data || typeof parsed.data !== 'object') {
-              showToast('ملف النسخة الاحتياطية غير صالح.', 'error');
-              return;
-            }
-            const ok = await showConfirmModal({
-              title: 'استرجاع النسخة الاحتياطية',
-              message: `هل أنت متأكد من استرجاع النسخة الاحتياطية المؤرخة (${parsed.exportedAt || 'سابقاً'})؟ سيتم استبدال البيانات الحالية ببيانات الملف.`,
-              confirmText: 'نعم، استرجاع الآن',
-              danger: true,
-            });
-            if (!ok) return;
-
-            Object.keys(parsed.data).forEach((key) => {
-              localStorage.setItem(key, parsed.data[key]);
-            });
-            showToast('✓ تم استرجاع قاعدة بيانات المنظومة بنجاح!');
-            setTimeout(() => window.location.reload(), 1000);
-          } catch (err) {
-            showToast('فشل قراءة ملف النسخة الاحتياطية: ' + err.message, 'error');
-          }
-        };
-        reader.readAsText(file, 'UTF-8');
-      });
+      if (isEmbeddedAdminView) window.scrollTo(0, 0);
     }
 
     window.addEventListener('hashchange', () => {
@@ -1462,7 +1266,7 @@
     }
 
     // Load profile form & logo
-    const profile = await getSchoolProfile();
+    const profile = await getSchoolProfile(activeSchoolId);
     const logoFile = document.getElementById('prof-logo-file');
     const logoUploadBtn = document.getElementById('prof-logo-upload-btn');
     const logoClearBtn = document.getElementById('prof-logo-clear-btn');
@@ -1498,18 +1302,29 @@
 
     logoUploadBtn.addEventListener('click', () => logoFile.click());
 
-    logoFile.addEventListener('change', () => {
+    logoFile.addEventListener('change', async () => {
       const file = logoFile.files[0];
       if (!file) return;
-      if (file.size > 2 * 1024 * 1024) {
-        alert('حجم صورة الشعار يجب ألا يتجاوز 2 ميجابايت لضمان سرعة التحميل.');
-        return;
+      const previousLogo = logoVal.value;
+      logoUploadBtn.disabled = true;
+      logoUploadBtn.textContent = 'جارٍ تجهيز الشعار...';
+      try {
+        const compressedFile = await compressMediaImage(file, 800, 0.84);
+        const uploaded = await uploadMediaImage(compressedFile, {
+          schoolId: activeSchoolId,
+          assetType: 'branding',
+          onStatus: (status) => { logoUploadBtn.textContent = status; },
+          onProgress: (progress) => { logoUploadBtn.textContent = `جارٍ رفع الشعار ${progress}%`; },
+        });
+        setLogoPreview(uploaded.secureUrl);
+      } catch (error) {
+        logoFile.value = '';
+        setLogoPreview(previousLogo);
+        showToast(error.message || 'تعذر رفع شعار المدرسة.', 'error');
+      } finally {
+        logoUploadBtn.disabled = false;
+        logoUploadBtn.textContent = logoVal.value ? '✓ تم رفع الشعار' : '📸 اختيار صورة الشعار';
       }
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setLogoPreview(e.target.result);
-      };
-      reader.readAsDataURL(file);
     });
 
     logoClearBtn.addEventListener('click', () => {
@@ -1519,24 +1334,42 @@
 
     document.getElementById('school-profile-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const updatedProfile = await saveSchoolProfile({
-        nameAr: document.getElementById('prof-name-ar').value.trim(),
-        administration: document.getElementById('prof-admin').value.trim(),
-        address: document.getElementById('prof-address').value.trim(),
-        phone: document.getElementById('prof-phone').value.trim(),
-        aboutStory: document.getElementById('prof-story').value.trim(),
-        vision: document.getElementById('prof-vision').value.trim(),
-        mission: document.getElementById('prof-mission').value.trim(),
-        branding: {
-          ...(profile?.branding || {}),
-          logoUrl: logoVal.value.trim(),
-        }
-      });
-      document.getElementById('profile-saved-alert').style.display = 'flex';
-      await loadOverviewAuditTrail();
-      setTimeout(() => {
-        document.getElementById('profile-saved-alert').style.display = 'none';
-      }, 3000);
+      const submitButton = e.currentTarget.querySelector('[type="submit"]');
+      const savedAlert = document.getElementById('profile-saved-alert');
+      const errorAlert = document.getElementById('profile-error-alert');
+      savedAlert.style.display = 'none';
+      errorAlert.style.display = 'none';
+
+      if (logoVal.value.startsWith('data:')) {
+        errorAlert.textContent = 'الشعار الحالي محفوظ بصيغة قديمة. ارفعه من جديد قبل حفظ البيانات حتى يُخزن بأمان في خدمة الصور.';
+        errorAlert.style.display = 'flex';
+        return;
+      }
+
+      submitButton.disabled = true;
+      try {
+        await saveSchoolProfile({
+          nameAr: document.getElementById('prof-name-ar').value.trim(),
+          administration: document.getElementById('prof-admin').value.trim(),
+          address: document.getElementById('prof-address').value.trim(),
+          phone: document.getElementById('prof-phone').value.trim(),
+          aboutStory: document.getElementById('prof-story').value.trim(),
+          vision: document.getElementById('prof-vision').value.trim(),
+          mission: document.getElementById('prof-mission').value.trim(),
+          branding: {
+            ...(profile?.branding || {}),
+            logoUrl: logoVal.value.trim(),
+          }
+        }, activeSchoolId);
+        savedAlert.style.display = 'flex';
+        await loadOverviewAuditTrail();
+        setTimeout(() => { savedAlert.style.display = 'none'; }, 3000);
+      } catch (error) {
+        errorAlert.textContent = error.message || 'تعذر حفظ بيانات المدرسة.';
+        errorAlert.style.display = 'flex';
+      } finally {
+        submitButton.disabled = false;
+      }
     });
 
     // --------------------------------------------------------------------------
@@ -1975,7 +1808,7 @@
     }
 
     async function loadMessagesSection() {
-      const unreadCount = await getUnreadCount(currentUser.uid || currentUser.email, currentUser.role);
+      const unreadCount = await getUnreadCount(currentUser.uid || currentUser.email, currentUser.role, currentUser.schoolId, currentUser.email);
       const badge = document.getElementById('inbox-count-badge');
       if (badge) badge.textContent = unreadCount;
 
@@ -2403,122 +2236,22 @@
       }
     }
 
-    let overviewCmsInitialized = false;
-    async function loadOverviewCms() {
-      const tbody = document.getElementById('cms-table-body');
-      const emptyState = document.getElementById('cms-empty-state');
-      const tableWrap = document.getElementById('cms-table-wrap');
-      if (!tbody) return;
-
-      try {
-        const items = await getCmsItems();
-        if (!items || items.length === 0) {
-          tbody.innerHTML = '';
-          if (tableWrap) tableWrap.style.display = 'none';
-          if (emptyState) emptyState.style.display = 'flex';
-          return;
-        }
-
-        if (tableWrap) tableWrap.style.display = 'block';
-        if (emptyState) emptyState.style.display = 'none';
-
-        const categoryNames = {
-          news: 'بيان رسمي / أخبار',
-          activities: 'أنشطة ومعارض',
-          announcements: 'تنبيه إداري',
-          leadership: 'القيادة المدرسية',
-        };
-
-        tbody.innerHTML = items.map((item) => `
-          <tr>
-            <td style="font-size: 11.5px; color: var(--text-muted); font-weight: 600;">${item.formattedDate || item.date || item.createdAt || '—'}</td>
-            <td><span class="badge badge-accent" style="font-size: 10.5px;">${categoryNames[item.category] || item.category}</span></td>
-            <td style="font-weight: 700; font-size: var(--text-xs); color: var(--color-primary-950);">${item.title}</td>
-            <td>
-              <span class="badge ${item.status === 'published' ? 'badge-success' : 'badge-default'}" style="font-size: 10.5px;">
-                ${item.status === 'published' ? 'منشور بالموقع' : 'مسودة'}
-              </span>
-            </td>
-            <td style="text-align: center;">
-              <button type="button" class="btn btn-outline btn-sm delete-overview-cms-btn" data-cms-id="${item.id}" style="padding: 2px 8px; font-size: 10.5px; color: var(--color-danger-text);">
-                حذف
-              </button>
-            </td>
-          </tr>
-        `).join('');
-
-        tbody.querySelectorAll('.delete-overview-cms-btn').forEach((btn) => {
-          btn.addEventListener('click', async () => {
-            const ok = await showConfirmModal({
-              title: 'حذف المحتوى من الموقع',
-              message: 'هل أنت متأكد من رغبتك في حذف هذا المحتوى من الموقع العام؟',
-              danger: true,
-            });
-            if (ok) {
-              await deleteCmsItem(btn.dataset.cmsId);
-              showToast('تم حذف المحتوى بنجاح');
-              await loadOverviewCms();
-              await loadOverviewAuditTrail();
-            }
-          });
-        });
-      } catch (err) {
-        console.warn('Overview CMS notice:', err);
-      }
-
-      if (!overviewCmsInitialized) {
-        overviewCmsInitialized = true;
-        const toggleBtn = document.getElementById('toggle-cms-form-btn');
-        const formPanel = document.getElementById('cms-form-panel');
-        const cancelBtn = document.getElementById('cancel-cms-btn');
-        const form = document.getElementById('new-cms-form');
-
-        if (toggleBtn && formPanel) {
-          toggleBtn.addEventListener('click', () => { formPanel.style.display = 'block'; });
-        }
-        if (cancelBtn && formPanel) {
-          cancelBtn.addEventListener('click', () => { formPanel.style.display = 'none'; });
-        }
-        if (form) {
-          form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const title = document.getElementById('cms-title').value.trim();
-            const category = document.getElementById('cms-category').value;
-            const status = document.getElementById('cms-status').value;
-            const summary = document.getElementById('cms-summary').value.trim();
-            if (!title) return;
-
-            try {
-              await createCmsItem({ title, category, status, summary, authorName: currentUser.displayName });
-              form.reset();
-              if (formPanel) formPanel.style.display = 'none';
-              showToast('✓ تم نشر المحتوى بنجاح بالموقع العام.');
-              await loadOverviewCms();
-              await loadOverviewAuditTrail();
-            } catch (err) {
-              showToast('خطأ أثناء حفظ المحتوى: ' + err.message, 'error');
-            }
-          });
-        }
-      }
-    }
-
     async function loadOverviewDynamicSections() {
       renderOverviewCharts();
+      renderAttendanceAlerts(document.getElementById('admin-attendance-alerts'), currentUser.role);
       await Promise.all([
         loadOverviewAuditTrail(),
         loadOverviewClasses(),
-        loadOverviewCms(),
       ]);
     }
 
-    // Initial load of overview dynamic sections (charts, audit, classes, cms)
+    // Initial load of overview dynamic sections (charts, audit, classes)
     await loadOverviewDynamicSections();
 
     // Initial view router check
     const initialHash = window.location.hash.replace('#', '');
     switchView(initialHash || 'overview');
   </script>
-  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=11.0');}</script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=17.3');}</script>
 </body>
 </html>
