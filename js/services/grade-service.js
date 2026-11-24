@@ -20,10 +20,14 @@ import { recordAuditEvent } from './audit-service.js';
 const CACHE_ASSESSMENTS_KEY = 'dse_assessments_';
 const CACHE_GRADES_KEY = 'dse_grades_v5_';
 
+function getCurrentSchoolId() {
+  return getCurrentUser()?.schoolId || DEFAULT_SCHOOL_ID;
+}
+
 /**
  * Fetch all assessments / exams for a school
  */
-export async function getAssessments(schoolId = DEFAULT_SCHOOL_ID) {
+export async function getAssessments(schoolId = getCurrentSchoolId()) {
   try {
     const col = collection(db, 'schools', schoolId, 'assessments');
     const snap = await getDocs(col);
@@ -41,7 +45,7 @@ export async function getAssessments(schoolId = DEFAULT_SCHOOL_ID) {
 /**
  * Create a new assessment / exam
  */
-export async function createAssessment({ title, subject, maxGrade, term, deadline, teacherName }, schoolId = DEFAULT_SCHOOL_ID) {
+export async function createAssessment({ title, subject, maxGrade, term, deadline, teacherName }, schoolId = getCurrentSchoolId()) {
   const cleanTitle = String(title).trim();
   if (!cleanTitle) throw new Error('يرجى تحديد عنوان التقييم أو الاختبار.');
 
@@ -184,7 +188,7 @@ export const DEFAULT_GRADES = [
 /**
  * Fetch grades for students or specific student
  */
-export async function getStudentGrades(studentCode = null, schoolId = DEFAULT_SCHOOL_ID) {
+export async function getStudentGrades(studentCode = null, schoolId = getCurrentSchoolId()) {
   const currentUser = getCurrentUser();
   const demoGradeIds = new Set(DEFAULT_GRADES.map((grade) => grade.id));
   const keepRecordedGrades = (grades) => grades.filter((grade) => !demoGradeIds.has(grade.id));
@@ -243,6 +247,8 @@ export async function getStudentGrades(studentCode = null, schoolId = DEFAULT_SC
     }
   }
 
+  if (currentUser?.role !== 'director') return [];
+
   const cacheKey = `${CACHE_GRADES_KEY}${schoolId}`;
   try {
     const snapshot = await getDocs(collection(db, 'schools', schoolId, 'grades'));
@@ -269,7 +275,7 @@ export async function getStudentGrades(studentCode = null, schoolId = DEFAULT_SC
 /**
  * Record or update a student's grade
  */
-export async function recordStudentGrade({ studentCode, studentName, assessmentId, assessmentTitle, subject, score, maxScore, feedback, teacherName }, schoolId = DEFAULT_SCHOOL_ID) {
+export async function recordStudentGrade({ studentCode, studentName, assessmentId, assessmentTitle, subject, score, maxScore, feedback, teacherName }, schoolId = getCurrentSchoolId()) {
   const gradeId = `grd_${studentCode}_${assessmentId}`;
   const gradeData = {
     id: gradeId,
@@ -311,7 +317,7 @@ export async function recordStudentGrade({ studentCode, studentName, assessmentI
 /**
  * Calculate real average performance across subjects from recorded student grades
  */
-export async function getSubjectPerformanceAverages(schoolId = DEFAULT_SCHOOL_ID) {
+export async function getSubjectPerformanceAverages(schoolId = getCurrentSchoolId()) {
   const grades = (await getStudentGrades(null, schoolId)) || [];
   if (grades.length === 0) return [];
 

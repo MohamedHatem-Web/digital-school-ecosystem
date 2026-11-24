@@ -11,9 +11,11 @@ export const APP_CONFIG = {
 };
 
 const localHostname = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
-const emulatorRequested = localHostname && new URLSearchParams(window.location.search).get('emulator') === '1';
-if (emulatorRequested) localStorage.setItem('dse_use_firebase_emulator', '1');
-export const USE_LOCAL_FIREBASE_EMULATORS = localHostname && emulatorRequested;
+const emulatorOption = localHostname ? new URLSearchParams(window.location.search).get('emulator') : null;
+if (emulatorOption === '1') sessionStorage.setItem('dse_use_firebase_emulator', '1');
+if (emulatorOption === '0') sessionStorage.removeItem('dse_use_firebase_emulator');
+export const USE_LOCAL_FIREBASE_EMULATORS = localHostname &&
+  (emulatorOption === '1' || (emulatorOption !== '0' && sessionStorage.getItem('dse_use_firebase_emulator') === '1'));
 
 // Official Firebase project configuration
 export const FIREBASE_CONFIG = {

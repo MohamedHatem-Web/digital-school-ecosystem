@@ -4,6 +4,7 @@
 // ==========================================================================
 
 import {
+  firebaseApp,
   db,
   collection,
   doc,
@@ -18,8 +19,22 @@ import { DEFAULT_SCHOOL_ID } from './school-service.js';
 import { recordAuditEvent } from './audit-service.js';
 import { getCurrentUser } from '../auth.js';
 
-const CACHE_DEVICES_KEY = 'dse_tablet_devices_v5_';
-const CACHE_BATCHES_KEY = 'dse_tablet_batches_v5_';
+const CACHE_DEVICES_KEY = 'dse_tablet_devices_v6_';
+const CACHE_BATCHES_KEY = 'dse_tablet_batches_v6_';
+
+function getCurrentSchoolId() {
+  return getCurrentUser()?.schoolId || DEFAULT_SCHOOL_ID;
+}
+
+function getTabletCacheKey(prefix, schoolId) {
+  const user = getCurrentUser();
+  if (!user?.uid) return null;
+  return `${prefix}${firebaseApp.options.projectId}_${schoolId}_${user.uid}`;
+}
+
+function canUseOfflineCache(error) {
+  return ['unavailable', 'deadline-exceeded', 'network-request-failed'].includes(error?.code);
+}
 
 // --------------------------------------------------------------------------
 // 1. Batches Management
@@ -41,18 +56,22 @@ export const DEFAULT_BATCHES = [
   }
 ];
 
-export async function getTabletBatches(schoolId = DEFAULT_SCHOOL_ID) {
+export async function getTabletBatches(schoolId = getCurrentSchoolId()) {
+  const cacheKey = getTabletCacheKey(CACHE_BATCHES_KEY, schoolId);
+  let readError;
   try {
     const batchesCol = collection(db, 'schools', schoolId, 'batches');
     const snapshot = await getDocs(batchesCol);
     const list = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-    localStorage.setItem(`${CACHE_BATCHES_KEY}${schoolId}`, JSON.stringify(list));
+    if (cacheKey) localStorage.setItem(cacheKey, JSON.stringify(list));
     return list;
   } catch (err) {
-    console.warn('Firestore getTabletBatches notice (cache fallback):', err);
+    readError = err;
+    console.warn('Firestore getTabletBatches notice:', err);
   }
 
-  const cachedStr = localStorage.getItem(`${CACHE_BATCHES_KEY}${schoolId}`);
+  if (!cacheKey || !canUseOfflineCache(readError)) return [];
+  const cachedStr = localStorage.getItem(cacheKey);
   if (cachedStr) {
     try {
       const parsed = JSON.parse(cachedStr);
@@ -67,7 +86,7 @@ export async function getTabletBatches(schoolId = DEFAULT_SCHOOL_ID) {
 
 export const registerTabletBatch = createTabletBatch;
 
-export async function increaseTabletBatchQuantity(batchId, quantity, notes = '', schoolId = DEFAULT_SCHOOL_ID) {
+export async function increaseTabletBatchQuantity(batchId, quantity, notes = '', schoolId = getCurrentSchoolId()) {
   const additionalQuantity = Number(quantity);
   if (!batchId) throw new Error('اختر الدفعة التي تريد زيادة كميتها.');
   if (!Number.isInteger(additionalQuantity) || additionalQuantity < 1) {
@@ -92,10 +111,13 @@ export async function increaseTabletBatchQuantity(batchId, quantity, notes = '',
     updatedAt: serverTimestamp(),
   });
 
-  localStorage.setItem(
-    `${CACHE_BATCHES_KEY}${schoolId}`,
-    JSON.stringify(batches.map((entry) => entry.id === batchId ? updatedBatch : entry))
-  );
+  const cacheKey = getTabletCacheKey(CACHE_BATCHES_KEY, schoolId);
+  if (cacheKey) {
+    localStorage.setItem(
+      cacheKey,
+      JSON.stringify(batches.map((entry) => entry.id === batchId ? updatedBatch : entry))
+    );
+  }
 
   await recordAuditEvent({
     action: 'زيادة كمية دفعة تابلت',
@@ -108,7 +130,7 @@ export async function increaseTabletBatchQuantity(batchId, quantity, notes = '',
   return updatedBatch;
 }
 
-export async function createTabletBatch({ batchNumber, academicYear, receivedQuantity, deviceCount, deliveryDate, notes, operatorName }, schoolId = DEFAULT_SCHOOL_ID) {
+export async function createTabletBatch({ batchNumber, academicYear, receivedQuantity, deviceCount, deliveryDate, notes, operatorName }, schoolId = getCurrentSchoolId()) {
   const cleanNumber = String(batchNumber).trim();
   if (!cleanNumber) {
     throw new Error('يرجى تحديد رقم أو إشارة دفعة الاستلام الوزارية.');
@@ -142,7 +164,8 @@ export async function createTabletBatch({ batchNumber, academicYear, receivedQua
   // Update local cache
   const existing = await getTabletBatches(schoolId);
   const updated = [batchData, ...existing];
-  localStorage.setItem(`${CACHE_BATCHES_KEY}${schoolId}`, JSON.stringify(updated));
+  const cacheKey = getTabletCacheKey(CACHE_BATCHES_KEY, schoolId);
+  if (cacheKey) localStorage.setItem(cacheKey, JSON.stringify(updated));
 
   await recordAuditEvent({
     action: 'تسجيل دفعة استلام تابلت وزارية',
@@ -214,7 +237,7 @@ export const DEFAULT_DEVICES = [
   }
 ];
 
-export async function getTabletDevicesForStudent(studentCode, schoolId = DEFAULT_SCHOOL_ID) {
+export async function getTabletDevicesForStudent(studentCode, schoolId = getCurrentSchoolId()) {
   const cleanCode = String(studentCode || '').trim();
   if (!/^\d{6,12}$/.test(cleanCode)) return [];
 
@@ -226,7 +249,7 @@ export async function getTabletDevicesForStudent(studentCode, schoolId = DEFAULT
   return snapshot.docs.map((deviceDoc) => ({ id: deviceDoc.id, ...deviceDoc.data() }));
 }
 
-export async function getTabletDevices(schoolId = DEFAULT_SCHOOL_ID) {
+export async function getTabletDevices(schoolId = getCurrentSchoolId()) {
   const currentUser = getCurrentUser();
   if (currentUser?.role === 'teacher') {
     if (!currentUser.classId) return [];
@@ -262,16 +285,19 @@ export async function getTabletDevices(schoolId = DEFAULT_SCHOOL_ID) {
     }
   }
 
-  const cacheKey = `${CACHE_DEVICES_KEY}${schoolId}`;
+  const cacheKey = getTabletCacheKey(CACHE_DEVICES_KEY, schoolId);
+  let readError;
   try {
     const snapshot = await getDocs(collection(db, 'schools', schoolId, 'devices'));
     const list = snapshot.docs.map((deviceDoc) => ({ id: deviceDoc.id, ...deviceDoc.data() }));
-    localStorage.setItem(cacheKey, JSON.stringify(list));
+    if (cacheKey) localStorage.setItem(cacheKey, JSON.stringify(list));
     return list;
   } catch (error) {
-    console.warn('Firestore getTabletDevices notice (cache fallback):', error);
+    readError = error;
+    console.warn('Firestore getTabletDevices notice:', error);
   }
 
+  if (!cacheKey || !canUseOfflineCache(readError)) return [];
   try {
     const parsed = JSON.parse(localStorage.getItem(cacheKey) || '[]');
     return Array.isArray(parsed) ? parsed : [];
@@ -280,7 +306,7 @@ export async function getTabletDevices(schoolId = DEFAULT_SCHOOL_ID) {
   }
 }
 
-export async function registerTabletDevice({ imei, serialNumber, batchId, model }, schoolId = DEFAULT_SCHOOL_ID) {
+export async function registerTabletDevice({ imei, serialNumber, batchId, model }, schoolId = getCurrentSchoolId()) {
   const cleanImei = String(imei).trim();
   if (!/^\d{14,15}$/.test(cleanImei)) {
     throw new Error('رقم IMEI غير صحيح، يجب أن يتكون من 14 إلى 15 رقماً.');
@@ -334,7 +360,8 @@ export async function registerTabletDevice({ imei, serialNumber, batchId, model 
 
   // Update local cache
   const updatedDevices = [deviceData, ...devices.filter((d) => d.imei !== cleanImei)];
-  localStorage.setItem(`${CACHE_DEVICES_KEY}${schoolId}`, JSON.stringify(updatedDevices));
+  const cacheKey = getTabletCacheKey(CACHE_DEVICES_KEY, schoolId);
+  if (cacheKey) localStorage.setItem(cacheKey, JSON.stringify(updatedDevices));
 
   await recordAuditEvent({
     action: 'تسجيل جهاز تابلت جديد بالمخزن',
@@ -347,7 +374,7 @@ export async function registerTabletDevice({ imei, serialNumber, batchId, model 
   return deviceData;
 }
 
-export async function deliverTabletDevice(imei, { studentCode, studentName, operatorName, recipientName = '', recipientNationalId = '', recipientPhone = '' } = {}, schoolId = DEFAULT_SCHOOL_ID) {
+export async function deliverTabletDevice(imei, { studentCode, studentName, operatorName, recipientName = '', recipientNationalId = '', recipientPhone = '' } = {}, schoolId = getCurrentSchoolId()) {
   const cleanImei = String(imei).trim();
   if (!cleanImei) {
     throw new Error('يرجى إدخال رقم IMEI للجهاز المراد تسليمه.');
@@ -406,7 +433,8 @@ export async function deliverTabletDevice(imei, { studentCode, studentName, oper
 
   // Update local cache
   const updatedList = devices.map((d) => (d.imei === cleanImei ? updatedDevice : d));
-  localStorage.setItem(`${CACHE_DEVICES_KEY}${schoolId}`, JSON.stringify(updatedList));
+  const cacheKey = getTabletCacheKey(CACHE_DEVICES_KEY, schoolId);
+  if (cacheKey) localStorage.setItem(cacheKey, JSON.stringify(updatedList));
 
   await recordAuditEvent({
     action: 'تسليم تابلت رسمي لطالب',

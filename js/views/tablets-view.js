@@ -66,48 +66,17 @@ export async function renderTabletsView(container) {
           <div id="tab-batches-list" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px;"></div>
         </section>
 
-        <div id="tab-reg-panel" style="display: none; background: rgba(15, 23, 42, 0.92); border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 14px; padding: 18px; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-            <h3 style="margin:0; color:#f8fafc; font-size:1.1rem;">قيد جهاز تابلت جديد في المخزن</h3>
-            <button type="button" class="btn btn-sm" id="tab-close-reg-btn">✕ إغلاق</button>
-          </div>
-          <form id="tab-new-device-form">
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
-              <div class="form-group">
-                <label class="form-label" for="tab-dev-batch">دفعة التابلت *</label>
-                <select id="tab-dev-batch" class="form-control" required></select>
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="tab-dev-imei">رقم IMEI *</label>
-                <input type="text" id="tab-dev-imei" class="form-control" placeholder="مثال: 358941094829104" required maxlength="15">
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="tab-dev-serial">الرقم التسلسلي</label>
-                <input type="text" id="tab-dev-serial" class="form-control" placeholder="مثال: TAB-2026-001">
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="tab-dev-model">موديل التابلت</label>
-                <input type="text" id="tab-dev-model" class="form-control" value="Samsung Galaxy Tab A9">
-              </div>
-            </div>
-            <div style="display:flex; justify-content:flex-end; margin-top:16px;">
-              <button type="submit" class="btn btn-primary btn-md">تأكيد وقيد الجهاز</button>
-            </div>
-          </form>
-        </div>
-
         <div id="tab-batch-dashboard" style="display:none; flex-direction:column; gap:16px;">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
             <button type="button" id="tab-back-to-batches" class="btn btn-outline btn-sm">← كل الدفعات</button>
             <h2 id="tab-active-batch-heading" style="font-size:1.2rem; color:#f8fafc;"></h2>
           </div>
-          <button type="button" id="tab-register-btn" class="btn btn-primary btn-sm">+ تسجيل IMEI بالدفعة</button>
         </div>
 
-        <div style="display:flex; gap:10px; align-items:end; flex-wrap:wrap; padding:14px; background:rgba(15,23,42,.7); border:1px solid rgba(148,163,184,.2); border-radius:12px;">
+        <div id="tab-add-stock-panel" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap; padding:14px; background:rgba(15,23,42,.7); border:1px solid rgba(148,163,184,.2); border-radius:12px;">
           <div class="form-group" style="margin:0; flex:1; min-width:150px;"><label class="form-label" for="tab-add-stock-quantity">إضافة أجهزة مستلمة للدفعة</label><input id="tab-add-stock-quantity" type="number" min="1" step="1" class="form-control" placeholder="الكمية الإضافية"></div>
-          <button type="button" id="tab-add-stock-btn" class="btn btn-outline">+ زيادة كمية الدفعة</button>
+          <button type="button" id="tab-add-stock-btn" class="btn btn-accent btn-md">+ زيادة كمية الدفعة</button>
           <span style="color:#94a3b8; font-size:.8rem;">تُضاف للمخزون الافتراضي دون إنشاء IMEI لكل جهاز.</span>
         </div>
 
@@ -143,9 +112,9 @@ export async function renderTabletsView(container) {
             <h3 style="margin:0 0 16px; color:#f8fafc; font-size:1.15rem;">⚡ تسجيل رقم IMEI وتفعيله</h3>
             <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
               <input id="tablet-activation-imei" type="text" class="form-control" placeholder="IMEI" autocomplete="one-time-code" style="flex:1; min-width: 210px; background: rgba(2, 6, 23, 0.85); color: #f8fafc; border:1px solid rgba(148,163,184,.2); border-radius:10px;">
-              <button onclick="activateTabletInBatch()" type="button" style="background:#22c55e; color:#0f172a; border:none; border-radius:10px; padding:12px 16px; cursor:pointer; font-weight:800;">تسجيل وتفعيل</button>
+              <button id="tab-activate-imei-btn" type="button" class="btn btn-primary btn-md">تسجيل وتفعيل</button>
             </div>
-            <div id="activation-feedback" style="margin-top:12px; color:#cbd5e1; min-height:20px;"></div>
+            <div id="activation-feedback" role="status" aria-live="polite" style="margin-top:12px; color:#cbd5e1; min-height:20px;"></div>
           </div>
 
           <div class="panel" style="padding:20px; background: rgba(15, 23, 42, 0.82); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 14px; min-height: 160px;">
@@ -258,7 +227,6 @@ async function loadTabletsData() {
   allStudents = (await getStudents()) || [];
 
   renderBatchesList();
-  populateBatchSelect();
   updateBatchPresentation();
   refreshTabletSummary();
 
@@ -300,11 +268,7 @@ function renderBatchesList() {
           <div>مسلم <strong style="display:block;color:#60a5fa;">${delivered}</strong></div>
           <div>متبقٍ للتسجيل <strong style="display:block;color:#fbbf24;">${Math.max(0, received - activated)}</strong></div>
         </div>
-        <div style="display:flex; gap:8px; align-items:center;">
-          <button type="button" class="btn btn-primary btn-sm" data-open-batch="${escapeHtml(batch.id)}" style="flex:1;">فتح الدفعة</button>
-          <input type="number" min="1" step="1" aria-label="كمية إضافية" data-stock-quantity="${escapeHtml(batch.id)}" placeholder="+ كمية" style="width:90px; padding:8px; border-radius:8px; background:#020617; border:1px solid rgba(148,163,184,.25); color:#f8fafc;">
-          <button type="button" class="btn btn-outline btn-sm" data-add-stock="${escapeHtml(batch.id)}" title="زيادة الكمية المستلمة">+</button>
-        </div>
+        <button type="button" class="btn btn-primary btn-md" data-open-batch="${escapeHtml(batch.id)}">فتح الدفعة</button>
       </article>
     `;
   }).join('') : '<div style="grid-column:1/-1; padding:20px; border:1px solid rgba(148,163,184,.2); border-radius:12px; color:#94a3b8;">لا توجد دفعات مسجلة. ابدأ بتسجيل دفعة الاستلام.</div>';
@@ -319,33 +283,6 @@ function renderBatchesList() {
     });
   });
 
-  list.querySelectorAll('[data-add-stock]').forEach((button) => {
-    button.addEventListener('click', async () => {
-      const batchId = button.dataset.addStock;
-      const quantityInput = list.querySelector(`[data-stock-quantity="${CSS.escape(batchId)}"]`);
-      try {
-        button.disabled = true;
-        await increaseTabletBatchQuantity(batchId, quantityInput?.value);
-        if (quantityInput) quantityInput.value = '';
-        await loadTabletsData();
-      } catch (error) {
-        alert(error.message || 'تعذر زيادة كمية الدفعة.');
-      } finally {
-        button.disabled = false;
-      }
-    });
-  });
-}
-
-function populateBatchSelect() {
-  const select = document.getElementById('tab-dev-batch');
-  if (!select) return;
-  select.innerHTML = allBatches.length
-    ? allBatches.map((batch) => `<option value="${escapeHtml(batch.id)}">${escapeHtml(batch.batchNumber || batch.id)}</option>`).join('')
-    : '<option value="">سجل دفعة أولاً</option>';
-  if (selectedBatchId && allBatches.some((batch) => batch.id === selectedBatchId)) {
-    select.value = selectedBatchId;
-  }
 }
 
 function updateBatchPresentation() {
@@ -353,14 +290,15 @@ function updateBatchPresentation() {
   const isInBatch = Boolean(selectedBatchId);
   const batchList = document.getElementById('tab-batches-section');
   const dashboard = document.getElementById('tab-batch-dashboard');
+  const addStockPanel = document.getElementById('tab-add-stock-panel');
   const heading = document.getElementById('tab-active-batch-heading');
   const batch = allBatches.find((entry) => entry.id === selectedBatchId);
 
   if (batchList) batchList.style.display = isInBatch || isSearching ? 'none' : 'flex';
   if (dashboard) dashboard.style.display = isInBatch || isSearching ? 'flex' : 'none';
+  if (addStockPanel) addStockPanel.style.display = isInBatch ? 'flex' : 'none';
   if (heading) heading.textContent = batch ? batch.batchNumber || batch.id : isSearching ? 'نتائج البحث في كل الدفعات' : '';
   document.getElementById('tab-search-scope').textContent = isInBatch && !isSearching ? `داخل دفعة: ${batch?.batchNumber || ''}` : 'كل الدفعات';
-  document.getElementById('tab-dev-batch').value = selectedBatchId || allBatches[0]?.id || '';
 }
 
 function refreshTabletSummary() {
@@ -393,10 +331,13 @@ function refreshTabletSummary() {
   if (notDeliveredEl) notDeliveredEl.textContent = Math.max(0, received - delivered);
 }
 
-function activateTabletInBatch() {
-  const imeiValue = document.getElementById('tablet-activation-imei')?.value.trim();
+async function activateTabletInBatch() {
+  const imeiInput = document.getElementById('tablet-activation-imei');
+  const imeiValue = imeiInput?.value.trim();
   const feedback = document.getElementById('activation-feedback');
+  const button = document.getElementById('tab-activate-imei-btn');
 
+  if (feedback) feedback.style.color = '#fca5a5';
   if (!imeiValue) {
     if (feedback) feedback.textContent = 'يرجى إدخال رقم IMEI أولاً.';
     return;
@@ -412,11 +353,31 @@ function activateTabletInBatch() {
     return;
   }
 
-  document.getElementById('tab-dev-batch').value = selectedBatchId;
-  document.getElementById('tab-dev-imei').value = imeiValue;
-  document.getElementById('tab-reg-panel').style.display = 'block';
-  document.getElementById('tab-dev-serial').focus();
-  if (feedback) feedback.textContent = 'أدخل البيانات الاختيارية ثم احفظ لقيد الجهاز وتفعيله في الدفعة.';
+  try {
+    if (button) button.disabled = true;
+    if (feedback) {
+      feedback.style.color = '#cbd5e1';
+      feedback.textContent = 'جارٍ تسجيل الجهاز في الدفعة...';
+    }
+    await registerTabletDevice({
+      imei: imeiValue,
+      batchId: selectedBatchId,
+      model: 'Samsung Galaxy Tab A9',
+    });
+    if (imeiInput) imeiInput.value = '';
+    if (feedback) {
+      feedback.style.color = '#86efac';
+      feedback.textContent = 'تم تسجيل وتفعيل الجهاز بنجاح.';
+    }
+    await loadTabletsData();
+  } catch (error) {
+    if (feedback) {
+      feedback.style.color = '#fca5a5';
+      feedback.textContent = error.message || 'تعذر تسجيل الجهاز.';
+    }
+  } finally {
+    if (button) button.disabled = false;
+  }
 }
 
 function lookupTabletForDelivery() {
@@ -658,14 +619,9 @@ function openHandoverModal(imei) {
 }
 
 function bindTabletsEvents(container) {
-  window.activateTabletInBatch = activateTabletInBatch;
   window.lookupTabletForDelivery = lookupTabletForDelivery;
   window.deliverTabletToStudent = deliverTabletToStudent;
 
-  const toggleRegBtn = document.getElementById('tab-register-btn');
-  const regPanel = document.getElementById('tab-reg-panel');
-  const closeRegBtn = document.getElementById('tab-close-reg-btn');
-  const regForm = document.getElementById('tab-new-device-form');
   const createBatchPanel = document.getElementById('tab-create-batch-panel');
 
   document.getElementById('tab-create-batch-btn')?.addEventListener('click', () => {
@@ -706,6 +662,10 @@ function bindTabletsEvents(container) {
   });
   document.getElementById('tab-add-stock-btn')?.addEventListener('click', async (event) => {
     const button = event.currentTarget;
+    if (!selectedBatchId) {
+      alert('افتح الدفعة التي تريد زيادة كميتها أولاً.');
+      return;
+    }
     try {
       button.disabled = true;
       await increaseTabletBatchQuantity(selectedBatchId, document.getElementById('tab-add-stock-quantity').value);
@@ -722,33 +682,7 @@ function bindTabletsEvents(container) {
     exportDevicesToCsv(allDevices);
   });
 
-  toggleRegBtn?.addEventListener('click', () => {
-    if (!selectedBatchId) {
-      alert('افتح الدفعة التي تريد تسجيل الجهاز ضمنها أولاً.');
-      return;
-    }
-    document.getElementById('tab-dev-batch').value = selectedBatchId;
-    regPanel.style.display = regPanel.style.display === 'none' ? 'block' : 'none';
-  });
-  closeRegBtn?.addEventListener('click', () => { regPanel.style.display = 'none'; });
-
-  regForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-      await registerTabletDevice({
-        imei: document.getElementById('tab-dev-imei').value.trim(),
-        serialNumber: document.getElementById('tab-dev-serial').value.trim(),
-        model: document.getElementById('tab-dev-model').value.trim(),
-        batchId: document.getElementById('tab-dev-batch').value,
-      });
-      regForm.reset();
-      regPanel.style.display = 'none';
-      alert('تم قيد الجهاز بنجاح في سجلات المخزن وتوثيقه.');
-      await loadTabletsData();
-    } catch (err) {
-      alert(err.message || 'حدث خطأ أثناء قيد الجهاز.');
-    }
-  });
+  document.getElementById('tab-activate-imei-btn')?.addEventListener('click', activateTabletInBatch);
 
   // Handover Modal bindings
   const handoverModal = document.getElementById('tab-handover-modal');
