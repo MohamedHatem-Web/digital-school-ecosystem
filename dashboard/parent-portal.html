@@ -302,7 +302,7 @@
     import { getCurrentUser } from '../js/auth.js';
     import { DEFAULT_SCHOOL_ID, getSchoolProfile } from '../js/services/school-service.js';
     import { getStudents } from '../js/services/student-service.js';
-    import { getSchoolDismissals, subscribeToParentNotifications } from '../js/services/notification-service.js';
+    import { getCairoDateKey, getSchoolDismissals, subscribeToSchoolDismissals, subscribeToParentNotifications } from '../js/services/notification-service.js';
     import { getStudentGrades } from '../js/services/grade-service.js';
     import { getStudentAttendanceHistory } from '../js/services/attendance-service.js';
     import { getMessages, sendMessage, markMessageAsRead, getAllowedRecipients } from '../js/services/messaging-service.js';
@@ -488,21 +488,32 @@
     // 1. Check for active School Dismissal notification
     async function loadDismissalBanner() {
       try {
-        const dismissals = await getSchoolDismissals(schoolId);
-        if (dismissals.length > 0) {
-          const latest = dismissals[0];
-          const banner = document.getElementById('parent-dismissal-banner');
-          const desc = document.getElementById('dismissal-desc');
-          const time = document.getElementById('dismissal-time');
-          
-          const profile = await getSchoolProfile(schoolId);
-          const schoolName = profile?.nameAr || 'المدرسة';
-          const cleanMsg = (latest.message || '').replace(/مدرسة الأمل الثانوية/g, schoolName);
+        const banner = document.getElementById('parent-dismissal-banner');
+        const desc = document.getElementById('dismissal-desc');
+        const time = document.getElementById('dismissal-time');
+        const profile = await getSchoolProfile(schoolId);
+        const schoolName = profile?.nameAr || 'المدرسة';
+        const todayKey = getCairoDateKey();
 
+        subscribeToSchoolDismissals((dismissals) => {
+          const latest = dismissals.find((dismissal) =>
+            dismissal.status === 'completed' &&
+            ((dismissal.dateKey && dismissal.dateKey === todayKey) ||
+              (!dismissal.dateKey && String(dismissal.timestamp || '').startsWith(todayKey)))
+          );
+          if (!latest) {
+            banner.style.display = 'none';
+            return;
+          }
+          const cleanMsg = (latest.message || '').replace(/مدرسة الأمل الثانوية/g, schoolName);
           desc.textContent = `${cleanMsg} (تم الاعتماد بواسطة: ${latest.authorizedBy || 'إدارة المدرسة'})`;
-          time.textContent = latest.formattedTime || 'اليوم';
+          time.textContent = latest.dismissalTime
+            ? `اليوم — ${latest.dismissalTime}`
+            : (latest.formattedTime || 'اليوم');
           banner.style.display = 'flex';
-        }
+        }, (error) => {
+          console.warn('Parent dismissal realtime load error:', error);
+        }, schoolId);
       } catch (e) {
         console.warn('Parent dismissal load error:', e);
       }
@@ -735,6 +746,5 @@
     loadParentChildren();
     loadStudentActivationRequests();
   </script>
-  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=17.3');}</script>
 </body>
 </html>

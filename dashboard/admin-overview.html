@@ -106,6 +106,10 @@
             <span class="sidebar-icon">🚪</span>
             <span>أذونات الخروج المبكر</span>
           </a>
+          <a href="#dismissals" class="sidebar-link" id="nav-dismissals-link">
+            <span class="sidebar-icon">🔔</span>
+            <span>خطة الانصراف اليومي</span>
+          </a>
 
           <!-- القسم الرابع: التواصل الداخلي -->
           <div class="sidebar-section-title">✉️ التواصل المؤسسي</div>
@@ -180,8 +184,8 @@
               <button type="button" id="upload-avatar-btn" class="btn btn-outline btn-md">
                 📸 تحديث صورتي
               </button>
-              <button type="button" id="trigger-dismissal-btn" class="btn btn-warning btn-md" style="font-weight: 700;">
-                🔔 إعلان انصراف اليوم الدراسي
+              <button type="button" id="trigger-dismissal-btn" class="btn btn-warning btn-md" style="font-weight: 700;" title="فتح تبويب خطة الانصراف اليومي">
+                🔔 خطة انصراف اليوم الدراسي
               </button>
             </div>
           </div>
@@ -423,6 +427,22 @@
             </div>
           </div>
 
+          <div class="panel" id="platform-approval-panel" style="display:none;">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">اعتمادات المدارس والمنصة العامة</h3>
+                <p style="font-size:var(--text-xs);color:var(--text-muted);margin-top:2px;">مخصصة لمدير المنصة العام فقط.</p>
+              </div>
+              <button type="button" id="refresh-school-applications-btn" class="btn btn-outline btn-sm">تحديث الطلبات</button>
+            </div>
+            <div class="panel-body">
+              <div id="school-applications-empty" class="empty-state" style="display:none;">
+                <h4 class="empty-state-title">لا توجد طلبات مدارس حاليًا</h4>
+              </div>
+              <div id="school-applications-list" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--space-3);"></div>
+            </div>
+          </div>
+
           <!-- School Profile Setup Panel (Allows entering the real school identity!) -->
           <div class="panel">
             <div class="panel-header">
@@ -517,6 +537,60 @@
         <!-- End of View 1: Main Admin View -->
 
         <!-- View 2: Comprehensive Activity & Audit Trail -->
+        <div id="view-dismissals" class="portal-tab-view" style="display: none; flex-direction: column; gap: var(--space-5);">
+          <div class="panel-header">
+            <div>
+              <span class="badge badge-warning">خدمة انصراف موحّدة</span>
+              <h2 class="panel-title" style="margin-top: 6px;">خطة الانصراف اليومي</h2>
+              <p style="margin: 6px 0 0; color: var(--text-muted); font-size: var(--text-sm);">
+                اعتماد الموعد مرة واحدة لكل يوم، وتحديثه أو إلغاؤه من قبل الموظفين المخولين.
+              </p>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-5);">
+            <section class="panel">
+              <div class="panel-header"><h3 class="panel-title">اعتماد أو تعديل اليوم</h3></div>
+              <div class="panel-body" style="display: flex; flex-direction: column; gap: var(--space-4);">
+                <label style="display:flex; flex-direction:column; gap:6px;">
+                  تاريخ الانصراف
+                  <input type="date" id="dismissal-date" class="form-control">
+                </label>
+                <label style="display:flex; flex-direction:column; gap:6px;">
+                  وقت الانصراف الرسمي
+                  <input type="time" id="dismissal-time" class="form-control">
+                </label>
+                <label style="display:flex; flex-direction:column; gap:6px;">
+                  نص البيان لأولياء الأمور
+                  <textarea id="dismissal-message" class="form-control" rows="4">تم إعلان انتهاء اليوم الدراسي رسميًا وبدء خروج الطلاب بأمان.</textarea>
+                </label>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button type="button" id="activate-dismissal-btn" class="btn btn-primary">اعتماد انصراف اليوم</button>
+                  <button type="button" id="update-dismissal-btn" class="btn btn-outline" style="display:none;">حفظ التعديل</button>
+                  <button type="button" id="cancel-dismissal-btn" class="btn btn-danger" style="display:none;">إلغاء اليوم</button>
+                </div>
+                <div id="dismissal-form-status" class="alert" style="display:none;"></div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-header"><h3 class="panel-title">حالة اليوم المباشر</h3></div>
+              <div class="panel-body" id="dismissal-live-status" style="line-height:1.9;">
+                جارٍ تحميل حالة الانصراف...
+              </div>
+            </section>
+          </div>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h3 class="panel-title">سجل خطط الانصراف</h3>
+            </div>
+            <div class="panel-body" id="dismissal-history" style="display:flex; flex-direction:column; gap:8px;">
+              جارٍ تحميل السجل...
+            </div>
+          </section>
+        </div>
+
         <div id="view-audit-logs" class="portal-tab-view" style="display: none; flex-direction: column; gap: var(--space-5);">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: var(--space-3);">
             <div>
@@ -1100,7 +1174,15 @@
     import { getStudents } from '../js/services/student-service.js';
     import { getWeeklyAttendanceTrends } from '../js/services/attendance-service.js';
     import { getSubjectPerformanceAverages } from '../js/services/grade-service.js';
+    import { getSchoolApplications, approveSchoolApplication, rejectSchoolApplication } from '../js/services/account-service.js';
     import { getGatePasses } from '../js/services/gate-pass-service.js';
+    import {
+      activateDailySchoolDismissal,
+      updateDailySchoolDismissal,
+      cancelDailySchoolDismissal,
+      getCairoDateKey,
+      subscribeToSchoolDismissals,
+    } from '../js/services/notification-service.js';
     import { getMessages, sendMessage, markMessageAsRead, getAllowedRecipients, getUnreadCount } from '../js/services/messaging-service.js';
     import { renderGalleryView } from '../js/views/gallery-view.js';
     import { renderTabletsView } from '../js/views/tablets-view.js';
@@ -1140,6 +1222,70 @@
     const currentUser = getCurrentUser() || { displayName: 'مدير المدرسة', role: 'director', email: 'director@dse.edu.eg' };
     const activeSchoolId = currentUser.schoolId || DEFAULT_SCHOOL_ID;
 
+    async function loadSchoolApplications() {
+      if (currentUser.role !== 'super_admin') return;
+      const panel = document.getElementById('platform-approval-panel');
+      const list = document.getElementById('school-applications-list');
+      const empty = document.getElementById('school-applications-empty');
+      if (panel) panel.style.display = 'block';
+      try {
+        const applications = await getSchoolApplications();
+        const pending = applications.filter((application) => application.status === 'pending');
+        if (empty) empty.style.display = pending.length ? 'none' : 'block';
+        if (!list) return;
+        list.innerHTML = pending.map((application) => `
+          <article style="padding:var(--space-4);border:1px solid var(--border-subtle);border-radius:var(--radius-md);background:var(--bg-page);">
+            <h4 style="margin:0 0 var(--space-2);">${String(application.schoolNameAr || '').replace(/[&<>"']/g, '')}</h4>
+            <div style="font-size:var(--text-xs);color:var(--text-muted);line-height:1.8;">
+              <div>الرابط المقترح: <strong>/${String(application.schoolSlug || '').replace(/[^a-z0-9-]/g, '')}/</strong></div>
+              <div>مقدم الطلب: ${String(application.applicantName || '').replace(/[&<>"']/g, '')}</div>
+              <div>الدور: ${application.applicantRole === 'director' ? 'مدير المدرسة' : 'أخصائي التطوير'}</div>
+              <div>الطرف الثاني: ${String(application.counterpartName || '').replace(/[&<>"']/g, '')}</div>
+            </div>
+            <div style="display:flex;gap:var(--space-2);margin-top:var(--space-3);">
+              <button type="button" class="btn btn-primary btn-sm" data-approve-school="${application.id}">اعتماد وإنشاء الدعوات</button>
+              <button type="button" class="btn btn-outline btn-sm" data-reject-school="${application.id}">رفض الطلب</button>
+            </div>
+          </article>
+        `).join('');
+      } catch (error) {
+        showToast(error.message || 'تعذر تحميل طلبات المدارس.', 'error');
+      }
+    }
+
+    document.getElementById('refresh-school-applications-btn')?.addEventListener('click', loadSchoolApplications);
+    document.getElementById('school-applications-list')?.addEventListener('click', async (event) => {
+      const approveButton = event.target.closest('[data-approve-school]');
+      const rejectButton = event.target.closest('[data-reject-school]');
+      if (approveButton) {
+        const approved = await showConfirmModal({
+          title: 'اعتماد المدرسة؟',
+          message: 'سيتم إنشاء ملف المدرسة وإرسال دعوة للحسابين الأساسيين عبر البريد.',
+          confirmText: 'اعتماد',
+          cancelText: 'إلغاء',
+        });
+        if (!approved) return;
+        try {
+          const result = await approveSchoolApplication(approveButton.dataset.approveSchool);
+          showToast(`تم اعتماد المدرسة: /${result.schoolId}/`, 'success');
+          await loadSchoolApplications();
+        } catch (error) {
+          showToast(error.message || 'تعذر اعتماد المدرسة.', 'error');
+        }
+      }
+      if (rejectButton) {
+        const reason = window.prompt('سبب رفض الطلب (اختياري):', '');
+        try {
+          await rejectSchoolApplication(rejectButton.dataset.rejectSchool, reason || '');
+          showToast('تم رفض طلب المدرسة.', 'success');
+          await loadSchoolApplications();
+        } catch (error) {
+          showToast(error.message || 'تعذر رفض الطلب.', 'error');
+        }
+      }
+    });
+    loadSchoolApplications();
+
     // --------------------------------------------------------------------------
     // State variables
     // --------------------------------------------------------------------------
@@ -1157,6 +1303,7 @@
     // --------------------------------------------------------------------------
     const views = {
       overview: document.getElementById('view-admin-main'),
+      dismissals: document.getElementById('view-dismissals'),
       'audit-logs': document.getElementById('view-audit-logs'),
       'cms-hub': document.getElementById('view-cms-hub'),
       gallery: document.getElementById('view-gallery'),
@@ -1172,6 +1319,7 @@
 
     const sidebarLinks = {
       overview: document.getElementById('nav-overview-link'),
+      dismissals: document.getElementById('nav-dismissals-link'),
       'audit-logs': document.getElementById('nav-audit-link'),
       'cms-hub': document.getElementById('nav-cms-link'),
       gallery: document.getElementById('nav-gallery-link'),
@@ -1199,6 +1347,7 @@
 
       if (initializedViews.has(activeKey)) return;
       if (activeKey === 'overview') await loadOverviewDynamicSections();
+      if (activeKey === 'dismissals') await loadDismissalsSection();
       if (activeKey === 'audit-logs') await loadAuditLogsSection();
       if (activeKey === 'cms-hub') await renderCmsView(views['cms-hub']);
       if (activeKey === 'gallery') await renderGalleryView(views.gallery);
@@ -1229,6 +1378,158 @@
       }
     });
 
+    let dismissalRecords = [];
+    let dismissalSubscriptionStarted = false;
+
+    async function loadDismissalsSection() {
+      const dateInput = document.getElementById('dismissal-date');
+      const timeInput = document.getElementById('dismissal-time');
+      const messageInput = document.getElementById('dismissal-message');
+      const activateBtn = document.getElementById('activate-dismissal-btn');
+      const updateBtn = document.getElementById('update-dismissal-btn');
+      const cancelBtn = document.getElementById('cancel-dismissal-btn');
+      const statusEl = document.getElementById('dismissal-form-status');
+      const liveEl = document.getElementById('dismissal-live-status');
+      const historyEl = document.getElementById('dismissal-history');
+
+      if (!dateInput.value) dateInput.value = getCairoDateKey();
+
+      const getSelectedRecord = () => dismissalRecords.find((record) =>
+        record.dateKey === dateInput.value
+      );
+
+      const refreshForm = () => {
+        const record = getSelectedRecord();
+        const active = record && record.status !== 'cancelled';
+        activateBtn.style.display = active ? 'none' : 'inline-flex';
+        updateBtn.style.display = active ? 'inline-flex' : 'none';
+        cancelBtn.style.display = active ? 'inline-flex' : 'none';
+
+        if (active) {
+          timeInput.value = record.dismissalTime || '';
+          messageInput.value = record.message || '';
+          liveEl.innerHTML = `
+            <div><strong>الحالة:</strong> ${record.status === 'completed' ? 'معتمد ويظهر لأولياء الأمور' : 'نشط'}</div>
+            <div><strong>التاريخ:</strong> ${record.dateKey}</div>
+            <div><strong>الوقت:</strong> ${record.dismissalTime || 'غير محدد بعد'}</div>
+            <div><strong>اعتمد بواسطة:</strong> ${record.authorizedBy || 'غير مسجل'}</div>
+            <div><strong>الصفة:</strong> ${record.authorizedByRole || 'موظف مخول'}</div>
+          `;
+        } else if (record?.status === 'cancelled') {
+          timeInput.value = record.dismissalTime || '';
+          messageInput.value = record.message || '';
+          liveEl.innerHTML = `<div><strong>الحالة:</strong> ملغي لهذا اليوم</div><div><strong>ألغاه:</strong> ${record.cancelledBy || 'موظف مخول'}</div>`;
+        } else {
+          liveEl.innerHTML = '<div><strong>الحالة:</strong> لم يعتمد انصراف لهذا التاريخ بعد.</div>';
+        }
+
+        historyEl.innerHTML = dismissalRecords.length
+          ? dismissalRecords.slice(0, 30).map((record) => `
+              <div style="border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:10px 12px;">
+                <strong>${record.dateKey || '—'}</strong>
+                <span style="margin-inline-start:8px;">${record.status === 'cancelled' ? 'ملغي' : 'معتمد'}</span>
+                <span style="margin-inline-start:8px;">${record.dismissalTime || 'بدون وقت محدد'}</span>
+                <span style="display:block;color:var(--text-muted);font-size:12px;margin-top:4px;">
+                  المنفذ: ${record.authorizedBy || 'غير مسجل'} — ${record.authorizedByRole || ''}
+                </span>
+              </div>
+            `).join('')
+          : '<div style="color:var(--text-muted);">لا توجد خطط انصراف مسجلة بعد.</div>';
+      };
+
+      if (!dismissalSubscriptionStarted) {
+        dismissalSubscriptionStarted = true;
+        subscribeToSchoolDismissals((records) => {
+          dismissalRecords = records;
+          refreshForm();
+        }, (error) => {
+          statusEl.className = 'alert alert-danger';
+          statusEl.style.display = 'block';
+          statusEl.textContent = error.message || 'تعذر متابعة خطة الانصراف مباشرة.';
+        }, activeSchoolId);
+      }
+
+      dateInput.onchange = refreshForm;
+
+      activateBtn.onclick = async () => {
+        activateBtn.disabled = true;
+        statusEl.style.display = 'none';
+        try {
+          const result = await activateDailySchoolDismissal({
+            dateKey: dateInput.value,
+            dismissalTime: timeInput.value,
+            message: messageInput.value,
+            authorizedBy: currentUser.displayName || currentUser.email || 'موظف مخول',
+            authorizedByUid: currentUser.uid || '',
+            authorizedByRole: currentUser.role || 'director',
+          }, activeSchoolId);
+          statusEl.className = 'alert alert-success';
+          statusEl.style.display = 'block';
+          if (result.created) {
+            statusEl.textContent = 'تم الاعتماد ونشره لأولياء الأمور مباشرة.';
+            showToast('تم اعتماد خطة الانصراف ونشرها.', 'success');
+          } else {
+            statusEl.textContent = `تم الاعتماد مسبقًا بواسطة: ${result.dismissed.authorizedBy || 'موظف مخول'} ولا يُسجل الاعتماد مرتين.`;
+          }
+        } catch (error) {
+          statusEl.className = 'alert alert-danger';
+          statusEl.style.display = 'block';
+          statusEl.textContent = error.message || 'تعذر اعتماد الانصراف.';
+        } finally {
+          activateBtn.disabled = false;
+        }
+      };
+
+      updateBtn.onclick = async () => {
+        updateBtn.disabled = true;
+        try {
+          await updateDailySchoolDismissal({
+            dateKey: dateInput.value,
+            dismissalTime: timeInput.value,
+            message: messageInput.value,
+            authorizedBy: currentUser.displayName || currentUser.email || 'موظف مخول',
+            authorizedByUid: currentUser.uid || '',
+            authorizedByRole: currentUser.role || 'director',
+          }, activeSchoolId);
+          statusEl.className = 'alert alert-success';
+          statusEl.style.display = 'block';
+          statusEl.textContent = 'تم حفظ التعديل ونشره لأولياء الأمور مباشرة.';
+          showToast('تم تحديث خطة الانصراف.', 'success');
+        } catch (error) {
+          statusEl.className = 'alert alert-danger';
+          statusEl.style.display = 'block';
+          statusEl.textContent = error.message || 'تعذر تعديل الانصراف.';
+        } finally {
+          updateBtn.disabled = false;
+        }
+      };
+
+      cancelBtn.onclick = async () => {
+        const confirmed = await showConfirmModal({
+          title: 'إلغاء انصراف اليوم',
+          message: `هل تريد إلغاء خطة الانصراف بتاريخ ${dateInput.value}؟`,
+          confirmText: 'إلغاء الخطة',
+          cancelText: 'رجوع',
+        });
+        if (!confirmed) return;
+        try {
+          await cancelDailySchoolDismissal({
+            dateKey: dateInput.value,
+            authorizedBy: currentUser.displayName || currentUser.email || 'موظف مخول',
+            authorizedByUid: currentUser.uid || '',
+            authorizedByRole: currentUser.role || 'director',
+          }, activeSchoolId);
+          showToast('تم إلغاء خطة الانصراف.', 'success');
+        } catch (error) {
+          statusEl.className = 'alert alert-danger';
+          statusEl.style.display = 'block';
+          statusEl.textContent = error.message || 'تعذر إلغاء الانصراف.';
+        }
+      };
+
+      refreshForm();
+    }
+
     // --------------------------------------------------------------------------
     // School Metrics & Profile Form with Logo
     // --------------------------------------------------------------------------
@@ -1246,22 +1547,9 @@
     const dismissalBtn = document.getElementById('trigger-dismissal-btn');
     const dismissalAlert = document.getElementById('dismissal-success-alert');
     if (dismissalBtn && dismissalAlert) {
-      dismissalBtn.addEventListener('click', async () => {
-        dismissalAlert.style.display = 'flex';
-        try {
-          await recordAuditEvent({
-            action: 'إعلان واعتماد انصراف اليوم الدراسي رسمياً',
-            target: 'كافة الفصول والصفوف',
-            details: 'اعتماد رسمي لانتهاء اليوم الدراسي وإشعار أولياء الأمور بالمغادرة الآمنة',
-            category: 'attendance',
-            operatorRole: 'director',
-            operatorName: currentUser.displayName,
-          });
-          await loadOverviewAuditTrail();
-        } catch (e) {
-          console.warn('Dismissal audit notice:', e);
-        }
-        setTimeout(() => { dismissalAlert.style.display = 'none'; }, 4000);
+      dismissalBtn.addEventListener('click', () => {
+        window.location.hash = 'dismissals';
+        switchView('dismissals');
       });
     }
 
@@ -2252,6 +2540,5 @@
     const initialHash = window.location.hash.replace('#', '');
     switchView(initialHash || 'overview');
   </script>
-  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=17.3');}</script>
 </body>
 </html>

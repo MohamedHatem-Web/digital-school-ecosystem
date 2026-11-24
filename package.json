@@ -4,7 +4,27 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node serve.js"
+    "start": "node serve.js",
+    "test:attendance-policy": "node --test scripts/test-attendance-warning-policy.js",
+    "test:attendance-reconciliation": "node --test scripts/test-attendance-reconciliation.js",
+    "test:class-allocation": "node --test scripts/test-class-allocation.js",
+    "test:firestore": "firebase emulators:exec --project demo-family-access --only auth,firestore \"node scripts/test-firestore-access.js\"",
+    "test:worker-contact": "node scripts/test-worker-public-contact.js",
+    "test:worker-passwords": "node scripts/test-worker-password-change.js",
+    "test:worker-invitations": "node scripts/test-worker-account-invitations.js",
+    "test:worker-school-applications": "node scripts/test-worker-school-applications.js",
+    "test:tenant-router": "node --test scripts/test-tenant-router.mjs",
+    "evidence:capture-screens": "node evidence/capture-screens.mjs",
+    "test:school-onboarding-rules": "firebase emulators:exec --project demo-school-onboarding --only firestore \"node scripts/test-school-onboarding-rules.mjs\"",
+    "evidence:security": "firebase emulators:exec --project demo-dse-evidence --only firestore,auth \"node evidence/security-rules-unit-test.mjs\"",
+    "evidence:security:matrix": "node evidence/security-full-matrix.mjs",
+    "evidence:benchmark": "firebase emulators:exec --project demo-dse-evidence --only firestore \"node evidence/benchmark-emulator.mjs\"",
+    "evidence:recovery": "firebase emulators:exec --project demo-dse-evidence --only firestore \"node evidence/recovery-emulator.mjs\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "6.0.0",
+    "firebase": "13.3.0",
+    "playwright": "^1.65.1",
+    "pngjs": "^7.0.0"
   }
 }
-

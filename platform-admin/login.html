@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>دخول إدارة المنصة</title>
+  <link rel="stylesheet" href="../css/tokens.css?v=11.0">
+  <link rel="stylesheet" href="../css/base.css?v=11.1">
+  <link rel="stylesheet" href="../css/components.css?v=17.2">
+  <link rel="stylesheet" href="../css/dashboard.css?v=11.0">
+</head>
+<body>
+  <script>
+    (async () => {
+      if ('serviceWorker' in navigator) {
+        await Promise.all((await navigator.serviceWorker.getRegistrations()).map((registration) => registration.unregister()));
+      }
+      if ('caches' in window) {
+        await Promise.all((await caches.keys()).map((key) => caches.delete(key)));
+      }
+    })();
+  </script>
+  <main style="min-height:100vh;display:grid;place-items:center;padding:24px;">
+    <section id="platform-login-panel" class="panel" style="width:min(440px,100%);">
+      <div class="panel-header"><h1 class="panel-title">دخول إدارة المنصة</h1></div>
+      <div class="panel-body">
+        <p style="color:var(--text-muted);font-size:var(--text-sm);">هذه الصفحة لحسابات مديري المنصة فقط وليست بوابة مدرسة.</p>
+        <form id="platform-login-form" style="display:grid;gap:14px;">
+          <div class="form-group">
+            <label class="form-label" for="platform-email">البريد الإلكتروني</label>
+            <input id="platform-email" class="form-control" type="email" autocomplete="username" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="platform-password">كلمة المرور</label>
+            <input id="platform-password" class="form-control" type="password" autocomplete="current-password" required>
+          </div>
+          <p id="platform-login-error" class="alert alert-danger" style="display:none;"></p>
+          <button class="btn btn-primary btn-md" type="submit">دخول مدير المنصة</button>
+        </form>
+      </div>
+    </section>
+  </main>
+  <script type="module">
+    import { loginWithEmailPassword, getRoleDashboardUrl } from '../js/auth.js';
+    import { initComponents } from '../js/components.js';
+    initComponents();
+    const form = document.getElementById('platform-login-form');
+    const error = document.getElementById('platform-login-error');
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      error.style.display = 'none';
+      try {
+        const profile = await loginWithEmailPassword(
+          document.getElementById('platform-email').value,
+          document.getElementById('platform-password').value,
+        );
+        if (profile.role !== 'super_admin') {
+          throw new Error('هذا الحساب ليس حساب مدير منصة.');
+        }
+        window.location.replace(getRoleDashboardUrl(profile.role));
+      } catch (loginError) {
+        error.textContent = loginError.message || 'تعذر تسجيل الدخول.';
+        error.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -90,6 +90,10 @@
             <span class="sidebar-icon">🚪</span>
             <span>أذونات الخروج المبكر</span>
           </a>
+          <a href="#dismissals" class="sidebar-link" id="tech-nav-dismissals">
+            <span class="sidebar-icon">🔔</span>
+            <span>خطة الانصراف اليومي</span>
+          </a>
 
           <!-- القسم الرابع: التواصل الداخلي -->
           <div class="sidebar-section-title">✉️ التواصل والرسائل</div>
@@ -158,6 +162,7 @@
         <div id="view-attendance" style="display: none;"></div>
         <div id="view-social" style="display: none;"></div>
         <div id="view-gate-pass" style="display: none;"></div>
+        <div id="view-dismissals" style="display: none;"></div>
         <div id="view-messages" style="display: none;"></div>
         <div id="view-overview" style="display: none;"><iframe class="embedded-admin-frame" title="نظرة عامة واللوحة الإشرافية" data-src="admin-overview.html?embedded=tech#overview" style="width: 100%; height: 78vh; border: 0; display: block;"></iframe></div>
         <div id="view-accounts" style="display: none;"></div>
@@ -214,6 +219,7 @@
     import { renderGatePassView } from '../js/views/gate-pass-view.js';
     import { renderMessagesView } from '../js/views/messages-view.js';
     import { renderAccountManagementView } from '../js/views/account-management-view.js';
+    import { renderDismissalView } from '../js/views/dismissal-view.js';
 
     // Verify access
     checkRouteAccess(['tech_specialist', 'director', 'super_admin']);
@@ -245,6 +251,7 @@
       attendance: document.getElementById('view-attendance'),
       social: document.getElementById('view-social'),
       'gate-pass': document.getElementById('view-gate-pass'),
+      dismissals: document.getElementById('view-dismissals'),
       messages: document.getElementById('view-messages'),
       overview: document.getElementById('view-overview'),
       accounts: document.getElementById('view-accounts'),
@@ -288,6 +295,7 @@
       attendance: document.getElementById('tech-nav-attendance'),
       social: document.getElementById('tech-nav-social'),
       'gate-pass': document.getElementById('tech-nav-gate'),
+      dismissals: document.getElementById('tech-nav-dismissals'),
       messages: document.getElementById('tech-nav-messages'),
       overview: document.getElementById('tech-nav-overview'),
       accounts: accountsNavLink,
@@ -345,6 +353,8 @@
         await renderSocialView(views.social);
       } else if (activeKey === 'gate-pass') {
         await renderGatePassView(views['gate-pass']);
+      } else if (activeKey === 'dismissals') {
+        await renderDismissalView(views.dismissals);
       } else if (activeKey === 'messages') {
         await renderMessagesView(views.messages);
       } else if (activeKey === 'accounts') {

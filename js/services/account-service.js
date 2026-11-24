@@ -1,5 +1,6 @@
 import { auth, onAuthStateChanged } from '../firebase.js';
 import { MEDIA_CONFIG } from '../config.js';
+import { getTenantSchoolId } from '../tenant-router.js';
 import {
   EmailAuthProvider,
   reauthenticateWithCredential,
@@ -142,15 +143,15 @@ export async function setParentAccountPassword(password, firebaseUser = auth.cur
 }
 
 export async function requestStudentActivation({ studentCode, nationalId }) {
-  return postPublic('/api/family/request-student-activation', { studentCode, nationalId });
+  return postPublic('/api/family/request-student-activation', { studentCode, nationalId, schoolId: getTenantSchoolId() });
 }
 
 export async function getStudentActivationStatus(requestId, activationSecret) {
-  return postPublic('/api/family/student-activation-status', { requestId, activationSecret });
+  return postPublic('/api/family/student-activation-status', { requestId, activationSecret, schoolId: getTenantSchoolId() });
 }
 
 export async function completeStudentActivation({ requestId, activationSecret, password }) {
-  return postPublic('/api/family/complete-student-activation', { requestId, activationSecret, password });
+  return postPublic('/api/family/complete-student-activation', { requestId, activationSecret, password, schoolId: getTenantSchoolId() });
 }
 
 export async function getStudentActivationRequests() {
@@ -171,6 +172,46 @@ export async function changeOwnPassword(currentPassword, newPassword) {
 
 export async function createAccountInvitation(invitation) {
   return postAuthenticated('/api/admin/account-invitations', invitation);
+}
+
+export async function migrateSchoolTenant({ sourceSchoolId = 'sch_cairo_sec_01', targetSchoolId = 'zewail-school' } = {}) {
+  return postAuthenticated('/api/admin/platform/migrate-school', { sourceSchoolId, targetSchoolId, targetSlug: targetSchoolId });
+}
+
+export async function getSchoolApplications() {
+  const firebaseUser = await waitForFirebaseUser();
+  if (!firebaseUser) throw new Error('يجب تسجيل الدخول كمدير منصة.');
+  const token = await firebaseUser.getIdToken(true);
+  const response = await fetch(`${MEDIA_CONFIG.workerGatewayUrl.replace(/\/$/, '')}/api/admin/platform/applications`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || 'تعذر تحميل طلبات المدارس.');
+  return Array.isArray(result.applications) ? result.applications : [];
+}
+
+export async function approveSchoolApplication(applicationId) {
+  return postAuthenticated('/api/admin/platform/approve-school', { applicationId });
+}
+
+export async function rejectSchoolApplication(applicationId, reason = '') {
+  return postAuthenticated('/api/admin/platform/reject-school', { applicationId, reason });
+}
+
+export async function getPlatformSuperAdmins() {
+  const firebaseUser = await waitForFirebaseUser();
+  if (!firebaseUser) throw new Error('يجب تسجيل الدخول كمدير منصة.');
+  const token = await firebaseUser.getIdToken(true);
+  const response = await fetch(`${MEDIA_CONFIG.workerGatewayUrl.replace(/\/$/, '')}/api/admin/platform/super-admins`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || 'تعذر تحميل مديري المنصة.');
+  return Array.isArray(result.superAdmins) ? result.superAdmins : [];
+}
+
+export async function invitePlatformSuperAdmin({ email, displayName }) {
+  return postAuthenticated('/api/admin/platform/invite-super-admin', { email, displayName });
 }
 
 export async function completeAccountInvitationEmailLink(email) {

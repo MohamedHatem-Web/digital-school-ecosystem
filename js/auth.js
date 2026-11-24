@@ -15,9 +15,10 @@ import {
   setDoc,
 } from './firebase.js';
 import { recordAuditEvent } from './services/audit-service.js';
+import { buildTenantUrl, getTenantSchoolSlug, getTenantSlug } from './tenant-router.js';
 
 export const ROLE_DASHBOARDS = {
-  super_admin: 'dashboard/admin-overview.html',
+  super_admin: '/platform-admin/dashboard.html',
   director: 'dashboard/admin-overview.html',
   tech_specialist: 'dashboard/tech-devices.html',
   student_affairs: 'dashboard/student-affairs.html',
@@ -68,7 +69,7 @@ export function translateAuthError(errorCode) {
  * Authenticate user with Firebase Authentication and retrieve their authorized profile
  * Supports logging in with Email OR Student Code (e.g. 2026101 -> student@dse.edu.eg)
  */
-export async function loginWithEmailPassword(emailOrCode, password) {
+export async function loginWithEmailPassword(emailOrCode, password, { expectedSchoolSlug = null } = {}) {
   await authPersistenceReady;
   let email = String(emailOrCode || '').trim();
 
@@ -98,12 +99,35 @@ export async function loginWithEmailPassword(emailOrCode, password) {
   }
 
   const userData = userSnapshot.data();
-  if (!ROLES_METADATA[userData.role] || !userData.schoolId || (userData.status && userData.status !== 'active')) {
+  if (!ROLES_METADATA[userData.role] ||
+    (userData.role !== 'super_admin' && !userData.schoolId) ||
+    (userData.status && userData.status !== 'active')) {
     clearCachedUserSession();
     await signOut(auth);
     const error = new Error('ملف الصلاحيات غير صالح أو غير نشط.');
     error.code = 'auth/profile-not-provisioned';
     throw error;
+  }
+
+  if (expectedSchoolSlug && userData.role !== 'super_admin' &&
+    getTenantSchoolSlug(userData.schoolId) !== expectedSchoolSlug) {
+    const error = new Error('هذا الحساب تابع لمدرسة أخرى.');
+    error.code = 'auth/wrong-school';
+    error.schoolId = userData.schoolId;
+    error.schoolSlug = getTenantSchoolSlug(userData.schoolId);
+    try {
+      const schoolSnapshot = await getDoc(doc(db, 'schools', userData.schoolId));
+      error.schoolName = schoolSnapshot.exists()
+        ? (schoolSnapshot.data().nameAr || userData.schoolId)
+        : userData.schoolId;
+    } catch (schoolLookupError) {
+      console.warn('تعذر تحميل بيانات المدرسة المرتبطة بالحساب:', schoolLookupError);
+      error.schoolName = userData.schoolId;
+    }
+    await signOut(auth);
+    const mismatch = new Error(error.message);
+    Object.assign(mismatch, error);
+    throw mismatch;
   }
   const profile = {
     uid: firebaseUser.uid,
@@ -162,7 +186,7 @@ export async function loginWithEmailPassword(emailOrCode, password) {
     operatorName: profile.displayName,
     operatorRole: profile.role,
     operatorEmail: profile.email,
-    schoolId: profile.schoolId || 'sch_cairo_sec_01',
+    schoolId: profile.schoolId || 'zewail-school',
   }).catch(() => {});
 
   return profile;
@@ -250,7 +274,7 @@ export async function logout() {
       operatorName: user.displayName,
       operatorRole: user.role,
       operatorEmail: user.email,
-      schoolId: user.schoolId || 'sch_cairo_sec_01',
+      schoolId: user.schoolId || 'zewail-school',
     }).catch(() => {});
   }
 
@@ -287,7 +311,11 @@ export async function logout() {
       // ignore
     }
     const isInsideDashboard = window.location.pathname.includes('/dashboard/');
-    window.location.replace(isInsideDashboard ? '../login.html' : 'login.html');
+    if (window.location.pathname.startsWith('/platform-admin/')) {
+      window.location.replace('/platform-admin/');
+    } else {
+      window.location.replace(isInsideDashboard ? '../login.html' : 'login.html');
+    }
   }
 }
 
@@ -295,7 +323,9 @@ export async function logout() {
  * Determine redirect destination after successful login
  */
 export function getRoleDashboardUrl(role) {
-  return ROLE_DASHBOARDS[role] || 'dashboard/admin-overview.html';
+  const dashboardPath = ROLE_DASHBOARDS[role] || 'dashboard/admin-overview.html';
+  if (role === 'super_admin') return '/platform-admin/dashboard.html';
+  return getTenantSlug() ? buildTenantUrl(dashboardPath) : dashboardPath;
 }
 
 /**
@@ -313,7 +343,9 @@ export function observeAuthState(callback) {
       const userDocRef = doc(db, 'users', firebaseUser.uid);
       const userSnapshot = await getDoc(userDocRef);
       const userData = userSnapshot.exists() ? userSnapshot.data() : null;
-      if (!userData || !ROLES_METADATA[userData.role] || !userData.schoolId || (userData.status && userData.status !== 'active')) {
+      if (!userData || !ROLES_METADATA[userData.role] ||
+        (userData.role !== 'super_admin' && !userData.schoolId) ||
+        (userData.status && userData.status !== 'active')) {
         clearCachedUserSession();
         callback(null);
         return;

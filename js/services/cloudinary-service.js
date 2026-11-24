@@ -6,6 +6,7 @@
 import { MEDIA_CONFIG } from '../config.js';
 import { auth } from '../firebase.js';
 import { getCurrentUser } from '../auth.js';
+import { getActiveSchoolId } from './school-service.js';
 
 /**
  * Validates file type and size before any upload attempt.
@@ -107,7 +108,7 @@ export async function uploadMediaImage(file, options = {}) {
     throw new Error('رفع الصور متوقف مؤقتًا حتى نشر بوابة الرفع الآمنة وتدوير بيانات Cloudinary.');
   }
 
-  const schoolId = options.schoolId || currentUser.schoolId || 'sch_cairo_sec_01';
+  const schoolId = options.schoolId || currentUser.schoolId || getActiveSchoolId();
   const albumId = options.albumId || 'general';
   const assetType = options.assetType || 'album';
 

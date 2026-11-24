@@ -6,6 +6,8 @@
 import { getCurrentUser, logout, ROLES_METADATA, updateUserProfile } from './auth.js';
 import { auth, authPersistenceReady, onAuthStateChanged, doc, getDoc, db, signOut } from './firebase.js';
 import { changeOwnPassword } from './services/account-service.js';
+import { buildTenantUrl, getTenantSlug, isSameTenant } from './tenant-router.js';
+import { blockTenantForWrongSchool, guardTenantRoute } from './tenant-access.js';
 
 /**
  * Validates route access against user's verified role and Firebase Auth session.
@@ -14,9 +16,32 @@ import { changeOwnPassword } from './services/account-service.js';
 export function checkRouteAccess(allowedRoles = []) {
   // Step 1: Immediate fast check via session cache
   const cachedUser = getCurrentUser();
+  const tenantSlug = getTenantSlug();
+  const isPlatformAdminPage = window.location.pathname.startsWith('/platform-admin/');
+  if (tenantSlug) guardTenantRoute();
+  if (tenantSlug && cachedUser?.role === 'super_admin') {
+    window.location.replace('/platform-admin/');
+    return false;
+  }
+  if (tenantSlug && cachedUser?.schoolId && !isSameTenant(cachedUser.schoolId, tenantSlug)) {
+    blockTenantForWrongSchool(cachedUser, tenantSlug);
+    return false;
+  }
+  if (isPlatformAdminPage) {
+    if (!cachedUser) {
+      window.location.replace('/platform-admin/');
+      return false;
+    }
+    if (cachedUser.role !== 'super_admin') {
+      window.location.replace('/platform-admin/');
+      return false;
+    }
+  }
   const isInsideDashboard = window.location.pathname.includes('/dashboard/');
-  const loginUrl = isInsideDashboard ? '../login.html' : 'login.html';
-  const unauthorizedUrl = isInsideDashboard ? 'unauthorized.html' : 'dashboard/unauthorized.html';
+  const loginUrl = isPlatformAdminPage
+    ? '/platform-admin/'
+    : (tenantSlug ? buildTenantUrl('login.html') : (isInsideDashboard ? '../login.html' : 'login.html'));
+  const unauthorizedUrl = tenantSlug ? buildTenantUrl(isInsideDashboard ? 'dashboard/unauthorized.html' : 'dashboard/unauthorized.html') : (isInsideDashboard ? 'unauthorized.html' : 'dashboard/unauthorized.html');
 
   if (cachedUser?.passwordChangeRequired) {
     window.location.replace(`${loginUrl}?forcePasswordChange=1`);
@@ -54,6 +79,10 @@ export function checkRouteAccess(allowedRoles = []) {
         }
         const userData = userDoc.data();
         const role = userData.role || 'director';
+        if (tenantSlug && userData.schoolId && !isSameTenant(userData.schoolId, tenantSlug)) {
+          await blockTenantForWrongSchool(userData, tenantSlug);
+          return;
+        }
 
         if (userData.passwordChangeRequired) {
           const profile = {
@@ -68,7 +97,9 @@ export function checkRouteAccess(allowedRoles = []) {
           return;
         }
 
-        if (!ROLES_METADATA[role] || !userData.schoolId || (userData.status && userData.status !== 'active')) {
+        if (!ROLES_METADATA[role] ||
+          (role !== 'super_admin' && !userData.schoolId) ||
+          (userData.status && userData.status !== 'active')) {
           await rejectUnprovisionedSession(loginUrl);
           return;
         }
@@ -83,7 +114,7 @@ export function checkRouteAccess(allowedRoles = []) {
           ...userData,
           displayName: userData.displayName || firebaseUser.displayName,
           role,
-          schoolId: userData.schoolId || 'sch_cairo_sec_01',
+          schoolId: userData.schoolId || 'zewail-school',
         });
       } catch (err) {
         console.error('Auth verification error:', err);
@@ -129,6 +160,14 @@ export function checkRouteAccess(allowedRoles = []) {
       }
       const liveData = userDoc.data();
       const role = liveData.role || 'director';
+      if (tenantSlug && role === 'super_admin') {
+        window.location.replace('/platform-admin/');
+        return;
+      }
+      if (tenantSlug && liveData.schoolId && !isSameTenant(liveData.schoolId, tenantSlug)) {
+        await blockTenantForWrongSchool(liveData, tenantSlug);
+        return;
+      }
       if (liveData.passwordChangeRequired) {
         const updated = { ...cachedUser, ...liveData, passwordChangeRequired: true };
         localStorage.setItem('dse_user_session', JSON.stringify(updated));
@@ -136,7 +175,9 @@ export function checkRouteAccess(allowedRoles = []) {
         window.location.replace(`${loginUrl}?forcePasswordChange=1`);
         return;
       }
-      if (!ROLES_METADATA[role] || !liveData.schoolId || (liveData.status && liveData.status !== 'active')) {
+      if (!ROLES_METADATA[role] ||
+        (role !== 'super_admin' && !liveData.schoolId) ||
+        (liveData.status && liveData.status !== 'active')) {
         await rejectUnprovisionedSession(loginUrl);
         return;
       }

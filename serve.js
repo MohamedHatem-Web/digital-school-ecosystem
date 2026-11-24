@@ -24,7 +24,23 @@ const MIME_TYPES = {
 
 const server = http.createServer((req, res) => {
   let reqPath = decodeURI(req.url.split('?')[0]);
-  if (reqPath === '/') reqPath = '/index.html';
+  const tenantActualRequest = req.headers['x-dse-tenant-actual'];
+  const reservedPublicPaths = new Set(['/login.html', '/about.html', '/activities.html', '/calendar.html', '/contact.html', '/gallery.html', '/leadership.html', '/news.html', '/offline.html', '/verify.html']);
+  if (!tenantActualRequest && (reservedPublicPaths.has(reqPath) || reqPath === '/dashboard' || reqPath.startsWith('/dashboard/'))) {
+    res.writeHead(302, { Location: '/', 'Cache-Control': 'no-store' });
+    res.end();
+    return;
+  }
+  if (reqPath === '/platform-admin' || reqPath === '/platform-admin/') reqPath = '/platform-admin/login.html';
+  else if (reqPath === '/' || reqPath === '/index.html') reqPath = '/index.html';
+  else {
+    const segments = reqPath.split('/').filter(Boolean);
+    const reserved = new Set(['index.html', 'login.html', 'about.html', 'activities.html', 'calendar.html', 'contact.html', 'gallery.html', 'leadership.html', 'news.html', 'offline.html', 'verify.html', 'dashboard', 'js', 'css', 'images', 'evidence', 'api', 'platform-admin']);
+    if (!reserved.has(segments[0]) && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(segments[0] || '')) {
+      if (segments.length === 1) reqPath = '/index.html';
+      else reqPath = `/${segments.slice(1).join('/')}`;
+    }
+  }
 
   let filePath = path.join(__dirname, reqPath);
 

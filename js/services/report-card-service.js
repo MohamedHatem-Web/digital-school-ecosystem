@@ -3,7 +3,7 @@
 // Comprehensive Student Academic Report Card & PDF Generation Service
 // ==========================================================================
 
-import { getSchoolProfile } from './school-service.js';
+import { getSchoolProfile, getActiveSchoolId } from './school-service.js';
 import { getStudentGrades } from './grade-service.js';
 import { getStudentAttendanceHistory } from './attendance-service.js';
 import { generateQRCodeUrl, generateVerificationToken, buildVerificationUrl, registerVerifiedDocument } from './qr-service.js';
@@ -39,7 +39,7 @@ export function getGradeEstimate(percent) {
  * @param {Object} options.student Student object (name, code, grade, nationalId)
  * @param {string} options.schoolId School tenant identifier
  */
-export async function printStudentReportCard({ student, schoolId = 'sch_cairo_sec_01' }) {
+export async function printStudentReportCard({ student, schoolId = getActiveSchoolId() }) {
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
     alert('يرجى السماح بالنوافذ المنبثقة لعرض شهادة التقرير الأكاديمي.');

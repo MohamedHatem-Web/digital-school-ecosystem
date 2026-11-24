@@ -1,0 +1,38 @@
+{
+  "redirects": [
+    { "source": "/login.html", "destination": "/", "permanent": false },
+    { "source": "/about.html", "destination": "/", "permanent": false },
+    { "source": "/activities.html", "destination": "/", "permanent": false },
+    { "source": "/calendar.html", "destination": "/", "permanent": false },
+    { "source": "/contact.html", "destination": "/", "permanent": false },
+    { "source": "/gallery.html", "destination": "/", "permanent": false },
+    { "source": "/leadership.html", "destination": "/", "permanent": false },
+    { "source": "/news.html", "destination": "/", "permanent": false },
+    { "source": "/offline.html", "destination": "/", "permanent": false },
+    { "source": "/verify.html", "destination": "/", "permanent": false },
+    { "source": "/dashboard", "destination": "/", "permanent": false },
+    { "source": "/dashboard/:path*", "destination": "/", "permanent": false }
+  ],
+  "rewrites": [
+    { "source": "/platform-admin", "destination": "/platform-admin/login.html" },
+    { "source": "/platform-admin/", "destination": "/platform-admin/login.html" },
+    { "source": "/platform-admin/dashboard.html", "destination": "/platform-admin/dashboard.html" },
+    { "source": "/zewail-school", "destination": "/index.html" },
+    { "source": "/zewail-school/", "destination": "/index.html" },
+    { "source": "/zewail-school/:path*", "destination": "/:path*" },
+    { "source": "/:schoolId/css/:path*", "destination": "/css/:path*" },
+    { "source": "/:schoolId/js/:path*", "destination": "/js/:path*" },
+    { "source": "/:schoolId/dashboard/:path*", "destination": "/dashboard/:path*" },
+    { "source": "/:schoolId/about.html", "destination": "/about.html" },
+    { "source": "/:schoolId/activities.html", "destination": "/activities.html" },
+    { "source": "/:schoolId/calendar.html", "destination": "/calendar.html" },
+    { "source": "/:schoolId/contact.html", "destination": "/contact.html" },
+    { "source": "/:schoolId/gallery.html", "destination": "/gallery.html" },
+    { "source": "/:schoolId/leadership.html", "destination": "/leadership.html" },
+    { "source": "/:schoolId/news.html", "destination": "/news.html" },
+    { "source": "/:schoolId/verify.html", "destination": "/verify.html" },
+    { "source": "/:schoolId/offline.html", "destination": "/offline.html" },
+    { "source": "/:schoolId/login.html", "destination": "/login.html" },
+    { "source": "/:schoolId/:path*", "destination": "/index.html" }
+  ]
+}

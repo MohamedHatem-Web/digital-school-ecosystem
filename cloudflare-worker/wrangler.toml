@@ -7,8 +7,9 @@ CORS_ORIGIN = "https://digital-school-platform.vercel.app,https://digital-school
 CLOUDINARY_CLOUD_NAME = "arjlacyo"
 FIREBASE_PROJECT_ID = "digital-school-ecosystem"
 FIREBASE_WEB_API_KEY = "AIzaSyBD4WFrHSJB5EjpFwsOnlPzNCxf91vEyQw"
-DEFAULT_SCHOOL_ID = "sch_cairo_sec_01"
+DEFAULT_SCHOOL_ID = "zewail-school"
 FAMILY_ACTIVATION_CONTINUE_URL = "https://digital-school-ecosystem.web.app/login.html?flow=parent-activation"
+PLATFORM_CONTINUE_BASE = "https://digital-school-platform.vercel.app"
 
 [[ratelimits]]
 name = "FAMILY_ACTIVATION_LIMITER"
@@ -24,6 +25,14 @@ namespace_id = "9473218017"
 
 	[ratelimits.simple]
 	limit = 6
+	period = 60
+
+[[ratelimits]]
+name = "SCHOOL_APPLICATION_LIMITER"
+namespace_id = "9473218018"
+
+	[ratelimits.simple]
+	limit = 3
 	period = 60
 
 # Configure encrypted secrets only after rotating the previously exposed credentials:

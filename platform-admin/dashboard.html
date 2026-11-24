@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة إدارة المنصة</title>
+  <link rel="stylesheet" href="../css/tokens.css?v=11.0">
+  <link rel="stylesheet" href="../css/base.css?v=11.1">
+  <link rel="stylesheet" href="../css/components.css?v=17.2">
+  <link rel="stylesheet" href="../css/dashboard.css?v=11.0">
+</head>
+<body>
+  <script>
+    (async () => {
+      if ('serviceWorker' in navigator) {
+        await Promise.all((await navigator.serviceWorker.getRegistrations()).map((registration) => registration.unregister()));
+      }
+      if ('caches' in window) {
+        await Promise.all((await caches.keys()).map((key) => caches.delete(key)));
+      }
+    })();
+  </script>
+  <div id="school-details-modal" role="dialog" aria-modal="true" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(2,6,23,.72);place-items:center;padding:24px;">
+    <section class="panel" style="width:min(620px,100%);max-height:90vh;overflow:auto;">
+      <div class="panel-header" style="display:flex;justify-content:space-between;gap:12px;">
+        <h2 class="panel-title">تفاصيل المدرسة</h2>
+        <button id="close-school-details" type="button" class="btn btn-outline btn-sm">إغلاق</button>
+      </div>
+      <div id="school-details-content" class="panel-body"></div>
+    </section>
+  </div>
+  <div id="reject-modal" role="dialog" aria-modal="true" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(2,6,23,.72);place-items:center;padding:24px;">
+    <section class="panel" style="width:min(460px,100%);">
+      <div class="panel-header"><h2 class="panel-title">سبب رفض الطلب</h2></div>
+      <div class="panel-body">
+        <textarea id="reject-reason" class="form-control" rows="4" placeholder="اكتب سببًا مختصرًا..." maxlength="500"></textarea>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+          <button id="cancel-reject" type="button" class="btn btn-outline btn-sm">إلغاء</button>
+          <button id="confirm-reject" type="button" class="btn btn-danger btn-sm">رفض الطلب</button>
+        </div>
+      </div>
+    </section>
+  </div>
+  <main style="min-height:100vh;padding:24px;">
+    <div style="max-width:980px;margin:auto;display:grid;gap:18px;">
+      <header class="panel" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;">
+        <div><strong>لوحة إدارة المنصة</strong><div style="color:var(--text-muted);font-size:12px;">المدارس والاعتمادات فقط</div></div>
+        <div style="display:flex;gap:8px;">
+          <button id="platform-theme" type="button" class="theme-toggle-btn" title="تبديل الوضع"></button>
+          <button id="platform-logout" type="button" class="btn btn-outline btn-sm">تسجيل الخروج</button>
+        </div>
+      </header>
+      <section id="platform-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+        <article class="panel"><div class="panel-body"><span style="color:var(--text-muted);font-size:12px;">إجمالي المدارس</span><strong id="stat-total-schools" style="display:block;font-size:28px;margin-top:4px;">—</strong></div></article>
+        <article class="panel"><div class="panel-body"><span style="color:var(--text-muted);font-size:12px;">طلبات بانتظار الموافقة</span><strong id="stat-pending" style="display:block;font-size:28px;margin-top:4px;">—</strong></div></article>
+        <article class="panel"><div class="panel-body"><span style="color:var(--text-muted);font-size:12px;">مدارس نشطت آخر 7 أيام</span><strong id="stat-week" style="display:block;font-size:28px;margin-top:4px;">—</strong></div></article>
+        <article class="panel"><div class="panel-body"><span style="color:var(--text-muted);font-size:12px;">مدارس نشطت آخر 30 يومًا</span><strong id="stat-month" style="display:block;font-size:28px;margin-top:4px;">—</strong></div></article>
+      </section>
+      <section class="panel">
+        <div class="panel-header">
+          <div><h1 class="panel-title">طلبات تفعيل المدارس</h1><p style="color:var(--text-muted);font-size:12px;">اعتماد أو رفض وإرسال دعوات حسابي المؤسسة.</p></div>
+          <button id="refresh-applications" type="button" class="btn btn-outline btn-sm">تحديث</button>
+        </div>
+        <div id="applications-list" class="panel-body" aria-busy="true">
+          <article class="skeleton-card" style="height:150px;"></article>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="panel-header"><h2 class="panel-title">المدارس المعتمدة</h2></div>
+        <div id="schools-list" class="panel-body" aria-busy="true">
+          <article class="skeleton-card" style="height:90px;"></article>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script type="module">
+    import { checkRouteAccess } from '../js/router-guard.js';
+    import { initComponents, toggleTheme, showConfirmModal, showToast } from '../js/components.js';
+    import { logout } from '../js/auth.js';
+    import { getSchoolApplications, approveSchoolApplication, rejectSchoolApplication } from '../js/services/account-service.js';
+    import { listApprovedSchools } from '../js/services/school-service.js';
+
+    checkRouteAccess(['super_admin']);
+    initComponents();
+
+    function escapeText(value) {
+      return String(value ?? '—').replace(/[&<>"']/g, (character) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+      })[character]);
+    }
+
+    async function loadApplications() {
+      const container = document.getElementById('applications-list');
+      container.setAttribute('aria-busy', 'true');
+      try {
+        const applications = await getSchoolApplications();
+        const pending = applications.filter((item) => item.status === 'pending');
+        document.getElementById('stat-pending').textContent = String(pending.length);
+        container.innerHTML = pending.length ? pending.map((item) => `
+          <article class="panel" style="margin-bottom:12px;">
+            <div class="panel-body">
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+                <div><span style="color:var(--text-muted);font-size:11px;">اسم المدرسة عربي</span><strong style="display:block;">${escapeText(item.schoolNameAr)}</strong></div>
+                <div><span style="color:var(--text-muted);font-size:11px;">اسم المدرسة إنجليزي</span><strong style="display:block;">${escapeText(item.schoolNameEn || '—')}</strong></div>
+                <div><span style="color:var(--text-muted);font-size:11px;">الرابط</span><strong style="display:block;">/${escapeText(item.schoolSlug)}/</strong></div>
+                <div><span style="color:var(--text-muted);font-size:11px;">الهاتف</span><strong style="display:block;">${escapeText(item.phone || '—')}</strong></div>
+                <div><span style="color:var(--text-muted);font-size:11px;">مقدم الطلب</span><strong style="display:block;">${escapeText(item.applicantName)} — ${escapeText(item.applicantEmail)}</strong></div>
+                <div><span style="color:var(--text-muted);font-size:11px;">الطرف الثاني</span><strong style="display:block;">${escapeText(item.counterpartName || '—')} — ${escapeText(item.counterpartEmail || '—')}</strong></div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:12px;">
+                <button type="button" class="btn btn-primary btn-sm" data-approve="${item.id}">اعتماد</button>
+                <button type="button" class="btn btn-outline btn-sm" data-reject="${item.id}">رفض</button>
+              </div>
+            </div>
+          </article>
+        `).join('') : '<div class="empty-state"><h3 class="empty-state-title">لا توجد طلبات معلقة</h3></div>';
+      } catch (error) {
+        container.innerHTML = `<div class="alert alert-danger">${error.message || 'تعذر تحميل الطلبات.'}</div>`;
+      } finally {
+        container.setAttribute('aria-busy', 'false');
+      }
+    }
+
+    async function loadSchools() {
+      const container = document.getElementById('schools-list');
+      container.setAttribute('aria-busy', 'true');
+      try {
+        const schools = await listApprovedSchools();
+        window.__approvedSchools = schools;
+        const now = Date.now();
+        const week = schools.filter((school) => {
+          const value = Date.parse(school.approvedAt || school.createdAt || '');
+          return Number.isFinite(value) && now - value <= 7 * 24 * 60 * 60 * 1000;
+        }).length;
+        const month = schools.filter((school) => {
+          const value = Date.parse(school.approvedAt || school.createdAt || '');
+          return Number.isFinite(value) && now - value <= 30 * 24 * 60 * 60 * 1000;
+        }).length;
+        document.getElementById('stat-total-schools').textContent = String(schools.length);
+        document.getElementById('stat-week').textContent = String(week);
+        document.getElementById('stat-month').textContent = String(month);
+        container.innerHTML = schools.length ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">${schools.map((school) => `
+          <article class="panel"><div class="panel-body"><h3>${escapeText(school.nameAr || school.schoolId)}</h3><p style="color:var(--text-muted);font-size:13px;">/${escapeText(school.slug || school.schoolId)}/</p><button type="button" class="btn btn-outline btn-sm" data-school-details="${escapeText(school.schoolId)}" style="margin-top:8px;">عرض التفاصيل</button></div></article>
+        `).join('')}</div>` : '<div class="empty-state"><h3 class="empty-state-title">لا توجد مدارس معتمدة</h3></div>';
+      } catch (error) {
+        container.innerHTML = `<div class="alert alert-danger">${error.message || 'تعذر تحميل المدارس.'}</div>`;
+      } finally {
+        container.setAttribute('aria-busy', 'false');
+      }
+    }
+
+    document.getElementById('platform-theme').addEventListener('click', (event) => toggleTheme(event));
+    document.getElementById('platform-logout').addEventListener('click', () => logout());
+    document.getElementById('refresh-applications').addEventListener('click', loadApplications);
+    document.getElementById('close-school-details').addEventListener('click', () => {
+      document.getElementById('school-details-modal').style.display = 'none';
+    });
+    document.getElementById('schools-list').addEventListener('click', (event) => {
+      const button = event.target.closest('[data-school-details]');
+      if (!button) return;
+      const school = (window.__approvedSchools || []).find((item) => item.schoolId === button.dataset.schoolDetails);
+      if (!school) return;
+      document.getElementById('school-details-content').innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;line-height:1.8;">
+          <div><span style="color:var(--text-muted);font-size:12px;">الاسم بالعربية</span><strong style="display:block;">${escapeText(school.nameAr)}</strong></div>
+          <div><span style="color:var(--text-muted);font-size:12px;">الاسم بالإنجليزية</span><strong style="display:block;">${escapeText(school.nameEn)}</strong></div>
+          <div><span style="color:var(--text-muted);font-size:12px;">الإدارة التابعة</span><strong style="display:block;">${escapeText(school.administration || school.adminDeptAr)}</strong></div>
+          <div><span style="color:var(--text-muted);font-size:12px;">العنوان</span><strong style="display:block;">${escapeText(school.address)}</strong></div>
+          <div><span style="color:var(--text-muted);font-size:12px;">الهاتف</span><strong style="display:block;">${escapeText(school.phone)}</strong></div>
+          <div><span style="color:var(--text-muted);font-size:12px;">البريد</span><strong style="display:block;">${escapeText(school.email)}</strong></div>
+          <div><span style="color:var(--text-muted);font-size:12px;">المسار</span><strong style="display:block;">/${escapeText(school.slug || school.schoolId)}/</strong></div>
+          <div><span style="color:var(--text-muted);font-size:12px;">الحالة</span><strong style="display:block;">${school.status === 'active' ? 'نشطة ومعتمدة' : escapeText(school.status)}</strong></div>
+        </div>
+      `;
+      document.getElementById('school-details-modal').style.display = 'grid';
+    });
+    document.getElementById('applications-list').addEventListener('click', async (event) => {
+      const approve = event.target.closest('[data-approve]');
+      const reject = event.target.closest('[data-reject]');
+      if (approve) {
+        const confirmed = await showConfirmModal({ title: 'اعتماد المدرسة؟', message: 'سيتم إنشاء المدرسة وإرسال دعوات الحسابين الأساسيين.', confirmText: 'اعتماد' });
+        if (!confirmed) return;
+        try {
+          await approveSchoolApplication(approve.dataset.approve);
+          showToast('تم اعتماد المدرسة وإرسال الدعوات.', 'success');
+          await Promise.all([loadApplications(), loadSchools()]);
+        } catch (error) {
+          showToast(error.message || 'تعذر الاعتماد.', 'error');
+        }
+      }
+      if (reject) {
+        const modal = document.getElementById('reject-modal');
+        const reasonInput = document.getElementById('reject-reason');
+        reasonInput.value = '';
+        modal.style.display = 'grid';
+        reasonInput.focus();
+        document.getElementById('cancel-reject').onclick = () => {
+          modal.style.display = 'none';
+        };
+        document.getElementById('confirm-reject').onclick = async () => {
+          const reason = reasonInput.value.trim();
+          if (!reason) {
+            showToast('أدخل سبب رفض الطلب.', 'error');
+            return;
+          }
+          try {
+            await rejectSchoolApplication(reject.dataset.reject, reason);
+            modal.style.display = 'none';
+            showToast('تم رفض الطلب.', 'success');
+            await loadApplications();
+          } catch (error) {
+            showToast(error.message || 'تعذر الرفض.', 'error');
+          }
+        };
+      }
+    });
+
+    Promise.all([loadApplications(), loadSchools()]);
+  </script>
+</body>
+</html>

@@ -141,7 +141,7 @@ async function loadAlbums() {
   const countBadge = document.getElementById('gallery-album-count');
   if (!grid) return;
 
-  currentAlbums = await getAlbums('sch_cairo_sec_01');
+  currentAlbums = await getAlbums('zewail-school');
   if (countBadge) countBadge.textContent = `${currentAlbums.length} ألبومات`;
 
   renderAlbumsGrid();

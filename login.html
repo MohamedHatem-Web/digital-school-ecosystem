@@ -283,6 +283,7 @@
           <!-- Auth Alert Messages -->
           <div id="login-error-alert" class="alert alert-danger" style="display: none; margin-bottom: var(--space-4);">
             <span id="login-error-text">حدث خطأ أثناء تسجيل الدخول.</span>
+            <a id="login-error-action" class="btn btn-primary btn-sm" style="display:none;margin-inline-start:var(--space-3);"></a>
           </div>
 
           <div id="login-loading-indicator" class="alert alert-primary" style="display: none; margin-bottom: var(--space-4);">
@@ -428,6 +429,7 @@
 
   <script type="module">
     import { loginWithEmailPassword, getRoleDashboardUrl, translateAuthError, getCurrentUser, logout } from './js/auth.js?v=11.0';
+    import { getTenantSchoolSlug, getTenantSlug } from './js/tenant-router.js';
     import { initComponents, toggleTheme } from './js/components.js?v=11.0';
     import {
       activateParentAccount,
@@ -483,16 +485,27 @@
     const submitBtn = document.getElementById('submit-login-btn');
     const errorAlert = document.getElementById('login-error-alert');
     const errorText = document.getElementById('login-error-text');
+    const errorAction = document.getElementById('login-error-action');
     const loadingAlert = document.getElementById('login-loading-indicator');
 
     function setLoading(isLoading) {
       submitBtn.disabled = isLoading;
       loadingAlert.style.display = isLoading ? 'flex' : 'none';
-      if (isLoading) errorAlert.style.display = 'none';
+      if (isLoading) {
+        errorAlert.style.display = 'none';
+        errorAction.style.display = 'none';
+      }
     }
 
-    function showError(msg) {
+    function showError(msg, action) {
       errorText.textContent = msg;
+      if (action) {
+        errorAction.href = action.href;
+        errorAction.textContent = action.label;
+        errorAction.style.display = 'inline-flex';
+      } else {
+        errorAction.style.display = 'none';
+      }
       errorAlert.style.display = 'flex';
     }
 
@@ -813,7 +826,7 @@
 
       setLoading(true);
       try {
-        const profile = await loginWithEmailPassword(email, password);
+        const profile = await loginWithEmailPassword(email, password, { expectedSchoolSlug: getTenantSlug() });
         if (profile.passwordChangeRequired) await promptForFirstLoginPasswordChange();
         if (profile.role === 'student') {
           window.location.href = 'dashboard/student-portal.html';
@@ -825,7 +838,15 @@
       } catch (err) {
         console.error('Login error:', err);
         setLoading(false);
-        showError(translateAuthError(err.code || err.message));
+        if (err.code === 'auth/wrong-school') {
+          const ownSlug = getTenantSchoolSlug(err.schoolId);
+          showError(`هذا الحساب تابع لمدرسة ${err.schoolName || ownSlug}، وليس لهذه المدرسة.`, {
+            href: `/${encodeURIComponent(ownSlug)}/login.html`,
+            label: 'الانتقال إلى مدرستي',
+          });
+        } else {
+          showError(translateAuthError(err.code || err.message));
+        }
       }
     });
 
@@ -836,6 +857,5 @@
     finishStaffInvitationLink();
     resumeStudentActivationPolling();
   </script>
-  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=17.3');}</script>
 </body>
 </html>

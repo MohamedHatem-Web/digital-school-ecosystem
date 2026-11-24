@@ -20,6 +20,7 @@ import {
 import { getCurrentUser } from '../auth.js';
 import { recordAuditEvent } from './audit-service.js';
 import { deleteMediaImage } from './cloudinary-service.js';
+import { getActiveSchoolId } from './school-service.js';
 
 const ALBUMS_KEY = 'dse_media_albums';
 const MEDIA_ITEMS_KEY = 'dse_media_items';
@@ -61,7 +62,7 @@ export async function createAlbum(albumData) {
   }
 
   const user = getCurrentUser();
-  const schoolId = user.schoolId || 'sch_cairo_sec_01';
+  const schoolId = user.schoolId || getActiveSchoolId();
   const albumId = albumData.id || `alb_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 
   const newAlbum = {
@@ -116,7 +117,7 @@ export async function createAlbum(albumData) {
  * @param {Object} filter - { schoolId, categoryId, status, onlyPublic }
  */
 export async function getAlbums(filter = {}) {
-  const schoolId = filter.schoolId || (getCurrentUser() ? getCurrentUser().schoolId : 'sch_cairo_sec_01');
+  const schoolId = filter.schoolId || getActiveSchoolId();
   let albums = [];
 
   if (isFirebaseAvailable()) {
@@ -155,7 +156,7 @@ export async function getAlbums(filter = {}) {
 /**
  * Get album details by ID.
  */
-export async function getAlbumById(albumId, schoolId = 'sch_cairo_sec_01') {
+export async function getAlbumById(albumId, schoolId = getActiveSchoolId()) {
   if (isFirebaseAvailable()) {
     try {
       const docRef = doc(db, 'schools', schoolId, 'albums', albumId);
@@ -177,7 +178,7 @@ export async function updateAlbum(albumId, updates) {
   if (!canManageMedia()) throw new Error('Unauthorized');
 
   const user = getCurrentUser();
-  const schoolId = user.schoolId || 'sch_cairo_sec_01';
+  const schoolId = user.schoolId || getActiveSchoolId();
   updates.updatedAt = new Date().toISOString();
 
   if (updates.status) {
@@ -218,7 +219,7 @@ export async function deleteAlbum(albumId) {
   if (!canManageMedia()) throw new Error('Unauthorized');
 
   const user = getCurrentUser();
-  const schoolId = user.schoolId || 'sch_cairo_sec_01';
+  const schoolId = user.schoolId || getActiveSchoolId();
 
   // 1. Delete Firestore record
   if (isFirebaseAvailable()) {
@@ -261,7 +262,7 @@ export async function addMediaToAlbum(albumId, mediaData) {
   if (!canManageMedia()) throw new Error('Unauthorized');
 
   const user = getCurrentUser();
-  const schoolId = user.schoolId || 'sch_cairo_sec_01';
+  const schoolId = user.schoolId || getActiveSchoolId();
   const mediaId = mediaData.id || `med_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 
   const item = {
@@ -313,7 +314,7 @@ export async function addMediaToAlbum(albumId, mediaData) {
 /**
  * Retrieves all images inside an album.
  */
-export async function getAlbumImages(albumId, schoolId = 'sch_cairo_sec_01') {
+export async function getAlbumImages(albumId, schoolId = getActiveSchoolId()) {
   let images = [];
 
   if (isFirebaseAvailable()) {
@@ -340,7 +341,7 @@ export async function deleteAlbumImage(albumId, imageId, publicId) {
   if (!canManageMedia()) throw new Error('Unauthorized');
 
   const user = getCurrentUser();
-  const schoolId = user.schoolId || 'sch_cairo_sec_01';
+  const schoolId = user.schoolId || getActiveSchoolId();
 
   // Request Cloudflare Worker to delete from Cloudinary
   if (publicId) {

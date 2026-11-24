@@ -23,6 +23,10 @@ export default {
       return handlePublicContactInquiry(request, requestEnv);
     }
 
+    if (url.pathname === '/api/public/school-applications' && request.method === 'POST') {
+      return handlePublicSchoolApplication(request, requestEnv);
+    }
+
     // 3. Media Upload Signature Endpoint
     if (url.pathname === '/api/media/sign-upload' && request.method === 'POST') {
       return handleSignUpload(request, requestEnv);
@@ -43,6 +47,30 @@ export default {
 
     if (url.pathname === '/api/admin/link-student-family' && request.method === 'POST') {
       return handleLinkEnrolledStudentFamily(request, requestEnv);
+    }
+
+    if (url.pathname === '/api/admin/platform/migrate-school' && request.method === 'POST') {
+      return handlePlatformSchoolMigration(request, requestEnv);
+    }
+
+    if (url.pathname === '/api/admin/platform/approve-school' && request.method === 'POST') {
+      return handlePlatformApproveSchool(request, requestEnv);
+    }
+
+    if (url.pathname === '/api/admin/platform/reject-school' && request.method === 'POST') {
+      return handlePlatformRejectSchool(request, requestEnv);
+    }
+
+    if (url.pathname === '/api/admin/platform/applications' && request.method === 'GET') {
+      return handlePlatformListApplications(request, requestEnv);
+    }
+
+    if (url.pathname === '/api/admin/platform/super-admins' && request.method === 'GET') {
+      return handlePlatformListSuperAdmins(request, requestEnv);
+    }
+
+    if (url.pathname === '/api/admin/platform/invite-super-admin' && request.method === 'POST') {
+      return handlePlatformInviteSuperAdmin(request, requestEnv);
     }
 
     if (url.pathname === '/api/auth/complete-first-login' && request.method === 'POST') {
@@ -162,7 +190,19 @@ async function verifyAuth(request, env, allowUnprovisioned = false) {
     const role = fields.role?.stringValue;
     const schoolId = fields.schoolId?.stringValue;
     const status = fields.status?.stringValue;
-    if (status && status !== 'active') throw new Error('User account is inactive');
+    if (status && status !== 'active') throw Object.assign(new Error('User account is inactive'), { status: 403 });
+
+    if (role !== 'super_admin' && schoolId) {
+      const schoolResponse = await fetch(
+        `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(schoolId)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!schoolResponse.ok) throw Object.assign(new Error('School is not available'), { status: 403 });
+      const school = await schoolResponse.json();
+      if (school.fields?.status?.stringValue !== 'active') {
+        throw Object.assign(new Error('School is not approved'), { status: 403 });
+      }
+    }
 
     return {
       ...identity,
@@ -173,7 +213,7 @@ async function verifyAuth(request, env, allowUnprovisioned = false) {
       mustChangePassword: fields.passwordChangeRequired?.booleanValue === true,
     };
   } catch (err) {
-    throw Object.assign(new Error('Firebase authentication failed: ' + err.message), { status: 401 });
+    throw Object.assign(new Error('Firebase authentication failed: ' + err.message), { status: err.status || 401 });
   }
 }
 
@@ -185,7 +225,7 @@ async function handleParentActivation(request, env) {
     }
 
     const projectId = env.FIREBASE_PROJECT_ID;
-    const schoolId = env.DEFAULT_SCHOOL_ID || 'sch_cairo_sec_01';
+    const schoolId = String(body.schoolId || '').trim() || env.DEFAULT_SCHOOL_ID || 'zewail-school';
     const adminToken = await getFirebaseAdminAccessToken(env);
     const profileUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${encodeURIComponent(identity.uid)}`;
     const existingProfileResponse = await fetch(profileUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
@@ -268,6 +308,7 @@ async function handleParentActivation(request, env) {
           parentInfo,
         }) }),
       });
+      if (!applicationUpdateResponse.ok) throw new Error('تعذر تسجيل اعتماد المدرسة في الطلب.');
       if (!updateResponse.ok) throw new Error('تعذر ربط جميع أبناء الأسرة؛ أعد المحاولة.');
     }
 
@@ -359,7 +400,7 @@ async function handleStudentActivationRequest(request, env) {
       return jsonResponse({ error: 'محاولات كثيرة. انتظر دقيقة ثم حاول مرة أخرى.' }, 429, env);
     }
 
-    const schoolId = env.DEFAULT_SCHOOL_ID || 'sch_cairo_sec_01';
+    const schoolId = env.DEFAULT_SCHOOL_ID || 'zewail-school';
     const projectId = env.FIREBASE_PROJECT_ID;
     const adminToken = await getFirebaseAdminAccessToken(env);
     const studentUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(schoolId)}/students/${encodeURIComponent(`stu_${studentCode}`)}`;
@@ -453,7 +494,7 @@ async function handlePublicContactInquiry(request, env) {
       attendance: { id: 'student_affairs', role: 'student_affairs', name: 'شؤون الطلاب والقيد' },
       other: { id: 'director', role: 'director', name: 'مدير المدرسة' },
     }[topic];
-    const schoolId = env.DEFAULT_SCHOOL_ID || 'sch_cairo_sec_01';
+    const schoolId = env.DEFAULT_SCHOOL_ID || 'zewail-school';
     const projectId = env.FIREBASE_PROJECT_ID;
     const adminToken = await getFirebaseAdminAccessToken(env);
     const inquiryId = `public_${crypto.randomUUID()}`;
@@ -619,7 +660,8 @@ async function handleCreateAccountInvitation(request, env) {
         : 'تعذر إنشاء سجل الدعوة في Firebase.'), { status: 502 });
     }
 
-    const continueUrl = new URL(env.FAMILY_ACTIVATION_CONTINUE_URL);
+    const platformBase = env.PLATFORM_CONTINUE_BASE || 'https://digital-school-platform.vercel.app';
+    const continueUrl = new URL(`${platformBase.replace(/\/$/, '')}/${encodeURIComponent(schoolId)}/login.html`);
     continueUrl.searchParams.set('flow', 'staff-invitation');
     continueUrl.searchParams.set('invitationId', invitationId);
     const emailResult = await sendAccountInvitationEmail(email, continueUrl.toString(), env);
@@ -688,7 +730,7 @@ async function handleCompleteAccountInvitation(request, env) {
     if (Date.parse(invitation.expiresAt || '') <= Date.now()) {
       return jsonResponse({ error: 'انتهت صلاحية الدعوة. اطلب دعوة جديدة من إدارة المدرسة.' }, 410, env);
     }
-    if (!['director', 'tech_specialist', 'student_affairs', 'social_affairs', 'teacher'].includes(invitation.role)) {
+    if (!['super_admin', 'director', 'tech_specialist', 'student_affairs', 'social_affairs', 'teacher'].includes(invitation.role)) {
       return jsonResponse({ error: 'الدور الوظيفي في الدعوة غير صالح.' }, 400, env);
     }
 
@@ -725,14 +767,15 @@ async function handleCompleteAccountInvitation(request, env) {
     const teacherInfo = invitation.teacherInfo || {};
     const profile = {
       role: invitation.role,
-      schoolId: invitation.schoolId,
       status: 'active',
       email: identity.email,
       displayName: invitation.displayName,
       invitationId,
       createdAt: new Date().toISOString(),
       createdByUid: invitation.invitedByUid,
+      platformRole: invitation.platformRole || '',
     };
+    if (invitation.role !== 'super_admin') profile.schoolId = invitation.schoolId;
     if (invitation.role === 'teacher') {
       profile.subject = teacherInfo.subject || '';
       profile.classId = teacherInfo.classId || '';
@@ -790,8 +833,8 @@ async function hashActivationSecret(secret) {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-async function loadActivationRequest(requestId, projectId, adminToken) {
-  const documentUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent('sch_cairo_sec_01')}/activationRequests/${encodeURIComponent(requestId)}`;
+async function loadActivationRequest(requestId, projectId, adminToken, schoolId = 'zewail-school') {
+  const documentUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(schoolId)}/activationRequests/${encodeURIComponent(requestId)}`;
   const response = await fetch(documentUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
   if (!response.ok) return null;
   const document = await response.json();
@@ -822,7 +865,7 @@ async function handleStudentActivationStatus(request, env) {
     const secret = String(body.activationSecret || '').trim();
     if (!/^[0-9a-f-]{36}$/i.test(requestId)) return jsonResponse({ error: 'طلب التفعيل غير صالح.' }, 400, env);
     const adminToken = await getFirebaseAdminAccessToken(env);
-    const activation = await loadActivationRequest(requestId, env.FIREBASE_PROJECT_ID, adminToken);
+    const activation = await loadActivationRequest(requestId, env.FIREBASE_PROJECT_ID, adminToken, String(body.schoolId || '').trim() || 'zewail-school');
     if (!await verifyActivationSecret(activation, secret)) return jsonResponse({ error: 'طلب التفعيل غير صالح أو انتهت صلاحيته.' }, 404, env);
     if (activationRequestExpired(activation)) return jsonResponse({ status: 'expired' }, 200, env);
     return jsonResponse({ status: activation.data.status }, 200, env);
@@ -838,7 +881,7 @@ async function handleListActivationRequests(request, env) {
       return jsonResponse({ error: 'يجب تسجيل الدخول ببريد ولي أمر موثق.' }, 403, env);
     }
     const adminToken = await getFirebaseAdminAccessToken(env);
-    const schoolId = parent.schoolId || env.DEFAULT_SCHOOL_ID || 'sch_cairo_sec_01';
+    const schoolId = parent.schoolId || env.DEFAULT_SCHOOL_ID || 'zewail-school';
     const collectionUrl = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/schools/${encodeURIComponent(schoolId)}/activationRequests`;
     const requests = [];
     let pageToken = '';
@@ -884,7 +927,7 @@ async function handleReviewStudentActivation(request, env) {
       return jsonResponse({ error: 'بيانات مراجعة الطلب غير صالحة.' }, 400, env);
     }
     const adminToken = await getFirebaseAdminAccessToken(env);
-    const activation = await loadActivationRequest(requestId, env.FIREBASE_PROJECT_ID, adminToken);
+    const activation = await loadActivationRequest(requestId, env.FIREBASE_PROJECT_ID, adminToken, parent.schoolId || 'zewail-school');
     if (!activation || activation.data.status !== 'pending' || activationRequestExpired(activation)) {
       return jsonResponse({ error: 'انتهت صلاحية الطلب أو تمت مراجعته بالفعل.' }, 409, env);
     }
@@ -933,14 +976,14 @@ async function handleCompleteStudentActivation(request, env) {
 
     const projectId = env.FIREBASE_PROJECT_ID;
     const adminToken = await getFirebaseAdminAccessToken(env);
-    const activation = await loadActivationRequest(requestId, projectId, adminToken);
+    const activation = await loadActivationRequest(requestId, projectId, adminToken, String(body.schoolId || '').trim() || 'zewail-school');
     if (!await verifyActivationSecret(activation, secret) || activationRequestExpired(activation)) {
       return jsonResponse({ error: 'انتهت صلاحية طلب التفعيل أو بياناته غير صحيحة.' }, 403, env);
     }
     if (activation.data.status === 'completed') return jsonResponse({ success: true, email: `${activation.data.studentCode}@cairo7.moe.edu.eg` }, 200, env);
     if (activation.data.status !== 'approved') return jsonResponse({ error: 'بانتظار موافقة ولي الأمر.' }, 409, env);
 
-    const schoolId = activation.data.schoolId || env.DEFAULT_SCHOOL_ID || 'sch_cairo_sec_01';
+    const schoolId = activation.data.schoolId || env.DEFAULT_SCHOOL_ID || 'zewail-school';
     const studentCode = String(activation.data.studentCode || '');
     const studentUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(schoolId)}/students/${encodeURIComponent(`stu_${studentCode}`)}`;
     studentUrlForRollback = studentUrl;
@@ -1709,6 +1752,601 @@ function encodeFirestoreValue(value) {
   if (Array.isArray(value)) return { arrayValue: { values: value.map(encodeFirestoreValue) } };
   if (typeof value === 'object') return { mapValue: { fields: encodeFirestoreMap(value) } };
   return { nullValue: null };
+}
+
+async function handlePlatformListSuperAdmins(request, env) {
+  try {
+    const user = await verifyAuth(request, env);
+    if (user.role !== 'super_admin') return jsonResponse({ error: 'هذه العملية مخصصة لمديري المنصة العامين.' }, 403, env);
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const collectionUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users`;
+    const response = await fetch(collectionUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+    if (!response.ok) throw new Error('تعذر تحميل حسابات مديري المنصة.');
+    const page = await response.json();
+    const superAdmins = (page.documents || []).map((document) => {
+      const fields = decodeFirestoreMap(document.fields || {});
+      return {
+        uid: document.name.split('/').pop(),
+        email: fields.email || '',
+        displayName: fields.displayName || '',
+        status: fields.status || 'active',
+        platformRole: fields.platformRole || 'super_admin',
+        createdAt: fields.createdAt || '',
+      };
+    }).filter((profile) => profile.platformRole === 'super_admin' || !profile.schoolId);
+    return jsonResponse({ superAdmins }, 200, env);
+  } catch (error) {
+    return jsonResponse({ error: error.message || 'تعذر تحميل مديري المنصة.' }, error.status || 401, env);
+  }
+}
+
+async function handlePlatformInviteSuperAdmin(request, env) {
+  try {
+    const inviter = await verifyAuth(request, env);
+    if (inviter.role !== 'super_admin') return jsonResponse({ error: 'هذه العملية مخصصة لمديري المنصة العامين.' }, 403, env);
+    const body = await request.json();
+    const email = String(body.email || '').trim().toLowerCase();
+    const displayName = String(body.displayName || '').trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 ||
+      displayName.length < 2 || displayName.length > 120) {
+      return jsonResponse({ error: 'أدخل اسمًا وبريدًا صحيحين.' }, 400, env);
+    }
+
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const authBase = `https://identitytoolkit.googleapis.com/v1/projects/${projectId}`;
+    const lookupResponse = await fetch(`${authBase}/accounts:lookup`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: [email] }),
+    });
+    const lookupData = await lookupResponse.json().catch(() => ({}));
+    if (!lookupResponse.ok) throw new Error('تعذر التحقق من البريد في Firebase.');
+    if (lookupData.users?.length) throw Object.assign(new Error('يوجد حساب مرتبط بهذا البريد بالفعل.'), { status: 409 });
+
+    const invitationId = crypto.randomUUID();
+    const invitationUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/accountInvitations?documentId=${encodeURIComponent(invitationId)}`;
+    const invitation = {
+      invitationId,
+      email,
+      displayName,
+      role: 'super_admin',
+      schoolId: '',
+      platformRole: 'super_admin',
+      teacherInfo: {},
+      status: 'pending',
+      invitedByUid: inviter.uid,
+      invitedByRole: 'super_admin',
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
+    };
+    const createResponse = await fetch(invitationUrl, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: encodeFirestoreMap(invitation) }),
+    });
+    if (!createResponse.ok) throw new Error('تعذر إنشاء دعوة مدير المنصة.');
+
+    const continueUrl = new URL(env.PLATFORM_CONTINUE_BASE || 'https://digital-school-platform.vercel.app');
+    continueUrl.pathname = '/platform-admin/login.html';
+    continueUrl.searchParams.set('flow', 'staff-invitation');
+    continueUrl.searchParams.set('invitationId', invitationId);
+    const emailResult = await sendAccountInvitationEmail(email, continueUrl.toString(), env);
+    if (!emailResult.ok) {
+      await fetch(invitationUrl.replace(`?documentId=${encodeURIComponent(invitationId)}`, `/${encodeURIComponent(invitationId)}`), {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }).catch(() => {});
+      throw new Error('تعذر إرسال دعوة مدير المنصة عبر البريد.');
+    }
+    return jsonResponse({ success: true, invitationId, email }, 202, env);
+  } catch (error) {
+    return jsonResponse({ error: error.message || 'تعذر دعوة مدير المنصة.' }, error.status || 500, env);
+  }
+}
+
+async function handlePublicSchoolApplication(request, env) {
+  let applicationUrl = '';
+  let claimUrl = '';
+  try {
+    if (Number(request.headers.get('Content-Length') || 0) > 8192) {
+      return jsonResponse({ error: 'بيانات الطلب أكبر من المسموح.' }, 413, env);
+    }
+
+    const identity = await verifyAuth(request, env, true);
+    if (!identity.email || !identity.emailVerified) {
+      return jsonResponse({ error: 'تحقق من بريد المدير قبل إرسال طلب المدرسة.' }, 403, env);
+    }
+    const limiter = env.SCHOOL_APPLICATION_LIMITER;
+    if (!limiter) return jsonResponse({ error: 'خدمة تسجيل المدارس غير مكتملة الإعداد.' }, 503, env);
+    const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const [ipLimit, accountLimit] = await Promise.all([
+      limiter.limit({ key: `school-application-ip:${clientIp}` }),
+      limiter.limit({ key: `school-application-user:${identity.uid}` }),
+    ]);
+    if (!ipLimit.success || !accountLimit.success) {
+      return jsonResponse({ error: 'تم إرسال طلبات كثيرة. انتظر دقيقة ثم حاول.' }, 429, env);
+    }
+
+    const rawBody = await request.text();
+    if (new TextEncoder().encode(rawBody).length > 8192) {
+      return jsonResponse({ error: 'بيانات الطلب أكبر من المسموح.' }, 413, env);
+    }
+    let body;
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return jsonResponse({ error: 'صيغة بيانات الطلب غير صحيحة.' }, 400, env);
+    }
+    const schoolSlug = String(body.schoolSlug || '').trim().toLowerCase();
+    const schoolNameAr = String(body.schoolNameAr || '').trim();
+    const schoolNameEn = String(body.schoolNameEn || '').trim();
+    const applicantName = String(body.applicantName || '').trim();
+    const phone = String(body.phone || '').trim();
+    if (body.acceptedTerms !== true || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(schoolSlug) ||
+      schoolSlug.length > 63 || schoolNameAr.length < 2 || schoolNameAr.length > 160 ||
+      schoolNameEn.length > 160 || applicantName.length < 2 || applicantName.length > 120 ||
+      phone.length > 32) {
+      return jsonResponse({ error: 'راجع اسم المدرسة والرابط وبيانات المدير والموافقة على الشروط.' }, 400, env);
+    }
+
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const schoolUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(schoolSlug)}`;
+    const existingSchool = await fetch(schoolUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+    if (existingSchool.ok) return jsonResponse({ error: 'هذا الرابط مستخدم بالفعل من مدرسة.' }, 409, env);
+    if (existingSchool.status !== 404) throw new Error('تعذر التحقق من رابط المدرسة.');
+
+    const applicationId = crypto.randomUUID();
+    const createdAt = new Date().toISOString();
+    claimUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schoolSlugClaims?documentId=${encodeURIComponent(schoolSlug)}`;
+    const claimResponse = await fetch(claimUrl, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: encodeFirestoreMap({
+        schoolSlug,
+        applicationId,
+        applicantUid: identity.uid,
+        status: 'pending',
+        createdAt,
+      }) }),
+    });
+    if (!claimResponse.ok) {
+      if (claimResponse.status === 409) return jsonResponse({ error: 'يوجد طلب سابق للرابط المقترح.' }, 409, env);
+      throw new Error('تعذر حجز رابط المدرسة للطلب.');
+    }
+
+    applicationUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schoolApplications?documentId=${encodeURIComponent(applicationId)}`;
+    const application = {
+      id: applicationId,
+      schoolSlug,
+      schoolNameAr,
+      schoolNameEn,
+      applicantName,
+      applicantEmail: identity.email,
+      applicantEmailVerified: true,
+      applicantRole: 'director',
+      phone,
+      acceptedTerms: true,
+      status: 'pending',
+      createdAt,
+    };
+    const applicationResponse = await fetch(applicationUrl, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: encodeFirestoreMap(application) }),
+    });
+    if (!applicationResponse.ok) throw new Error('تعذر حفظ طلب المدرسة.');
+
+    const auditId = crypto.randomUUID();
+    const auditUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/platformAuditLogs?documentId=${encodeURIComponent(auditId)}`;
+    const auditResponse = await fetch(auditUrl, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: encodeFirestoreMap({
+        action: 'school_application_submitted',
+        applicationId,
+        schoolSlug,
+        actorUid: identity.uid,
+        createdAt,
+      }) }),
+    });
+    if (!auditResponse.ok) throw new Error('تعذر تسجيل عملية إرسال الطلب.');
+
+    return jsonResponse({ success: true, id: applicationId, schoolSlug }, 202, env);
+  } catch (error) {
+    if (applicationUrl || claimUrl) {
+      const cleanupToken = await getFirebaseAdminAccessToken(env).catch(() => '');
+      if (cleanupToken) {
+        const cleanup = [];
+        if (applicationUrl) cleanup.push(fetch(applicationUrl.replace(/\?documentId=.*$/, `/${encodeURIComponent(applicationUrl.split('documentId=')[1] || '')}`), {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${cleanupToken}` },
+        }));
+        if (claimUrl) cleanup.push(fetch(claimUrl.replace(/\?documentId=.*$/, `/${encodeURIComponent(new URL(claimUrl).searchParams.get('documentId') || '')}`), {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${cleanupToken}` },
+        }));
+        const results = await Promise.allSettled(cleanup);
+        if (results.some((result) => result.status === 'rejected' || !result.value.ok)) {
+          console.error('School application rollback was incomplete', { applicationId: new URL(applicationUrl || claimUrl).searchParams.get('documentId') });
+        }
+      }
+    }
+    return jsonResponse({ error: error.message || 'تعذر إرسال طلب المدرسة.' }, error.status || 500, env);
+  }
+}
+
+async function handlePlatformListApplications(request, env) {
+  try {
+    const user = await verifyAuth(request, env);
+    if (user.role !== 'super_admin') return jsonResponse({ error: 'هذه العملية مخصصة لمدير المنصة العام.' }, 403, env);
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const collectionUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schoolApplications`;
+    const response = await fetch(collectionUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+    if (!response.ok) throw new Error('تعذر تحميل طلبات المدارس.');
+    const page = await response.json();
+    const applications = (page.documents || []).map((document) => ({
+      id: document.name.split('/').pop(),
+      ...decodeFirestoreMap(document.fields || {}),
+    })).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+    return jsonResponse({ applications }, 200, env);
+  } catch (error) {
+    return jsonResponse({ error: error.message || 'تعذر تحميل الطلبات.' }, error.status || 401, env);
+  }
+}
+
+async function createPlatformAuditLog(projectId, adminToken, logId, fields) {
+  const auditUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/platformAuditLogs?documentId=${encodeURIComponent(logId)}`;
+  const response = await fetch(auditUrl, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields: encodeFirestoreMap(fields) }),
+  });
+  if (!response.ok) throw new Error('تعذر تسجيل العملية في سجل تدقيق المنصة.');
+}
+
+async function handlePlatformRejectSchool(request, env) {
+  try {
+    const user = await verifyAuth(request, env);
+    if (user.role !== 'super_admin') return jsonResponse({ error: 'هذه العملية مخصصة لمدير المنصة العام.' }, 403, env);
+    const body = await request.json();
+    const applicationId = String(body.applicationId || '').trim();
+    const reason = String(body.reason || '').trim();
+    if (!/^[0-9a-f-]{36}$/i.test(applicationId) || reason.length < 2 || reason.length > 500) {
+      return jsonResponse({ error: 'معرّف الطلب أو سبب الرفض غير صالح.' }, 400, env);
+    }
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const applicationUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schoolApplications/${encodeURIComponent(applicationId)}`;
+    const applicationResponse = await fetch(applicationUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+    if (!applicationResponse.ok) return jsonResponse({ error: 'طلب المدرسة غير موجود.' }, 404, env);
+    const application = decodeFirestoreMap((await applicationResponse.json()).fields || {});
+    if (application.status !== 'pending') return jsonResponse({ error: 'تمت مراجعة طلب المدرسة بالفعل.' }, 409, env);
+    const updateUrl = new URL(applicationUrl);
+    ['status', 'rejectionReason', 'reviewedAt', 'reviewedByUid'].forEach((field) => updateUrl.searchParams.append('updateMask.fieldPaths', field));
+    const reviewedAt = new Date().toISOString();
+    const response = await fetch(updateUrl, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: encodeFirestoreMap({
+        status: 'rejected',
+        rejectionReason: reason,
+        reviewedAt,
+        reviewedByUid: user.uid,
+      }) }),
+    });
+    if (!response.ok) throw new Error('تعذر حفظ قرار رفض المدرسة.');
+    const claimUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schoolSlugClaims/${encodeURIComponent(application.schoolSlug || '')}`;
+    const claimResponse = await fetch(claimUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+    if (claimResponse.ok) {
+      const claim = decodeFirestoreMap((await claimResponse.json()).fields || {});
+      if (claim.applicationId === applicationId) {
+        const deleteClaim = await fetch(claimUrl, { method: 'DELETE', headers: { Authorization: `Bearer ${adminToken}` } });
+        if (!deleteClaim.ok) throw new Error('تم رفض الطلب لكن تعذر تحرير رابط المدرسة.');
+      }
+    }
+    await createPlatformAuditLog(projectId, adminToken, `${applicationId}-rejected`, {
+      action: 'school_application_rejected',
+      applicationId,
+      schoolSlug: application.schoolSlug || '',
+      actorUid: user.uid,
+      reason,
+      createdAt: reviewedAt,
+    });
+    return jsonResponse({ success: true }, 200, env);
+  } catch (error) {
+    return jsonResponse({ error: error.message || 'تعذر رفض الطلب.' }, error.status || 500, env);
+  }
+}
+
+async function handlePlatformApproveSchool(request, env) {
+  try {
+    const user = await verifyAuth(request, env);
+    if (user.role !== 'super_admin') return jsonResponse({ error: 'هذه العملية مخصصة لمدير المنصة العام.' }, 403, env);
+    const body = await request.json();
+    const applicationId = String(body.applicationId || '').trim();
+    if (!/^[0-9a-f-]{36}$/i.test(applicationId)) return jsonResponse({ error: 'معرّف الطلب غير صالح.' }, 400, env);
+
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const applicationUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schoolApplications/${encodeURIComponent(applicationId)}`;
+    const applicationResponse = await fetch(applicationUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+    if (!applicationResponse.ok) throw Object.assign(new Error('طلب المدرسة غير موجود.'), { status: 404 });
+    const application = decodeFirestoreMap((await applicationResponse.json()).fields || {});
+    if (application.status !== 'pending') throw Object.assign(new Error('تمت مراجعة طلب المدرسة بالفعل.'), { status: 409 });
+
+    const schoolId = String(application.schoolSlug || '').trim();
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(schoolId)) throw new Error('اسم الرابط للمدرسة غير صالح.');
+    if (!application.applicantEmailVerified ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(application.applicantEmail || '').trim()) ||
+      application.applicantRole !== 'director' ||
+      String(application.applicantName || '').trim().length < 2 ||
+      String(application.schoolNameAr || '').trim().length < 2) {
+      throw new Error('يجب أن يتضمن الطلب بريد مدير موثقًا وبيانات مدير ومدرسة صحيحة.');
+    }
+
+    const schoolUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(schoolId)}`;
+    const existingSchool = await fetch(schoolUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+    if (existingSchool.ok) throw Object.assign(new Error('هناك مدرسة تستخدم هذا الرابط بالفعل.'), { status: 409 });
+
+    const schoolFields = {
+      schoolId,
+      slug: schoolId,
+      nameAr: application.schoolNameAr,
+      nameEn: application.schoolNameEn || '',
+      phone: application.phone || '',
+      academicYear: '2026/2027',
+      branding: { primaryColor: '#0f172a', accentColor: '#d97706', logoUrl: '' },
+      status: 'active',
+      publicListing: true,
+      isConfigured: false,
+      createdAt: new Date().toISOString(),
+      approvedAt: new Date().toISOString(),
+      approvedByUid: user.uid,
+    };
+    const createSchoolResponse = await fetch(schoolUrl, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: encodeFirestoreMap(schoolFields) }),
+    });
+    if (!createSchoolResponse.ok) throw new Error('تعذر إنشاء ملف المدرسة المعتمدة.');
+
+    const people = [{ name: application.applicantName, email: application.applicantEmail, role: 'director' }];
+
+    const createdInvitations = [];
+    for (const person of people) {
+      const invitationId = crypto.randomUUID();
+      const invitationUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/accountInvitations?documentId=${encodeURIComponent(invitationId)}`;
+      const invitation = {
+        invitationId,
+        email: person.email.toLowerCase(),
+        displayName: person.name,
+        role: person.role,
+        schoolId,
+        teacherInfo: {},
+        status: 'pending',
+        invitedByUid: user.uid,
+        invitedByRole: 'super_admin',
+        createdAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
+      };
+      const invitationResponse = await fetch(invitationUrl, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: encodeFirestoreMap(invitation) }),
+      });
+      if (!invitationResponse.ok) {
+        await Promise.all(createdInvitations.map((invitation) => fetch(invitation.url, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }).catch(() => {})));
+        await fetch(schoolUrl, { method: 'DELETE', headers: { Authorization: `Bearer ${adminToken}` } }).catch(() => {});
+        throw new Error('تم إنشاء المدرسة مؤقتًا لكن تعذر إنشاء دعوة حساب؛ أعد المحاولة.');
+      }
+      createdInvitations.push({
+        id: invitationId,
+        url: invitationUrl.replace(`?documentId=${encodeURIComponent(invitationId)}`, `/${encodeURIComponent(invitationId)}`),
+      });
+      const platformBase = env.PLATFORM_CONTINUE_BASE || 'https://digital-school-platform.vercel.app';
+      const continueUrl = new URL(`${platformBase.replace(/\/$/, '')}/${encodeURIComponent(schoolId)}/login.html`);
+      continueUrl.searchParams.set('flow', 'staff-invitation');
+      continueUrl.searchParams.set('invitationId', invitationId);
+      const emailResult = await sendAccountInvitationEmail(person.email, continueUrl.toString(), env);
+      if (!emailResult.ok) {
+        await Promise.all(createdInvitations.map((invitation) => fetch(invitation.url, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }).catch(() => {})));
+        await fetch(schoolUrl, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }).catch(() => {});
+        throw new Error('تعذر إرسال دعوة الحساب؛ لم يُعتمد إنشاء المدرسة لإتاحة إعادة المحاولة.');
+      }
+    }
+
+    const updateUrl = new URL(applicationUrl);
+    ['status', 'reviewedAt', 'reviewedByUid', 'approvedSchoolId'].forEach((field) => updateUrl.searchParams.append('updateMask.fieldPaths', field));
+    const reviewedAt = new Date().toISOString();
+    const applicationUpdateResponse = await fetch(updateUrl, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: encodeFirestoreMap({
+        status: 'approved',
+        reviewedAt,
+        reviewedByUid: user.uid,
+        approvedSchoolId: schoolId,
+      }) }),
+    });
+
+    const claimUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schoolSlugClaims/${encodeURIComponent(schoolId)}`;
+    const claimUpdateUrl = new URL(claimUrl);
+    ['status', 'approvedAt', 'approvedSchoolId'].forEach((field) => claimUpdateUrl.searchParams.append('updateMask.fieldPaths', field));
+    const claimUpdateResponse = await fetch(claimUpdateUrl, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: encodeFirestoreMap({
+        status: 'approved',
+        approvedAt: reviewedAt,
+        approvedSchoolId: schoolId,
+      }) }),
+    });
+    if (!claimUpdateResponse.ok) throw new Error('تم إنشاء المدرسة والدعوة لكن تعذر تثبيت حجز الرابط؛ راجع سجل المنصة.');
+
+    await createPlatformAuditLog(projectId, adminToken, `${applicationId}-approved`, {
+      action: 'school_application_approved',
+      applicationId,
+      schoolSlug: schoolId,
+      actorUid: user.uid,
+      createdAt: reviewedAt,
+    });
+    const schoolAuditUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(schoolId)}/auditLogs?documentId=${encodeURIComponent(`onboarding-${applicationId}`)}`;
+    const schoolAuditResponse = await fetch(schoolAuditUrl, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: encodeFirestoreMap({
+        id: `onboarding-${applicationId}`,
+        action: 'اعتماد المدرسة وإنشاء حساب المدير الأول',
+        target: schoolId,
+        details: 'اعتمد مدير المنصة طلب المدرسة وأرسل دعوة المدير الأول.',
+        operatorRole: 'super_admin',
+        operatorId: user.uid,
+        timestamp: reviewedAt,
+        schoolId,
+      }) }),
+    });
+    if (!schoolAuditResponse.ok) throw new Error('تم اعتماد المدرسة لكن تعذر حفظ سجل التدقيق الخاص بها.');
+
+    return jsonResponse({ success: true, schoolId, invitationsSent: people.length }, 200, env);
+  } catch (error) {
+    return jsonResponse({ error: error.message || 'تعذر اعتماد المدرسة.' }, error.status || 500, env);
+  }
+}
+
+async function handlePlatformSchoolMigration(request, env) {
+  try {
+    const user = await verifyAuth(request, env);
+    if (user.role !== 'super_admin') {
+      return jsonResponse({ error: 'هذه العملية مخصصة لمدير المنصة العام فقط.' }, 403, env);
+    }
+    const body = await request.json();
+    const sourceSchoolId = String(body.sourceSchoolId || 'sch_cairo_sec_01').trim();
+    const targetSchoolId = String(body.targetSchoolId || 'zewail-school').trim();
+    const targetSlug = String(body.targetSlug || targetSchoolId).trim();
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(targetSchoolId)) {
+      return jsonResponse({ error: 'معرّف المدرسة الهدف غير صالح.' }, 400, env);
+    }
+
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    let copiedDocuments = 0;
+    let copiedCollections = 0;
+
+    async function copyDocument(sourcePath, targetPath, documentTransform = null) {
+      const sourceUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${sourcePath}`;
+      const sourceResponse = await fetch(sourceUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+      if (!sourceResponse.ok) {
+        if (sourceResponse.status === 404) return;
+        throw new Error(`تعذر قراءة المستند ${sourcePath}`);
+      }
+      const sourceDocument = await sourceResponse.json();
+      let fields = decodeFirestoreMap(sourceDocument.fields || {});
+      fields = documentTransform ? documentTransform(fields) : fields;
+      fields.schoolId = targetSchoolId;
+      fields.slug = targetSlug;
+
+      const targetUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${targetPath}`;
+      const writeResponse = await fetch(targetUrl, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: encodeFirestoreMap(fields) }),
+      });
+      if (!writeResponse.ok) throw new Error(`تعذر نسخ المستند ${targetPath}`);
+      copiedDocuments++;
+
+      const idsUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${sourcePath}:listCollectionIds`;
+      const idsResponse = await fetch(idsUrl, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+      if (!idsResponse.ok) return;
+      const idsData = await idsResponse.json();
+      for (const collectionId of idsData.collectionIds || []) {
+        copiedCollections++;
+        await copyCollection(`${sourcePath}/${collectionId}`, `${targetPath}/${collectionId}`);
+      }
+    }
+
+    async function copyCollection(sourceCollectionPath, targetCollectionPath) {
+      let pageToken = '';
+      do {
+        const collectionUrl = new URL(`https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${sourceCollectionPath}`);
+        collectionUrl.searchParams.set('pageSize', '100');
+        if (pageToken) collectionUrl.searchParams.set('pageToken', pageToken);
+        const response = await fetch(collectionUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+        if (!response.ok) throw new Error(`تعذر قراءة المجموعة ${sourceCollectionPath}`);
+        const page = await response.json();
+        for (const document of page.documents || []) {
+          const relativePath = document.name.split('/documents/')[1];
+          const documentId = relativePath.split('/').pop();
+          const targetRelativePath = `${targetCollectionPath}/${documentId}`;
+          await copyDocument(relativePath, targetRelativePath);
+        }
+        pageToken = page.nextPageToken || '';
+      } while (pageToken);
+    }
+
+    await copyDocument(`schools/${sourceSchoolId}`, `schools/${targetSchoolId}`, (fields) => ({
+      ...fields,
+      status: 'active',
+      publicListing: true,
+      isConfigured: true,
+      schoolId: targetSchoolId,
+      slug: targetSlug,
+    }));
+
+    const usersUrl = new URL(`https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users`);
+    usersUrl.searchParams.set('pageSize', '100');
+    let userPageToken = '';
+    let updatedUsers = 0;
+    do {
+      if (userPageToken) usersUrl.searchParams.set('pageToken', userPageToken);
+      const response = await fetch(usersUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+      if (!response.ok) throw new Error('تعذر قراءة حسابات المستخدمين أثناء الهجرة.');
+      const page = await response.json();
+      for (const document of page.documents || []) {
+        const fields = decodeFirestoreMap(document.fields || {});
+        if (fields.schoolId !== sourceSchoolId) continue;
+        fields.schoolId = targetSchoolId;
+        fields.updatedAt = new Date().toISOString();
+        const documentPath = document.name.split('/documents/')[1];
+        const writeResponse = await fetch(`https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${documentPath}`, {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: encodeFirestoreMap(fields) }),
+        });
+        if (!writeResponse.ok) throw new Error('تعذر تحديث حساب مستخدم أثناء الهجرة.');
+        updatedUsers++;
+      }
+      userPageToken = page.nextPageToken || '';
+    } while (userPageToken);
+
+    return jsonResponse({
+      success: true,
+      sourceSchoolId,
+      targetSchoolId,
+      targetSlug,
+      copiedDocuments,
+      copiedCollections,
+      updatedUsers,
+    }, 200, env);
+  } catch (error) {
+    return jsonResponse({ error: error.message || 'تعذر تنفيذ هجرة المدرسة.' }, error.status || 500, env);
+  }
 }
 
 async function handleCompleteFirstLogin(request, env) {

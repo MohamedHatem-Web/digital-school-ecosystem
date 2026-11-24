@@ -173,13 +173,14 @@
     import { initComponents } from './js/components.js?v=11.0';
     import { initI18n } from './js/i18n.js';
     import { getSchoolProfile } from './js/services/school-service.js';
+    import { getTenantSchoolId } from './js/tenant-router.js';
     import { getAlbums, getAlbumImages, MEDIA_CATEGORIES } from './js/services/media-service.js';
     import { getOptimizedImageUrl } from './js/services/cloudinary-service.js';
 
     initComponents();
     initI18n();
 
-    let schoolId = 'sch_cairo_sec_01';
+    let schoolId = getTenantSchoolId();
     const schoolProfilePromise = getSchoolProfile();
 
     let publicAlbums = [];
@@ -329,6 +330,5 @@
     // Initial fetch
     loadPublicGallery();
   </script>
-  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js?v=17.3');}</script>
 </body>
 </html>

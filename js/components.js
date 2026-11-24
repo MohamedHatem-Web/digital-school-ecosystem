@@ -5,6 +5,8 @@
 
 import { getCurrentUser, getRoleDashboardUrl } from './auth.js';
 import { getSchoolProfile, applySchoolBranding } from './services/school-service.js';
+import { applyTenantNavigation, getTenantSlug } from './tenant-router.js';
+import { guardTenantRoute } from './tenant-access.js';
 
 // ==========================================================================
 // Theme Management (Light / Dark Mode with LocalStorage & OS Preference)
@@ -202,18 +204,55 @@ export function initTheme() {
 }
 
 export function initComponents() {
+  if (getTenantSlug()) {
+    guardTenantRoute().then((isAllowed) => {
+      if (isAllowed) initializeComponents();
+    });
+    return;
+  }
+  initializeComponents();
+}
+
+function initializeComponents() {
+  applyTenantNavigation();
+  const slug = getTenantSlug();
+  const platformSegments = window.location.pathname.split('/').filter(Boolean);
+  if (platformSegments.includes('platform-admin')) {
+    initTheme();
+    return;
+  }
+  const reservedWithoutTenant = new Set([
+    'index.html', 'login.html', 'about.html', 'activities.html', 'calendar.html',
+    'contact.html', 'gallery.html', 'leadership.html', 'news.html', 'offline.html',
+    'verify.html',
+  ]);
+  const segments = window.location.pathname.split('/').filter(Boolean);
+  if (!slug && segments.some((segment) => reservedWithoutTenant.has(segment) || segment === 'dashboard')) {
+    if (!(window.location.pathname === '/' || window.location.pathname === '/index.html')) {
+      window.location.replace('/');
+      return;
+    }
+  }
   initTheme();
 
   // Dynamic School Branding Application (Cache-first then Firestore sync)
   try {
-    const cachedSchool = localStorage.getItem('dse_school_sch_cairo_sec_01');
+    if (['/', '/index.html'].includes(window.location.pathname)) {
+      // The platform root intentionally has no school branding or cached school identity.
+    } else {
+    let activeSchoolId = 'zewail-school';
+    const segments = window.location.pathname.split('/').filter(Boolean);
+    const reserved = new Set(['index.html', 'login.html', 'about.html', 'activities.html', 'calendar.html', 'contact.html', 'gallery.html', 'leadership.html', 'news.html', 'offline.html', 'verify.html', 'dashboard', 'js', 'css', 'images', 'evidence']);
+    if (segments.length && !reserved.has(segments[0])) activeSchoolId = segments[0];
+    const cachedSchool = localStorage.getItem(`dse_school_${activeSchoolId}`);
     if (cachedSchool) {
       applySchoolBranding(JSON.parse(cachedSchool));
+    }
     }
   } catch (e) {}
 
   getSchoolProfile().then((profile) => {
-    if (profile) applySchoolBranding(profile);
+    if (profile?.schoolId) applySchoolBranding(profile);
   }).catch(() => {});
 
   // Proactive Cache & Stale Data Sanitizer
@@ -229,7 +268,7 @@ export function initComponents() {
     if ('caches' in window) {
       caches.keys().then((names) => {
         names.forEach((name) => {
-          if (name !== 'dse-pwa-v17.3-prod') {
+          if (name !== 'dse-pwa-v17.6-tenant-passthrough') {
             caches.delete(name);
           }
         });
@@ -251,6 +290,12 @@ export function initComponents() {
       const activeUser = getCurrentUser();
 
       if (activeUser && isPublicPage) {
+        const tenantSlug = getTenantSlug();
+        if (tenantSlug && activeUser.schoolId !== tenantSlug) {
+          // Sessions are shown only inside their own tenant route.
+        } else if (!tenantSlug && activeUser.role !== 'super_admin') {
+          // The platform root is a directory; ordinary users keep their dashboard button on the school route.
+        } else {
         const dest = getRoleDashboardUrl(activeUser.role);
         const userName = activeUser.displayName || 'حسابي';
 
@@ -280,6 +325,7 @@ export function initComponents() {
         document.querySelectorAll('.site-footer a[href*="login"]').forEach((link) => {
           link.href = dest;
         });
+        }
       }
     } catch (e) {
       console.warn('Components session sync notice:', e);
@@ -396,6 +442,10 @@ function initializePublicFooter() {
   if (contactText) {
     contactText.id = 'footer-contact-text';
     getSchoolProfile().then((profile) => {
+      if (!profile?.schoolId) {
+        contactText.textContent = 'منصة إدارة وتشغيل المدارس الرقمية';
+        return;
+      }
       const contactDetails = [
         profile?.address,
         profile?.phone ? `هاتف: ${profile.phone}` : '',

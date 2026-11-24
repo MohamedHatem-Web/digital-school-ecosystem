@@ -57,6 +57,10 @@
             <span class="sidebar-icon">🚪</span>
             <span>أذونات الخروج المبكر</span>
           </a>
+          <a href="#dismissals" class="sidebar-link" id="soc-nav-dismissals">
+            <span class="sidebar-icon">🔔</span>
+            <span>خطة الانصراف اليومي</span>
+          </a>
 
           <div class="sidebar-section-title">🛡️ الرقابة والمراسلات</div>
           <a href="#audit-logs" class="sidebar-link" id="soc-nav-audit">
@@ -113,6 +117,7 @@
         <div id="view-students-container" style="display: none;"></div>
         <div id="view-student-inquiry-container" style="display: none;"></div>
         <div id="view-gate-pass-container" style="display: none;"></div>
+        <div id="view-dismissals-container" style="display: none;"></div>
         <div id="view-audit-container" style="display: none;"></div>
         <div id="view-messages-container" style="display: none;"></div>
       </main>
@@ -127,6 +132,7 @@
     import { renderStudentInquiryView } from '../js/views/student-inquiry-view.js';
     import { renderGatePassView } from '../js/views/gate-pass-view.js';
     import { renderMessagesView } from '../js/views/messages-view.js';
+    import { renderDismissalView } from '../js/views/dismissal-view.js';
     import { getAuditLogs } from '../js/services/audit-service.js';
     import { getCurrentUser } from '../js/auth.js';
     import { skeletonTable } from '../js/utils/skeleton-utils.js';
@@ -155,6 +161,7 @@
       students: document.getElementById('soc-nav-students'),
       'student-inquiry': document.getElementById('soc-nav-student-inquiry'),
       'gate-pass': document.getElementById('soc-nav-gate'),
+      dismissals: document.getElementById('soc-nav-dismissals'),
       'audit-logs': document.getElementById('soc-nav-audit'),
       messages: document.getElementById('soc-nav-messages'),
     };
@@ -164,6 +171,7 @@
       students: document.getElementById('view-students-container'),
       'student-inquiry': document.getElementById('view-student-inquiry-container'),
       'gate-pass': document.getElementById('view-gate-pass-container'),
+      dismissals: document.getElementById('view-dismissals-container'),
       'audit-logs': document.getElementById('view-audit-container'),
       messages: document.getElementById('view-messages-container'),
     };
@@ -194,6 +202,8 @@
         await renderStudentInquiryView(containers['student-inquiry']);
       } else if (activeKey === 'gate-pass') {
         await renderGatePassView(containers['gate-pass']);
+      } else if (activeKey === 'dismissals') {
+        await renderDismissalView(containers.dismissals);
       } else if (activeKey === 'audit-logs') {
         await loadAuditLogsView();
       } else if (activeKey === 'messages') {

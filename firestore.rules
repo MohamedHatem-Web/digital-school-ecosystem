@@ -2,6 +2,21 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    match /schoolApplications/{applicationId} {
+      allow read: if isSuperAdmin();
+      allow create: if false;
+      allow update, delete: if isSuperAdmin();
+    }
+
+    match /schoolSlugClaims/{schoolSlug} {
+      allow read, write: if false;
+    }
+
+    match /platformAuditLogs/{logId} {
+      allow read: if isSuperAdmin();
+      allow create, update, delete: if false;
+    }
+
     // Global Authorization Helpers
     function isAuthenticated() {
       return request.auth != null;
@@ -17,19 +32,22 @@ service cloud.firestore {
         getUserDoc().role == 'super_admin';
     }
 
+    function isActiveSchool(schoolId) {
+      return exists(/databases/$(database)/documents/schools/$(schoolId)) &&
+        get(/databases/$(database)/documents/schools/$(schoolId)).data.status == 'active';
+    }
+
     function belongsToSchool(schoolId) {
-      return isAuthenticated() && (
-        isSuperAdmin() ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         getUserDoc().schoolId == schoolId)
-      );
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserDoc().role != 'super_admin' &&
+        getUserDoc().schoolId == schoolId &&
+        isActiveSchool(schoolId);
     }
 
     function hasRole(schoolId, allowedRoles) {
-      return belongsToSchool(schoolId) && (
-        isSuperAdmin() ||
-        getUserDoc().role in allowedRoles
-      );
+      return belongsToSchool(schoolId) &&
+        getUserDoc().role in allowedRoles;
     }
 
     function canReadStudentCode(schoolId, studentCode) {
@@ -197,8 +215,9 @@ service cloud.firestore {
       }
 
       match /dismissals/{dismissalId} {
-        allow read: if belongsToSchool(schoolId);
-        allow write: if hasRole(schoolId, ['director', 'super_admin']);
+        allow read: if hasRole(schoolId, ['director', 'social_affairs', 'tech_specialist', 'super_admin', 'parent']);
+        allow create, update: if hasRole(schoolId, ['director', 'social_affairs', 'tech_specialist', 'super_admin']);
+        allow delete: if hasRole(schoolId, ['director', 'super_admin']);
       }
 
       // Gate passes contain sensitive early-exit details; keep access within school staff.
@@ -266,7 +285,8 @@ service cloud.firestore {
       // H. Public CMS Content (News, Activities, Leadership, Announcements)
       match /cmsContent/{contentId} {
         // Public can read published items; draft items restricted to staff
-        allow read: if resource.data.status == 'published' || hasRole(schoolId, ['tech_specialist', 'director', 'super_admin']);
+        allow read: if (isActiveSchool(schoolId) && resource.data.status == 'published') ||
+          hasRole(schoolId, ['tech_specialist', 'director', 'super_admin']);
         allow write: if hasRole(schoolId, ['tech_specialist', 'director', 'super_admin']);
       }
 
@@ -280,11 +300,13 @@ service cloud.firestore {
       // J. Media Albums & Photo Gallery (Cloudinary Metadata)
       match /albums/{albumId} {
         // Public can read published albums; drafts only authorized
-        allow read: if resource.data.status == 'published' || hasRole(schoolId, ['tech_specialist', 'director', 'super_admin']);
+        allow read: if (isActiveSchool(schoolId) && resource.data.status == 'published') ||
+          hasRole(schoolId, ['tech_specialist', 'director', 'super_admin']);
         allow write: if hasRole(schoolId, ['tech_specialist', 'director', 'super_admin']);
 
         match /images/{imageId} {
           allow read: if hasRole(schoolId, ['tech_specialist', 'director', 'super_admin']) || (
+            isActiveSchool(schoolId) &&
             exists(/databases/$(database)/documents/schools/$(schoolId)/albums/$(albumId)) &&
             get(/databases/$(database)/documents/schools/$(schoolId)/albums/$(albumId)).data.status == 'published'
           );

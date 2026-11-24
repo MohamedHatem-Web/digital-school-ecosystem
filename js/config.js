@@ -7,15 +7,13 @@ export const APP_CONFIG = {
   version: '2.0-vanilla',
   defaultLanguage: 'ar',
   defaultDirection: 'rtl',
-  defaultSchoolId: 'sch_cairo_sec_01',
+  defaultSchoolId: 'zewail-school',
 };
 
 const localHostname = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
 const emulatorRequested = localHostname && new URLSearchParams(window.location.search).get('emulator') === '1';
 if (emulatorRequested) localStorage.setItem('dse_use_firebase_emulator', '1');
-export const USE_LOCAL_FIREBASE_EMULATORS = localHostname && (
-  emulatorRequested || localStorage.getItem('dse_use_firebase_emulator') === '1'
-);
+export const USE_LOCAL_FIREBASE_EMULATORS = localHostname && emulatorRequested;
 
 // Official Firebase project configuration
 export const FIREBASE_CONFIG = {

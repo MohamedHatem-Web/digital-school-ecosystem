@@ -71,6 +71,170 @@ export async function triggerSchoolDismissal({ message, authorizedBy }, schoolId
   return dismissalData;
 }
 
+export function getCairoDateKey(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Cairo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+/**
+ * Activates one dismissal record per school day. The daily document ID and
+ * Firestore transaction prevent two staff members from activating twice.
+ */
+export async function activateDailySchoolDismissal({
+  dateKey = getCairoDateKey(),
+  dismissalTime = '',
+  message = '',
+  authorizedBy = '',
+  authorizedByUid = '',
+  authorizedByRole = '',
+} = {}, schoolId = DEFAULT_SCHOOL_ID) {
+  const dismissalId = `dsm_${dateKey}`;
+  const docRef = doc(db, 'schools', schoolId, 'dismissals', dismissalId);
+  const now = new Date();
+  const normalizedTime = String(dismissalTime || '').trim();
+
+  const result = await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(docRef);
+    if (snapshot.exists()) {
+      const existing = { id: snapshot.id, ...snapshot.data() };
+      if (existing.status !== 'cancelled') {
+        return { created: false, dismissed: existing };
+      }
+    }
+
+    const dismissalData = {
+      id: dismissalId,
+      dateKey,
+      dismissalTime: normalizedTime,
+      timestamp: now.toISOString(),
+      formattedTime: normalizedTime
+        ? `اليوم — ${normalizedTime}`
+        : new Intl.DateTimeFormat('ar-EG', { timeStyle: 'short', dateStyle: 'medium' }).format(now),
+      message: String(message || '').trim() || 'تم إعلان انتهاء اليوم الدراسي رسميًا وبدء خروج الطلاب.',
+      authorizedBy: String(authorizedBy || '').trim() || 'إدارة المدرسة',
+      authorizedByUid,
+      authorizedByRole,
+      status: 'completed',
+      schoolId,
+      activatedAt: now.toISOString(),
+      serverTimestamp: serverTimestamp(),
+    };
+    transaction.set(docRef, dismissalData);
+    return { created: true, dismissed: dismissalData };
+  });
+
+  if (result.created) {
+    await createNotification({
+      title: 'إشعار انصراف رسمي — انتهاء اليوم الدراسي',
+      body: `${result.dismissed.message} (${result.dismissed.dismissalTime || result.dismissed.formattedTime})`,
+      category: 'dismissal',
+      targetRole: 'parent',
+      notificationId: `ntf_dismissal_${dateKey}`,
+      requirePersistence: true,
+    }, schoolId);
+
+    await recordAuditEvent({
+      action: 'اعتماد وإطلاق خطة انصراف اليوم الدراسي',
+      target: 'كافة الفصول والصفوف',
+      details: `التاريخ: ${dateKey} - وقت الانصراف: ${normalizedTime || 'غير محدد'} - المنفذ: ${authorizedBy}`,
+      category: 'attendance',
+      operatorRole: authorizedByRole || 'director',
+      operatorName: authorizedBy,
+      schoolId,
+    });
+  }
+
+  return result;
+}
+
+export async function updateDailySchoolDismissal({
+  dateKey,
+  dismissalTime = '',
+  message = '',
+  authorizedBy = '',
+  authorizedByUid = '',
+  authorizedByRole = '',
+} = {}, schoolId = DEFAULT_SCHOOL_ID) {
+  const dismissalId = `dsm_${dateKey}`;
+  const docRef = doc(db, 'schools', schoolId, 'dismissals', dismissalId);
+  const now = new Date();
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(docRef);
+    if (!snapshot.exists()) throw new Error('لا يوجد إعلان انصراف مسجل لهذا اليوم.');
+    const existing = snapshot.data();
+    transaction.update(docRef, {
+      dismissalTime: String(dismissalTime || '').trim(),
+      formattedTime: dismissalTime ? `اليوم — ${dismissalTime}` : existing.formattedTime,
+      message: String(message || '').trim() || existing.message,
+      updatedAt: now.toISOString(),
+      updatedBy: authorizedBy,
+      updatedByUid: authorizedByUid,
+      updatedByRole: authorizedByRole,
+      serverTimestamp: serverTimestamp(),
+    });
+  });
+
+  await recordAuditEvent({
+    action: 'تعديل خطة انصراف اليوم الدراسي',
+    target: 'كافة الفصول والصفوف',
+    details: `التاريخ: ${dateKey} - وقت الانصراف: ${dismissalTime || 'غير محدد'} - المعدل: ${authorizedBy}`,
+    category: 'attendance',
+    operatorRole: authorizedByRole || 'director',
+    operatorName: authorizedBy,
+    schoolId,
+  });
+  return { id: dismissalId, dateKey, dismissalTime, message };
+}
+
+export async function cancelDailySchoolDismissal({
+  dateKey,
+  authorizedBy = '',
+  authorizedByUid = '',
+  authorizedByRole = '',
+} = {}, schoolId = DEFAULT_SCHOOL_ID) {
+  const dismissalId = `dsm_${dateKey}`;
+  const docRef = doc(db, 'schools', schoolId, 'dismissals', dismissalId);
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(docRef);
+    if (!snapshot.exists()) throw new Error('لا يوجد إعلان انصراف مسجل لهذا اليوم.');
+    transaction.update(docRef, {
+      status: 'cancelled',
+      cancelledAt: new Date().toISOString(),
+      cancelledBy: authorizedBy,
+      cancelledByUid: authorizedByUid,
+      cancelledByRole: authorizedByRole,
+      serverTimestamp: serverTimestamp(),
+    });
+  });
+
+  await recordAuditEvent({
+    action: 'إلغاء خطة انصراف اليوم الدراسي',
+    target: 'كافة الفصول والصفوف',
+    details: `التاريخ: ${dateKey} - الملغي: ${authorizedBy}`,
+    category: 'attendance',
+    operatorRole: authorizedByRole || 'director',
+    operatorName: authorizedBy,
+    schoolId,
+  });
+  return { id: dismissalId, dateKey, status: 'cancelled' };
+}
+
+export function subscribeToSchoolDismissals(onDismissals, onError, schoolId = DEFAULT_SCHOOL_ID) {
+  const dismissalsCol = collection(db, 'schools', schoolId, 'dismissals');
+  return onSnapshot(dismissalsCol, (snapshot) => {
+    const dismissals = [];
+    snapshot.forEach((dismissalDoc) => dismissals.push({ id: dismissalDoc.id, ...dismissalDoc.data() }));
+    dismissals.sort((a, b) => String(b.dateKey || b.timestamp || '').localeCompare(String(a.dateKey || a.timestamp || '')));
+    onDismissals(dismissals);
+  }, onError);
+}
+
 export const DEFAULT_DISMISSALS = [];
 
 /**
