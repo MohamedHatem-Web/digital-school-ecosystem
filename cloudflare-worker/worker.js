@@ -664,42 +664,60 @@ async function handleCreateAccountInvitation(request, env) {
     const continueUrl = new URL(`${platformBase.replace(/\/$/, '')}/${encodeURIComponent(schoolId)}/login.html`);
     continueUrl.searchParams.set('flow', 'staff-invitation');
     continueUrl.searchParams.set('invitationId', invitationId);
-    const emailResult = await sendAccountInvitationEmail(email, continueUrl.toString(), env);
-    if (!emailResult.ok) {
+    const invitationLinkResult = await generateAccountInvitationLink(email, continueUrl.toString(), env, adminToken);
+    if (!invitationLinkResult.ok) {
       await fetch(invitationUrl.replace(`?documentId=${encodeURIComponent(invitationId)}`, `/${encodeURIComponent(invitationId)}`), {
         method: 'DELETE', headers: { Authorization: `Bearer ${adminToken}` },
       }).catch(() => {});
-      console.error('Account invitation email delivery failed', { status: emailResult.status, code: emailResult.code });
-      const message = emailResult.code === 'OPERATION_NOT_ALLOWED'
-        ? 'تسجيل الدخول برابط البريد غير مفعّل في Firebase Authentication.'
-        : ['UNAUTHORIZED_DOMAIN', 'INVALID_CONTINUE_URI'].includes(emailResult.code)
-          ? 'عنوان صفحة إكمال الدعوة غير مسموح به في نطاقات Firebase Authentication المعتمدة.'
-          : emailResult.code
-            ? `تعذر إرسال رابط الدعوة (Firebase: ${emailResult.code}).`
-            : 'تعذر إرسال رابط الدعوة. تحقق من إعداد Firebase للبريد.';
-      return jsonResponse({ error: message }, 502, env);
+      console.error('Account invitation link generation failed', { status: invitationLinkResult.status, code: invitationLinkResult.code });
+      return jsonResponse({ error: invitationLinkFailureMessage(invitationLinkResult.code) }, 502, env);
     }
 
-    return jsonResponse({ success: true, invitationId, email, role }, 202, env);
+    return jsonResponse({
+      success: true,
+      invitationId,
+      email,
+      role,
+      invitationLink: invitationLinkResult.invitationLink,
+    }, 202, env);
   } catch (error) {
-    return jsonResponse({ error: error.message || 'تعذر إرسال دعوة الحساب.' }, error.status || 500, env);
+    return jsonResponse({ error: error.message || 'تعذر إنشاء رابط دعوة الحساب.' }, error.status || 500, env);
   }
 }
 
-async function sendAccountInvitationEmail(email, continueUrl, env) {
+async function generateAccountInvitationLink(email, continueUrl, env, adminToken) {
   if (!env.FIREBASE_WEB_API_KEY) return { ok: false, status: 0, code: 'MISSING_WEB_API_KEY' };
-  const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${encodeURIComponent(env.FIREBASE_WEB_API_KEY)}`, {
+  const linkResponse = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${encodeURIComponent(env.FIREBASE_WEB_API_KEY)}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       requestType: 'EMAIL_SIGNIN',
       email,
       continueUrl,
       canHandleCodeInApp: true,
+      returnOobLink: true,
     }),
   });
-  const result = await response.json().catch(() => ({}));
-  return { ok: response.ok, status: response.status, code: getFirebaseApiErrorCode(result) };
+  const linkResult = await linkResponse.json().catch(() => ({}));
+  if (!linkResponse.ok || typeof linkResult.oobLink !== 'string') {
+    return {
+      ok: false,
+      status: linkResponse.status || 502,
+      code: getFirebaseApiErrorCode(linkResult) || 'MISSING_OOB_LINK',
+    };
+  }
+  return { ok: true, status: linkResponse.status, invitationLink: linkResult.oobLink };
+}
+
+function invitationLinkFailureMessage(code) {
+  if (['OPERATION_NOT_ALLOWED', 'EMAIL_SIGNIN_DISABLED'].includes(code)) {
+    return 'تسجيل الدخول برابط البريد غير مفعّل في Firebase Authentication.';
+  }
+  if (['UNAUTHORIZED_DOMAIN', 'INVALID_CONTINUE_URI'].includes(code)) {
+    return 'عنوان صفحة إكمال الدعوة غير مسموح به في نطاقات Firebase Authentication المعتمدة.';
+  }
+  if (code === 'MISSING_WEB_API_KEY') return 'إعداد رابط Firebase غير مكتمل على الخادم.';
+  return code ? `تعذر إنشاء رابط الدعوة (${code}).` : 'تعذر إنشاء رابط الدعوة.';
 }
 
 function getFirebaseApiErrorCode(result) {
@@ -1832,15 +1850,21 @@ async function handlePlatformInviteSuperAdmin(request, env) {
     continueUrl.pathname = '/platform-admin/login.html';
     continueUrl.searchParams.set('flow', 'staff-invitation');
     continueUrl.searchParams.set('invitationId', invitationId);
-    const emailResult = await sendAccountInvitationEmail(email, continueUrl.toString(), env);
-    if (!emailResult.ok) {
+    const invitationLinkResult = await generateAccountInvitationLink(email, continueUrl.toString(), env, adminToken);
+    if (!invitationLinkResult.ok) {
       await fetch(invitationUrl.replace(`?documentId=${encodeURIComponent(invitationId)}`, `/${encodeURIComponent(invitationId)}`), {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${adminToken}` },
       }).catch(() => {});
-      throw new Error('تعذر إرسال دعوة مدير المنصة عبر البريد.');
+      throw Object.assign(new Error(invitationLinkFailureMessage(invitationLinkResult.code)), { status: 502 });
     }
-    return jsonResponse({ success: true, invitationId, email }, 202, env);
+    return jsonResponse({
+      success: true,
+      invitationId,
+      email,
+      role: 'super_admin',
+      invitationLink: invitationLinkResult.invitationLink,
+    }, 202, env);
   } catch (error) {
     return jsonResponse({ error: error.message || 'تعذر دعوة مدير المنصة.' }, error.status || 500, env);
   }
@@ -1854,18 +1878,11 @@ async function handlePublicSchoolApplication(request, env) {
       return jsonResponse({ error: 'بيانات الطلب أكبر من المسموح.' }, 413, env);
     }
 
-    const identity = await verifyAuth(request, env, true);
-    if (!identity.email || !identity.emailVerified) {
-      return jsonResponse({ error: 'تحقق من بريد المدير قبل إرسال طلب المدرسة.' }, 403, env);
-    }
     const limiter = env.SCHOOL_APPLICATION_LIMITER;
     if (!limiter) return jsonResponse({ error: 'خدمة تسجيل المدارس غير مكتملة الإعداد.' }, 503, env);
     const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
-    const [ipLimit, accountLimit] = await Promise.all([
-      limiter.limit({ key: `school-application-ip:${clientIp}` }),
-      limiter.limit({ key: `school-application-user:${identity.uid}` }),
-    ]);
-    if (!ipLimit.success || !accountLimit.success) {
+    const ipLimit = await limiter.limit({ key: `school-application-ip:${clientIp}` });
+    if (!ipLimit.success) {
       return jsonResponse({ error: 'تم إرسال طلبات كثيرة. انتظر دقيقة ثم حاول.' }, 429, env);
     }
 
@@ -1882,13 +1899,27 @@ async function handlePublicSchoolApplication(request, env) {
     const schoolSlug = String(body.schoolSlug || '').trim().toLowerCase();
     const schoolNameAr = String(body.schoolNameAr || '').trim();
     const schoolNameEn = String(body.schoolNameEn || '').trim();
+    const applicantRole = String(body.applicantRole || '').trim();
+    const applicantEmail = String(body.applicantEmail || '').trim().toLowerCase();
     const applicantName = String(body.applicantName || '').trim();
+    const counterpartRole = String(body.counterpartRole || '').trim();
+    const counterpartEmail = String(body.counterpartEmail || '').trim().toLowerCase();
+    const counterpartName = String(body.counterpartName || '').trim();
     const phone = String(body.phone || '').trim();
-    if (body.acceptedTerms !== true || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(schoolSlug) ||
+    const expectedCounterpartRole = applicantRole === 'director' ? 'tech_specialist' : 'director';
+    if (String(body.faxNumber || '').trim()) {
+      return jsonResponse({ error: 'تعذر التحقق من طلب المدرسة.' }, 400, env);
+    }
+    if (body.acceptedTerms !== true || !['director', 'tech_specialist'].includes(applicantRole) ||
+      counterpartRole !== expectedCounterpartRole ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(applicantEmail) ||
+      applicantEmail.length > 254 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(schoolSlug) ||
       schoolSlug.length > 63 || schoolNameAr.length < 2 || schoolNameAr.length > 160 ||
       schoolNameEn.length > 160 || applicantName.length < 2 || applicantName.length > 120 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(counterpartEmail) || counterpartEmail.length > 254 ||
+      counterpartEmail === applicantEmail || counterpartName.length < 2 || counterpartName.length > 120 ||
       phone.length > 32) {
-      return jsonResponse({ error: 'راجع اسم المدرسة والرابط وبيانات المدير والموافقة على الشروط.' }, 400, env);
+      return jsonResponse({ error: 'راجع اسم المدرسة والرابط وبيانات مقدم الطلب والطرف الثاني والموافقة على الشروط.' }, 400, env);
     }
 
     const projectId = env.FIREBASE_PROJECT_ID;
@@ -1907,7 +1938,7 @@ async function handlePublicSchoolApplication(request, env) {
       body: JSON.stringify({ fields: encodeFirestoreMap({
         schoolSlug,
         applicationId,
-        applicantUid: identity.uid,
+        applicantEmail,
         status: 'pending',
         createdAt,
       }) }),
@@ -1923,10 +1954,14 @@ async function handlePublicSchoolApplication(request, env) {
       schoolSlug,
       schoolNameAr,
       schoolNameEn,
+      applicantRole,
       applicantName,
-      applicantEmail: identity.email,
-      applicantEmailVerified: true,
-      applicantRole: 'director',
+      applicantEmail,
+      applicantEmailVerified: false,
+      counterpartRole,
+      counterpartName,
+      counterpartEmail,
+      counterpartEmailVerified: false,
       phone,
       acceptedTerms: true,
       status: 'pending',
@@ -1948,7 +1983,9 @@ async function handlePublicSchoolApplication(request, env) {
         action: 'school_application_submitted',
         applicationId,
         schoolSlug,
-        actorUid: identity.uid,
+        actorType: 'public_applicant',
+        actorUid: null,
+        actorEmail: applicantEmail,
         createdAt,
       }) }),
     });
@@ -2015,8 +2052,11 @@ async function handlePlatformRejectSchool(request, env) {
     const body = await request.json();
     const applicationId = String(body.applicationId || '').trim();
     const reason = String(body.reason || '').trim();
-    if (!/^[0-9a-f-]{36}$/i.test(applicationId) || reason.length < 2 || reason.length > 500) {
-      return jsonResponse({ error: 'معرّف الطلب أو سبب الرفض غير صالح.' }, 400, env);
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(applicationId)) {
+      return jsonResponse({ error: 'معرّف طلب المدرسة غير صالح؛ حدّث قائمة الطلبات وحاول مجددًا.' }, 400, env);
+    }
+    if ((reason.length > 0 && reason.length < 2) || reason.length > 500) {
+      return jsonResponse({ error: 'اترك سبب الرفض فارغًا أو اكتب سببًا من حرفين إلى 500 حرف.' }, 400, env);
     }
     const projectId = env.FIREBASE_PROJECT_ID;
     const adminToken = await getFirebaseAdminAccessToken(env);
@@ -2080,12 +2120,19 @@ async function handlePlatformApproveSchool(request, env) {
 
     const schoolId = String(application.schoolSlug || '').trim();
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(schoolId)) throw new Error('اسم الرابط للمدرسة غير صالح.');
-    if (!application.applicantEmailVerified ||
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(application.applicantEmail || '').trim()) ||
-      application.applicantRole !== 'director' ||
+    const validRoles = ['director', 'tech_specialist'];
+    const expectedCounterpartRole = application.applicantRole === 'director' ? 'tech_specialist' : 'director';
+    const applicantEmail = String(application.applicantEmail || '').trim().toLowerCase();
+    const counterpartEmail = String(application.counterpartEmail || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(applicantEmail) ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(counterpartEmail) ||
+      applicantEmail === counterpartEmail ||
+      !validRoles.includes(application.applicantRole) ||
+      application.counterpartRole !== expectedCounterpartRole ||
       String(application.applicantName || '').trim().length < 2 ||
+      String(application.counterpartName || '').trim().length < 2 ||
       String(application.schoolNameAr || '').trim().length < 2) {
-      throw new Error('يجب أن يتضمن الطلب بريد مدير موثقًا وبيانات مدير ومدرسة صحيحة.');
+      throw new Error('يجب أن يتضمن الطلب بيانات صحيحة ومختلفة للمدير وأخصائي التطوير وبيانات المدرسة مكتملة.');
     }
 
     const schoolUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(schoolId)}`;
@@ -2114,9 +2161,13 @@ async function handlePlatformApproveSchool(request, env) {
     });
     if (!createSchoolResponse.ok) throw new Error('تعذر إنشاء ملف المدرسة المعتمدة.');
 
-    const people = [{ name: application.applicantName, email: application.applicantEmail, role: 'director' }];
+    const people = [
+      { name: application.applicantName, email: applicantEmail, role: application.applicantRole },
+      { name: application.counterpartName, email: counterpartEmail, role: application.counterpartRole },
+    ];
 
     const createdInvitations = [];
+    const issuedInvitations = [];
     for (const person of people) {
       const invitationId = crypto.randomUUID();
       const invitationUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/accountInvitations?documentId=${encodeURIComponent(invitationId)}`;
@@ -2154,8 +2205,8 @@ async function handlePlatformApproveSchool(request, env) {
       const continueUrl = new URL(`${platformBase.replace(/\/$/, '')}/${encodeURIComponent(schoolId)}/login.html`);
       continueUrl.searchParams.set('flow', 'staff-invitation');
       continueUrl.searchParams.set('invitationId', invitationId);
-      const emailResult = await sendAccountInvitationEmail(person.email, continueUrl.toString(), env);
-      if (!emailResult.ok) {
+      const invitationLinkResult = await generateAccountInvitationLink(person.email, continueUrl.toString(), env, adminToken);
+      if (!invitationLinkResult.ok) {
         await Promise.all(createdInvitations.map((invitation) => fetch(invitation.url, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${adminToken}` },
@@ -2164,8 +2215,19 @@ async function handlePlatformApproveSchool(request, env) {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${adminToken}` },
         }).catch(() => {});
-        throw new Error('تعذر إرسال دعوة الحساب؛ لم يُعتمد إنشاء المدرسة لإتاحة إعادة المحاولة.');
+        console.error('School invitation link generation failed', {
+          applicationId,
+          status: invitationLinkResult.status,
+          code: invitationLinkResult.code,
+        });
+        throw Object.assign(new Error(`${invitationLinkFailureMessage(invitationLinkResult.code)} لم يكتمل اعتماد المدرسة؛ أعد المحاولة بعد إصلاح الإعداد.`), { status: 502 });
       }
+      issuedInvitations.push({
+        email: person.email,
+        displayName: person.name,
+        role: person.role,
+        invitationLink: invitationLinkResult.invitationLink,
+      });
     }
 
     const updateUrl = new URL(applicationUrl);
@@ -2209,9 +2271,9 @@ async function handlePlatformApproveSchool(request, env) {
       headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields: encodeFirestoreMap({
         id: `onboarding-${applicationId}`,
-        action: 'اعتماد المدرسة وإنشاء حساب المدير الأول',
+        action: 'اعتماد المدرسة وإنشاء حسابي المدير وأخصائي التطوير',
         target: schoolId,
-        details: 'اعتمد مدير المنصة طلب المدرسة وأرسل دعوة المدير الأول.',
+        details: 'اعتمد مدير المنصة الطلب وأنشأ رابط تفعيل منفصلًا للمدير وأخصائي التطوير لإرسالهما يدويًا.',
         operatorRole: 'super_admin',
         operatorId: user.uid,
         timestamp: reviewedAt,
@@ -2220,7 +2282,12 @@ async function handlePlatformApproveSchool(request, env) {
     });
     if (!schoolAuditResponse.ok) throw new Error('تم اعتماد المدرسة لكن تعذر حفظ سجل التدقيق الخاص بها.');
 
-    return jsonResponse({ success: true, schoolId, invitationsSent: people.length }, 200, env);
+    return jsonResponse({
+      success: true,
+      schoolId,
+      invitationsCreated: issuedInvitations.length,
+      invitations: issuedInvitations,
+    }, 200, env);
   } catch (error) {
     return jsonResponse({ error: error.message || 'تعذر اعتماد المدرسة.' }, error.status || 500, env);
   }

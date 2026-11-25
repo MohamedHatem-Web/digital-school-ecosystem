@@ -7,6 +7,17 @@
   <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>لوحة إدارة المنصة</title>
+  <script>
+    try {
+      const savedTheme = localStorage.getItem('dse_theme');
+      const preferredTheme = savedTheme === 'dark' || savedTheme === 'light'
+        ? savedTheme
+        : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', preferredTheme);
+    } catch {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  </script>
   <link rel="stylesheet" href="../css/tokens.css?v=11.0">
   <link rel="stylesheet" href="../css/base.css?v=11.1">
   <link rel="stylesheet" href="../css/components.css?v=17.2">
@@ -32,11 +43,23 @@
       <div id="school-details-content" class="panel-body"></div>
     </section>
   </div>
+  <div id="school-invitation-links-modal" role="dialog" aria-modal="true" aria-labelledby="school-invitation-links-title" style="display:none;position:fixed;inset:0;z-index:11000;background:rgba(2,6,23,.78);place-items:center;padding:24px;overflow:auto;">
+    <section class="panel" style="width:min(720px,100%);max-height:90vh;overflow:auto;">
+      <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+        <h2 id="school-invitation-links-title" class="panel-title">روابط تفعيل الحسابات</h2>
+        <button id="close-school-invitation-links" type="button" class="btn btn-outline btn-sm">إغلاق</button>
+      </div>
+      <div class="panel-body">
+        <p style="color:var(--text-muted);line-height:1.8;">انسخ كل رابط وأرسله يدويًا إلى البريد المعروض فقط. الرابط سري ويحتوي رمز دخول أحادي الاستخدام؛ لا تشاركه في مجموعة أو مع شخص آخر.</p>
+        <div id="school-invitation-links-list" style="display:grid;gap:12px;"></div>
+      </div>
+    </section>
+  </div>
   <div id="reject-modal" role="dialog" aria-modal="true" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(2,6,23,.72);place-items:center;padding:24px;">
     <section class="panel" style="width:min(460px,100%);">
       <div class="panel-header"><h2 class="panel-title">سبب رفض الطلب</h2></div>
       <div class="panel-body">
-        <textarea id="reject-reason" class="form-control" rows="4" placeholder="اكتب سببًا مختصرًا..." maxlength="500"></textarea>
+        <textarea id="reject-reason" class="form-control" rows="4" placeholder="سبب الرفض (اختياري، اكتب حرفين على الأقل إن أضفته)..." maxlength="500"></textarea>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
           <button id="cancel-reject" type="button" class="btn btn-outline btn-sm">إلغاء</button>
           <button id="confirm-reject" type="button" class="btn btn-danger btn-sm">رفض الطلب</button>
@@ -61,7 +84,7 @@
       </section>
       <section class="panel">
         <div class="panel-header">
-          <div><h1 class="panel-title">طلبات تفعيل المدارس</h1><p style="color:var(--text-muted);font-size:12px;">اعتماد أو رفض وإرسال دعوات حسابي المؤسسة.</p></div>
+          <div><h1 class="panel-title">طلبات تفعيل المدارس</h1><p style="color:var(--text-muted);font-size:12px;">اعتماد أو رفض الطلب؛ الاعتماد ينشئ رابط تفعيل خاصًا لكل من المدير وأخصائي التطوير لتسليمه يدويًا.</p></div>
           <button id="refresh-applications" type="button" class="btn btn-outline btn-sm">تحديث</button>
         </div>
         <div id="applications-list" class="panel-body" aria-busy="true">
@@ -92,6 +115,22 @@
       })[character]);
     }
 
+    function showSchoolInvitationLinks(result) {
+      const container = document.getElementById('school-invitation-links-list');
+      container.innerHTML = (result.invitations || []).map((invitation) => `
+        <article class="panel" data-invitation-link-card>
+          <div class="panel-body">
+            <strong>${escapeText(invitation.role === 'director' ? 'مدير المدرسة' : 'أخصائي التطوير التكنولوجي')}</strong>
+            <div style="font-size:var(--text-sm);color:var(--text-muted);margin:4px 0 8px;">${escapeText(invitation.email)}</div>
+            <input class="form-control" type="url" readonly aria-label="رابط تفعيل ${escapeText(invitation.email)}" value="${escapeText(invitation.invitationLink)}">
+            <button type="button" class="btn btn-outline btn-sm" data-copy-school-invitation style="margin-top:8px;">نسخ رابط هذا الحساب</button>
+            <span role="status" style="margin-inline-start:8px;"></span>
+          </div>
+        </article>
+      `).join('');
+      document.getElementById('school-invitation-links-modal').style.display = 'grid';
+    }
+
     async function loadApplications() {
       const container = document.getElementById('applications-list');
       container.setAttribute('aria-busy', 'true');
@@ -107,8 +146,8 @@
                 <div><span style="color:var(--text-muted);font-size:11px;">اسم المدرسة إنجليزي</span><strong style="display:block;">${escapeText(item.schoolNameEn || '—')}</strong></div>
                 <div><span style="color:var(--text-muted);font-size:11px;">الرابط</span><strong style="display:block;">/${escapeText(item.schoolSlug)}/</strong></div>
                 <div><span style="color:var(--text-muted);font-size:11px;">الهاتف</span><strong style="display:block;">${escapeText(item.phone || '—')}</strong></div>
-                <div><span style="color:var(--text-muted);font-size:11px;">مقدم الطلب</span><strong style="display:block;">${escapeText(item.applicantName)} — ${escapeText(item.applicantEmail)}</strong></div>
-                <div><span style="color:var(--text-muted);font-size:11px;">الطرف الثاني</span><strong style="display:block;">${escapeText(item.counterpartName || '—')} — ${escapeText(item.counterpartEmail || '—')}</strong></div>
+                <div><span style="color:var(--text-muted);font-size:11px;">مقدم الطلب — ${item.applicantRole === 'director' ? 'مدير المدرسة' : 'أخصائي التطوير التكنولوجي'}</span><strong style="display:block;">${escapeText(item.applicantName)}</strong><span style="color:var(--text-muted);font-size:11px;">${escapeText(item.applicantEmail)} · ${item.applicantEmailVerified ? 'البريد موثق' : 'رابط تفعيل يدوي بعد الاعتماد'}</span></div>
+                <div><span style="color:var(--text-muted);font-size:11px;">${item.counterpartRole === 'director' ? 'مدير المدرسة' : 'أخصائي التطوير التكنولوجي'}</span><strong style="display:block;">${escapeText(item.counterpartName || '—')}</strong><span style="color:var(--text-muted);font-size:11px;">${escapeText(item.counterpartEmail || '—')} · ${item.counterpartEmailVerified ? 'البريد موثق' : 'رابط تفعيل يدوي بعد الاعتماد'}</span></div>
               </div>
               <div style="display:flex;gap:8px;margin-top:12px;">
                 <button type="button" class="btn btn-primary btn-sm" data-approve="${item.id}">اعتماد</button>
@@ -155,6 +194,24 @@
     document.getElementById('platform-theme').addEventListener('click', (event) => toggleTheme(event));
     document.getElementById('platform-logout').addEventListener('click', () => logout());
     document.getElementById('refresh-applications').addEventListener('click', loadApplications);
+    document.getElementById('close-school-invitation-links').addEventListener('click', () => {
+      document.getElementById('school-invitation-links-modal').style.display = 'none';
+    });
+    document.getElementById('school-invitation-links-list').addEventListener('click', async (event) => {
+      const button = event.target.closest('[data-copy-school-invitation]');
+      if (!button) return;
+      const card = button.closest('[data-invitation-link-card]');
+      const input = card.querySelector('input');
+      const status = card.querySelector('[role="status"]');
+      try {
+        await navigator.clipboard.writeText(input.value);
+        status.textContent = 'تم النسخ';
+      } catch {
+        input.focus();
+        input.select();
+        status.textContent = 'انسخ الرابط المحدد يدويًا';
+      }
+    });
     document.getElementById('close-school-details').addEventListener('click', () => {
       document.getElementById('school-details-modal').style.display = 'none';
     });
@@ -181,11 +238,12 @@
       const approve = event.target.closest('[data-approve]');
       const reject = event.target.closest('[data-reject]');
       if (approve) {
-        const confirmed = await showConfirmModal({ title: 'اعتماد المدرسة؟', message: 'سيتم إنشاء المدرسة وإرسال دعوات الحسابين الأساسيين.', confirmText: 'اعتماد' });
+        const confirmed = await showConfirmModal({ title: 'اعتماد المدرسة؟', message: 'سيتم إنشاء المدرسة وروابط تفعيل المدير وأخصائي التطوير. ستحتاج إلى إرسال كل رابط يدويًا لصاحبه.', confirmText: 'اعتماد' });
         if (!confirmed) return;
         try {
-          await approveSchoolApplication(approve.dataset.approve);
-          showToast('تم اعتماد المدرسة وإرسال الدعوات.', 'success');
+          const result = await approveSchoolApplication(approve.dataset.approve);
+          showToast('تم اعتماد المدرسة وإنشاء روابط التفعيل.', 'success');
+          showSchoolInvitationLinks(result);
           await Promise.all([loadApplications(), loadSchools()]);
         } catch (error) {
           showToast(error.message || 'تعذر الاعتماد.', 'error');
@@ -202,10 +260,12 @@
         };
         document.getElementById('confirm-reject').onclick = async () => {
           const reason = reasonInput.value.trim();
-          if (!reason) {
-            showToast('أدخل سبب رفض الطلب.', 'error');
+          if ((reason.length > 0 && reason.length < 2) || reason.length > 500) {
+            showToast('اترك سبب الرفض فارغًا أو اكتب سببًا من حرفين إلى 500 حرف.', 'error');
             return;
           }
+          const confirmButton = document.getElementById('confirm-reject');
+          confirmButton.disabled = true;
           try {
             await rejectSchoolApplication(reject.dataset.reject, reason);
             modal.style.display = 'none';
@@ -213,6 +273,8 @@
             await loadApplications();
           } catch (error) {
             showToast(error.message || 'تعذر الرفض.', 'error');
+          } finally {
+            confirmButton.disabled = false;
           }
         };
       }
