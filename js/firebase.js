@@ -57,15 +57,28 @@ if (USE_LOCAL_FIREBASE_EMULATORS) {
 
 // Resolve persistence before protected routes inspect the restored auth state.
 export const authPersistenceReady = (() => {
-  try {
-    return setPersistence(auth, browserLocalPersistence).catch((error) => {
-      console.warn('Firebase persistence warning:', error);
+  const persistenceFailure = (error) => {
+    console.error('Firebase local persistence could not be enabled:', error);
+    return Object.assign(new Error('تعذر تفعيل الحفظ المستمر لجلسة الدخول في هذا المتصفح.'), {
+      code: 'auth/persistence-failed',
+      cause: error,
     });
+  };
+
+  try {
+    return setPersistence(auth, browserLocalPersistence).then(
+      () => null,
+      persistenceFailure,
+    );
   } catch (error) {
-    console.warn('Firebase persistence setup notice:', error);
-    return Promise.resolve();
+    return Promise.resolve(persistenceFailure(error));
   }
 })();
+
+export async function ensureAuthPersistence() {
+  const error = await authPersistenceReady;
+  if (error) throw error;
+}
 
 // Helper to check if Firebase is available
 export function isFirebaseAvailable() {

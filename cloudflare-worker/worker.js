@@ -624,7 +624,9 @@ async function handleCreateAccountInvitation(request, env) {
         { headers: { Authorization: `Bearer ${adminToken}` } }
       );
       if (existingProfileResponse.ok) {
-        return jsonResponse({ error: 'يوجد حساب مرتبط بهذا البريد بالفعل.' }, 409, env);
+        return jsonResponse({
+          error: 'هذا البريد مرتبط بحساب وملف مستخدم موجودين بالفعل؛ لم تُنشأ دعوة جديدة. استخدم الحساب الحالي أو راجع مسؤول المدرسة لمعالجته.',
+        }, 409, env);
       }
       if (existingProfileResponse.status !== 404) {
         return jsonResponse({ error: 'تعذر التحقق من الحساب الموجود.' }, 502, env);

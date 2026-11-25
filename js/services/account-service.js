@@ -1,6 +1,7 @@
-import { auth, onAuthStateChanged } from '../firebase.js';
+import { auth, ensureAuthPersistence, onAuthStateChanged } from '../firebase.js';
 import { MEDIA_CONFIG } from '../config.js';
 import { getTenantSchoolId } from '../tenant-router.js';
+import { persistUserSession, readCachedUserSession } from '../session-cache.js';
 import {
   EmailAuthProvider,
   reauthenticateWithCredential,
@@ -10,7 +11,9 @@ import {
   updatePassword,
 } from '../firebase.js';
 
-function waitForFirebaseUser() {
+async function waitForFirebaseUser() {
+  await ensureAuthPersistence();
+  if (typeof auth.authStateReady === 'function') await auth.authStateReady();
   if (auth.currentUser) return Promise.resolve(auth.currentUser);
 
   return new Promise((resolve, reject) => {
@@ -63,20 +66,10 @@ export async function linkStudentToFamilyAccount({ studentCode, schoolId }) {
 export async function completeFirstLoginPasswordChange(newPassword) {
   const result = await postAuthenticated('/api/auth/complete-first-login', { newPassword });
   if (result.success) {
-    let updatedProfile = null;
-    for (const storage of [localStorage, sessionStorage]) {
-      try {
-        const profile = JSON.parse(storage.getItem('dse_user_session') || 'null');
-        if (profile) {
-          profile.passwordChangeRequired = false;
-          storage.setItem('dse_user_session', JSON.stringify(profile));
-          updatedProfile = profile;
-        }
-      } catch (error) {}
-    }
+    const updatedProfile = readCachedUserSession();
     if (updatedProfile) {
-      const maxAge = 60 * 60 * 24 * 30;
-      document.cookie = `dse_user_session=${encodeURIComponent(JSON.stringify(updatedProfile))}; path=/; max-age=${maxAge}; SameSite=Lax`;
+      updatedProfile.passwordChangeRequired = false;
+      persistUserSession(updatedProfile);
     }
   }
   return result;
@@ -93,6 +86,7 @@ export async function getFamilyStudentRecords() {
 }
 
 export async function sendParentActivationLink(email) {
+  await ensureAuthPersistence();
   const normalizedEmail = String(email || '').trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
     throw new Error('أدخل بريدًا إلكترونيًا صحيحًا لولي الأمر.');
@@ -107,6 +101,7 @@ export async function sendParentActivationLink(email) {
 
 export async function completeParentEmailLink(email) {
   if (!isSignInWithEmailLink(auth, window.location.href)) return null;
+  await ensureAuthPersistence();
   const normalizedEmail = String(email || localStorage.getItem('dse_pending_parent_email') || '').trim().toLowerCase();
   if (!normalizedEmail) throw new Error('اكتب بريد ولي الأمر الذي استقبل رابط التفعيل.');
   const credential = await signInWithEmailLink(auth, normalizedEmail, window.location.href);
@@ -126,12 +121,7 @@ export async function activateParentAccount(firebaseUser = auth.currentUser) {
   const result = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(result.error || 'تعذر ربط الأبناء بهذا البريد.');
   if (result.profile) {
-    for (const storage of [localStorage, sessionStorage]) {
-      storage.setItem('dse_user_session', JSON.stringify(result.profile));
-    }
-    const maxAge = 60 * 60 * 24 * 30;
-    document.cookie = `dse_user_session=${encodeURIComponent(JSON.stringify(result.profile))}; path=/; max-age=${maxAge}; SameSite=Lax`;
-    document.cookie = `dse_user_name=${encodeURIComponent(result.profile.displayName || '')}; path=/; max-age=${maxAge}; SameSite=Lax`;
+    persistUserSession(result.profile);
   }
   return result;
 }
@@ -218,6 +208,7 @@ export async function completeAccountInvitationEmailLink(email) {
   if (!isSignInWithEmailLink(auth, window.location.href)) return null;
   const normalizedEmail = String(email || '').trim().toLowerCase();
   if (!normalizedEmail) throw new Error('اكتب البريد الإلكتروني الذي استقبل الدعوة.');
+  await ensureAuthPersistence();
   const credential = await signInWithEmailLink(auth, normalizedEmail, window.location.href);
   return credential.user;
 }
@@ -238,11 +229,7 @@ export async function finishAccountInvitation({ invitationId, password }) {
   const result = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(result.error || 'تعذر إكمال إعداد الحساب. أعد المحاولة.');
   if (result.profile) {
-    for (const storage of [localStorage, sessionStorage]) {
-      storage.setItem('dse_user_session', JSON.stringify(result.profile));
-    }
-    const maxAge = 60 * 60 * 24 * 30;
-    document.cookie = `dse_user_session=${encodeURIComponent(JSON.stringify(result.profile))}; path=/; max-age=${maxAge}; SameSite=Lax`;
+    persistUserSession(result.profile);
   }
   return result.profile;
 }

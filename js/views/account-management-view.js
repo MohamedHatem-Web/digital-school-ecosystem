@@ -52,7 +52,7 @@ export async function renderAccountManagementView(container) {
     <div style="display:flex;flex-direction:column;gap:var(--space-5);max-width:880px;">
       <header>
         <h1 style="font-size:var(--text-2xl);font-weight:800;color:var(--color-primary-950);margin-bottom:var(--space-1);">إنشاء حساب موظف</h1>
-        <p style="font-size:var(--text-sm);color:var(--text-muted);margin:0;">أرسل دعوة إلى البريد. صاحب الحساب يختار كلمة مروره بنفسه عند فتح الرابط.</p>
+        <p style="font-size:var(--text-sm);color:var(--text-muted);margin:0;">أنشئ رابط دعوة أحادي الاستخدام، ثم أرسله بنفسك للموظف عبر قناة آمنة. صاحب الحساب يختار كلمة مروره عند فتح الرابط.</p>
       </header>
       <section class="panel">
         <form id="account-invitation-form" class="panel-body" style="display:flex;flex-direction:column;gap:var(--space-4);">
@@ -89,7 +89,7 @@ export async function renderAccountManagementView(container) {
           </fieldset>
           <p id="account-invitation-status" role="status" aria-live="polite" style="font-size:var(--text-sm);min-height:1.5em;margin:0;"></p>
           <div style="display:flex;justify-content:flex-end;">
-            <button id="account-invitation-submit" type="submit" class="btn btn-primary btn-md">إرسال دعوة الحساب</button>
+            <button id="account-invitation-submit" type="submit" class="btn btn-primary btn-md">إنشاء رابط الدعوة</button>
           </div>
         </form>
       </section>
@@ -135,16 +135,42 @@ export async function renderAccountManagementView(container) {
     }
 
     submit.disabled = true;
-    status.textContent = 'جارٍ التحقق وإرسال الدعوة...';
+    status.textContent = 'جارٍ التحقق وإنشاء رابط التفعيل...';
     status.style.color = 'var(--text-muted)';
     try {
-      await createAccountInvitation(payload);
+      const result = await createAccountInvitation(payload);
       form.reset();
       syncTeacherFields();
-      status.textContent = 'تم إرسال الدعوة. سيختار الموظف كلمة مروره من رابط البريد.';
+      status.replaceChildren(document.createTextNode('تم إنشاء رابط الدعوة فقط؛ لم يُرسل بريد تلقائيًا. انسخه وأرسله للموظف صاحب هذا البريد فقط. الرابط سري وأحادي الاستخدام:'));
+      const linkInput = document.createElement('input');
+      linkInput.type = 'url';
+      linkInput.readOnly = true;
+      linkInput.value = result.invitationLink;
+      linkInput.className = 'form-control';
+      linkInput.setAttribute('aria-label', 'رابط الدعوة السري');
+      linkInput.style.marginTop = 'var(--space-2)';
+      const copyButton = document.createElement('button');
+      copyButton.type = 'button';
+      copyButton.className = 'btn btn-outline btn-sm';
+      copyButton.textContent = 'نسخ الرابط';
+      copyButton.style.marginTop = 'var(--space-2)';
+      const copyStatus = document.createElement('span');
+      copyStatus.setAttribute('role', 'status');
+      copyStatus.style.marginInlineStart = 'var(--space-2)';
+      copyButton.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(linkInput.value);
+          copyStatus.textContent = 'تم النسخ';
+        } catch {
+          linkInput.focus();
+          linkInput.select();
+          copyStatus.textContent = 'انسخ الرابط المحدد يدويًا';
+        }
+      });
+      status.append(document.createElement('br'), linkInput, document.createElement('br'), copyButton, copyStatus);
       status.style.color = 'var(--color-success-text)';
     } catch (error) {
-      status.textContent = error.message || 'تعذر إرسال الدعوة.';
+      status.textContent = error.message || 'تعذر إنشاء رابط الدعوة.';
       status.style.color = 'var(--color-danger-text)';
     } finally {
       submit.disabled = false;

@@ -5,7 +5,7 @@
 
 import {
   auth,
-  authPersistenceReady,
+  ensureAuthPersistence,
   db,
   signInWithEmailAndPassword,
   signOut,
@@ -16,6 +16,11 @@ import {
 } from './firebase.js';
 import { recordAuditEvent } from './services/audit-service.js';
 import { buildTenantUrl, getTenantSchoolSlug, getTenantSlug } from './tenant-router.js';
+import {
+  clearCachedUserSession as clearStoredUserSession,
+  persistUserSession,
+  readCachedUserSession,
+} from './session-cache.js';
 
 export const ROLE_DASHBOARDS = {
   super_admin: '/platform-admin/dashboard.html',
@@ -58,6 +63,8 @@ export function translateAuthError(errorCode) {
       return 'الحساب غير مفعّل في سجل الصلاحيات. تواصل مع مسؤول النظام لتفعيله.';
     case 'auth/network-request-failed':
       return 'تعذر الاتصال بالخادم، يرجى فحص الاتصال بالإنترنت.';
+    case 'auth/persistence-failed':
+      return 'تعذر تفعيل الحفظ المستمر لجلسة الدخول في هذا المتصفح. فعّل تخزين الموقع ثم أعد المحاولة.';
     case 'auth/missing-password':
       return 'يرجى إدخال كلمة المرور.';
     default:
@@ -70,7 +77,7 @@ export function translateAuthError(errorCode) {
  * Supports logging in with Email OR Student Code (e.g. 2026101 -> student@dse.edu.eg)
  */
 export async function loginWithEmailPassword(emailOrCode, password, { expectedSchoolSlug = null } = {}) {
-  await authPersistenceReady;
+  await ensureAuthPersistence();
   let email = String(emailOrCode || '').trim();
 
   // If user entered a numeric student code, map it to the official school-education email format.
@@ -124,6 +131,7 @@ export async function loginWithEmailPassword(emailOrCode, password, { expectedSc
       console.warn('تعذر تحميل بيانات المدرسة المرتبطة بالحساب:', schoolLookupError);
       error.schoolName = userData.schoolId;
     }
+    clearCachedUserSession();
     await signOut(auth);
     const mismatch = new Error(error.message);
     Object.assign(mismatch, error);
@@ -165,17 +173,7 @@ export async function loginWithEmailPassword(emailOrCode, password, { expectedSc
   }
 
   // Store active profile in persistent local cache so session survives navigation & refreshes
-  localStorage.setItem('dse_user_session', JSON.stringify(profile));
-  sessionStorage.setItem('dse_user_session', JSON.stringify(profile));
-
-  // Store in persistent browser cookies (30 days) to keep user session alive across tabs and restarts
-  try {
-    const maxAge = 60 * 60 * 24 * 30; // 30 days
-    document.cookie = `dse_user_session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=${maxAge}; SameSite=Lax`;
-    document.cookie = `dse_user_name=${encodeURIComponent(profile.displayName || '')}; path=/; max-age=${maxAge}; SameSite=Lax`;
-  } catch (e) {
-    // ignore
-  }
+  persistUserSession(profile);
 
   // Record Audit Trail
   recordAuditEvent({
@@ -196,22 +194,9 @@ export async function loginWithEmailPassword(emailOrCode, password, { expectedSc
  * Get current session profile from storage cache (checks localStorage first, then cookies)
  */
 export function getCurrentUser() {
-  let sessionStr = localStorage.getItem('dse_user_session') || sessionStorage.getItem('dse_user_session');
-
-  // Fallback: recover session from cookie if storage was cleared or in a new browser tab/window
-  if (!sessionStr && typeof document !== 'undefined' && document.cookie) {
-    const matchCookie = document.cookie.match(/dse_user_session=([^;]+)/);
-    if (matchCookie && matchCookie[1]) {
-      try {
-        sessionStr = decodeURIComponent(matchCookie[1]);
-        localStorage.setItem('dse_user_session', sessionStr);
-      } catch (err) {}
-    }
-  }
-
-  if (!sessionStr) return null;
+  const user = readCachedUserSession();
+  if (!user) return null;
   try {
-    const user = JSON.parse(sessionStr);
     if (/^\d+@cairo7\.moe\.edu\.eg$/i.test(user?.email || '')) {
       user.role = 'student';
     }
@@ -228,24 +213,19 @@ export function getCurrentUser() {
     if (user && user.email && knownStaffNames[user.email]) {
       if (!user.displayName || user.displayName === 'طالب' || user.displayName === 'ولي أمر' || user.displayName === 'مستخدم المنظومة' || user.displayName.includes('[تجريبي]')) {
         user.displayName = knownStaffNames[user.email];
-        localStorage.setItem('dse_user_session', JSON.stringify(user));
-        sessionStorage.setItem('dse_user_session', JSON.stringify(user));
+        persistUserSession(user);
       }
     }
 
     return user;
   } catch (e) {
+    console.warn('Could not read or normalize the cached user profile:', e);
     return null;
   }
 }
 
 function clearCachedUserSession() {
-  localStorage.removeItem('dse_user_session');
-  sessionStorage.removeItem('dse_user_session');
-  if (typeof document !== 'undefined') {
-    document.cookie = 'dse_user_session=; path=/; max-age=0; SameSite=Lax';
-    document.cookie = 'dse_role=; path=/; max-age=0; SameSite=Lax';
-  }
+  clearStoredUserSession();
 }
 
 /**
@@ -281,10 +261,14 @@ export async function logout() {
   try {
     await signOut(auth);
   } catch (err) {
-    console.warn('Sign out warning:', err);
-  } finally {
-    localStorage.removeItem('dse_user_session');
-    sessionStorage.removeItem('dse_user_session');
+    console.error('Sign out failed; the saved session was preserved:', err);
+    window.alert('تعذر إنهاء جلسة Firebase. لم تُمسح بيانات الجلسة؛ تحقق من الاتصال ثم أعد تسجيل الخروج.');
+    return;
+  }
+
+  clearCachedUserSession();
+  try {
+    const storage = globalThis.localStorage;
     for (const prefix of [
       'dse_students_',
       'dse_grades_',
@@ -294,28 +278,22 @@ export async function logout() {
       'dse_notifications_',
       'dse_dismissals_',
     ]) {
-      for (let index = localStorage.length - 1; index >= 0; index -= 1) {
-        const key = localStorage.key(index);
-        if (key?.startsWith(prefix)) localStorage.removeItem(key);
+      for (let index = storage.length - 1; index >= 0; index -= 1) {
+        const key = storage.key(index);
+        if (key?.startsWith(prefix)) storage.removeItem(key);
       }
     }
-    localStorage.removeItem('dse_parent_children_codes');
-    localStorage.removeItem('dse_active_student_code');
-    localStorage.removeItem('dse_parent_active_child_code');
-    // Clear all session cookies
-    try {
-      document.cookie.split(';').forEach((c) => {
-        document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date(0).toUTCString() + ';path=/');
-      });
-    } catch (e) {
-      // ignore
-    }
-    const isInsideDashboard = window.location.pathname.includes('/dashboard/');
-    if (window.location.pathname.startsWith('/platform-admin/')) {
-      window.location.replace('/platform-admin/');
-    } else {
-      window.location.replace(isInsideDashboard ? '../login.html' : 'login.html');
-    }
+    storage.removeItem('dse_parent_children_codes');
+    storage.removeItem('dse_active_student_code');
+    storage.removeItem('dse_parent_active_child_code');
+  } catch (error) {
+    console.warn('Could not clear cached school data during logout:', error);
+  }
+  const isInsideDashboard = window.location.pathname.includes('/dashboard/');
+  if (window.location.pathname.startsWith('/platform-admin/')) {
+    window.location.replace('/platform-admin/');
+  } else {
+    window.location.replace(isInsideDashboard ? '../login.html' : 'login.html');
   }
 }
 
@@ -334,7 +312,6 @@ export function getRoleDashboardUrl(role) {
 export function observeAuthState(callback) {
   return onAuthStateChanged(auth, async (firebaseUser) => {
     if (!firebaseUser) {
-      sessionStorage.removeItem('dse_user_session');
       callback(null);
       return;
     }
@@ -378,8 +355,7 @@ export function observeAuthState(callback) {
         }
       }
 
-      localStorage.setItem('dse_user_session', JSON.stringify(profile));
-      sessionStorage.setItem('dse_user_session', JSON.stringify(profile));
+      persistUserSession(profile);
       callback(profile);
     } catch (err) {
       console.error('Error fetching user profile doc:', err);
@@ -408,7 +384,6 @@ export async function updateUserProfile(updates = {}) {
     console.warn('Could not update Firestore user doc:', err);
   }
 
-  localStorage.setItem('dse_user_session', JSON.stringify(updated));
-  sessionStorage.setItem('dse_user_session', JSON.stringify(updated));
+  persistUserSession(updated);
   return updated;
 }

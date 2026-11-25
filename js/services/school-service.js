@@ -4,7 +4,6 @@
 // ==========================================================================
 
 import {
-  auth,
   db,
   doc,
   getDoc,
@@ -14,16 +13,19 @@ import {
   getDocs,
   query,
   where,
-  sendSignInLinkToEmail,
-  isSignInWithEmailLink,
-  signInWithEmailLink,
 } from '../firebase.js';
 import { MEDIA_CONFIG } from '../config.js';
 import { getCurrentUser } from '../auth.js';
 import { recordAuditEvent } from './audit-service.js';
-import { DEFAULT_SCHOOL_ID as TENANT_DEFAULT_ID, getTenantSlug } from '../tenant-router.js';
+import {
+  DEFAULT_SCHOOL_ID as TENANT_DEFAULT_ID,
+  getTenantSchoolId,
+  getTenantSlug,
+} from '../tenant-router.js';
 
-export const DEFAULT_SCHOOL_ID = TENANT_DEFAULT_ID;
+export const DEFAULT_SCHOOL_ID = typeof window === 'undefined'
+  ? TENANT_DEFAULT_ID
+  : getTenantSchoolId();
 
 export function getActiveSchoolId() {
   if (typeof window !== 'undefined' && ['/', '/index.html'].includes(window.location.pathname)) return null;
@@ -44,67 +46,56 @@ export async function listApprovedSchools() {
 
 export async function submitSchoolApplication(application) {
   const schoolSlug = String(application.schoolSlug || '').trim().toLowerCase();
+  const applicantEmail = String(application.applicantEmail || '').trim().toLowerCase();
+  const counterpartEmail = String(application.counterpartEmail || '').trim().toLowerCase();
+  const applicantRole = String(application.applicantRole || '').trim();
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(schoolSlug)) {
     throw new Error('استخدم اسمًا لاتينيًا صغيرًا للحروف والأرقام والشرطات فقط.');
   }
-  if (!auth.currentUser?.email || !auth.currentUser.emailVerified) {
-    throw new Error('تحقق من بريدك الإلكتروني قبل إرسال طلب المدرسة.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(applicantEmail) || applicantEmail.length > 254) {
+    throw new Error('أدخل بريدًا إلكترونيًا صحيحًا لمقدم الطلب.');
   }
-  if (!application.acceptedTerms || !application.schoolNameAr || !application.applicantName) {
-    throw new Error('أكمل اسم المدرسة واسم المدير والموافقة على الشروط.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(counterpartEmail) || counterpartEmail.length > 254 ||
+    counterpartEmail === applicantEmail) {
+    throw new Error('أدخل بريدًا صحيحًا ومختلفًا للطرف الثاني.');
+  }
+  if (!['director', 'tech_specialist'].includes(applicantRole)) {
+    throw new Error('اختر دورك في المدرسة.');
+  }
+  if (!application.acceptedTerms || !application.schoolNameAr || !application.applicantName ||
+    !application.counterpartName) {
+    throw new Error('أكمل بيانات المدرسة والطرفين والموافقة على الشروط.');
   }
   if (!MEDIA_CONFIG.workerGatewayUrl) {
     throw new Error('خدمة تسجيل المدارس غير مفعلة في بيئة المحاكاة المحلية.');
   }
 
-  const token = await auth.currentUser.getIdToken(true);
   const response = await fetch(`${MEDIA_CONFIG.workerGatewayUrl.replace(/\/$/, '')}/api/public/school-applications`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
       schoolSlug,
       schoolNameAr: String(application.schoolNameAr).trim(),
       schoolNameEn: String(application.schoolNameEn || '').trim(),
+      applicantRole,
+      applicantEmail,
       applicantName: String(application.applicantName).trim(),
+      counterpartRole: applicantRole === 'director' ? 'tech_specialist' : 'director',
+      counterpartEmail,
+      counterpartName: String(application.counterpartName).trim(),
       phone: String(application.phone || '').trim(),
+      faxNumber: String(application.faxNumber || '').trim(),
       acceptedTerms: application.acceptedTerms === 'true' || application.acceptedTerms === true,
     }),
   });
   const result = await response.json().catch(() => ({}));
+  if (response.status === 404) {
+    throw new Error('مسار طلبات المدارس غير موجود في Worker المنشور. انشر النسخة المحدّثة من مجلد cloudflare-worker ثم أعد المحاولة.');
+  }
   if (!response.ok) throw new Error(result.error || 'تعذر إرسال طلب المدرسة.');
   return { id: result.id, schoolSlug: result.schoolSlug };
-}
-
-export async function beginSchoolApplicationVerification(email) {
-  const normalizedEmail = String(email || '').trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-    throw new Error('أدخل بريدًا إلكترونيًا صحيحًا للمدير.');
-  }
-  const actionCodeSettings = {
-    url: `${window.location.origin}${window.location.pathname}?flow=school-application`,
-    handleCodeInApp: true,
-  };
-  await sendSignInLinkToEmail(auth, normalizedEmail, actionCodeSettings);
-  localStorage.setItem('dse_school_application_email', normalizedEmail);
-}
-
-export async function completeSchoolApplicationVerification(email) {
-  const normalizedEmail = String(email || localStorage.getItem('dse_school_application_email') || '').trim().toLowerCase();
-  if (!isSignInWithEmailLink(auth, window.location.href)) {
-    return auth.currentUser?.emailVerified &&
-      auth.currentUser.email?.toLowerCase() === normalizedEmail
-      ? auth.currentUser
-      : null;
-  }
-  if (!normalizedEmail) throw new Error('أدخل البريد الإلكتروني الذي استقبل رابط التحقق.');
-  const credential = await signInWithEmailLink(auth, normalizedEmail, window.location.href);
-  localStorage.removeItem('dse_school_application_email');
-  if (!credential.user.emailVerified) throw new Error('لم يتم توثيق البريد الإلكتروني.');
-  await credential.user.getIdToken(true);
-  return credential.user;
 }
 
 // Initial state - strictly empty per Real-Data policy

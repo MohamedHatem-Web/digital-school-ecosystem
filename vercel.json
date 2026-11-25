@@ -20,6 +20,7 @@
     { "source": "/zewail-school", "destination": "/index.html" },
     { "source": "/zewail-school/", "destination": "/index.html" },
     { "source": "/zewail-school/:path*", "destination": "/:path*" },
+    { "source": "/:schoolId/manifest.webmanifest", "destination": "/manifest.webmanifest" },
     { "source": "/:schoolId/css/:path*", "destination": "/css/:path*" },
     { "source": "/:schoolId/js/:path*", "destination": "/js/:path*" },
     { "source": "/:schoolId/dashboard/:path*", "destination": "/dashboard/:path*" },

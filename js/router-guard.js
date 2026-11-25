@@ -4,10 +4,11 @@
 // ==========================================================================
 
 import { getCurrentUser, logout, ROLES_METADATA, updateUserProfile } from './auth.js';
-import { auth, authPersistenceReady, onAuthStateChanged, doc, getDoc, db, signOut } from './firebase.js';
+import { auth, ensureAuthPersistence, onAuthStateChanged, doc, getDoc, db, signOut } from './firebase.js';
 import { changeOwnPassword } from './services/account-service.js';
 import { buildTenantUrl, getTenantSlug, isSameTenant } from './tenant-router.js';
 import { blockTenantForWrongSchool, guardTenantRoute } from './tenant-access.js';
+import { clearCachedUserSession, persistUserSession } from './session-cache.js';
 
 /**
  * Validates route access against user's verified role and Firebase Auth session.
@@ -27,21 +28,17 @@ export function checkRouteAccess(allowedRoles = []) {
     blockTenantForWrongSchool(cachedUser, tenantSlug);
     return false;
   }
-  if (isPlatformAdminPage) {
-    if (!cachedUser) {
-      window.location.replace('/platform-admin/');
-      return false;
-    }
-    if (cachedUser.role !== 'super_admin') {
-      window.location.replace('/platform-admin/');
-      return false;
-    }
+  if (isPlatformAdminPage && cachedUser && cachedUser.role !== 'super_admin') {
+    window.location.replace('/platform-admin/');
+    return false;
   }
   const isInsideDashboard = window.location.pathname.includes('/dashboard/');
   const loginUrl = isPlatformAdminPage
     ? '/platform-admin/'
     : (tenantSlug ? buildTenantUrl('login.html') : (isInsideDashboard ? '../login.html' : 'login.html'));
-  const unauthorizedUrl = tenantSlug ? buildTenantUrl(isInsideDashboard ? 'dashboard/unauthorized.html' : 'dashboard/unauthorized.html') : (isInsideDashboard ? 'unauthorized.html' : 'dashboard/unauthorized.html');
+  const unauthorizedUrl = isPlatformAdminPage
+    ? '/platform-admin/'
+    : (tenantSlug ? buildTenantUrl('dashboard/unauthorized.html') : (isInsideDashboard ? 'unauthorized.html' : 'dashboard/unauthorized.html'));
 
   if (cachedUser?.passwordChangeRequired) {
     window.location.replace(`${loginUrl}?forcePasswordChange=1`);
@@ -91,8 +88,7 @@ export function checkRouteAccess(allowedRoles = []) {
             displayName: firebaseUser.displayName || userData.displayName || 'طالب',
             ...userData,
           };
-          localStorage.setItem('dse_user_session', JSON.stringify(profile));
-          sessionStorage.setItem('dse_user_session', JSON.stringify(profile));
+          persistUserSession(profile);
           window.location.replace(`${loginUrl}?forcePasswordChange=1`);
           return;
         }
@@ -108,24 +104,26 @@ export function checkRouteAccess(allowedRoles = []) {
           return;
         }
 
-        updateUserInterface({
+        const profile = {
           uid: firebaseUser.uid,
           email: firebaseUser.email,
           ...userData,
           displayName: userData.displayName || firebaseUser.displayName,
           role,
           schoolId: userData.schoolId || 'zewail-school',
-        });
+        };
+        persistUserSession(profile);
+        updateUserInterface(profile);
       } catch (err) {
         console.error('Auth verification error:', err);
-        if (isTemporaryAuthCheckError(err)) {
+        if (isTemporaryAuthCheckError(err) || isAuthPersistenceError(err)) {
           showAuthRetryNotice(err);
           return;
         }
         window.location.replace(loginUrl);
       }
     }, (error) => {
-      if (isTemporaryAuthCheckError(error)) showAuthRetryNotice(error);
+      if (isTemporaryAuthCheckError(error) || isAuthPersistenceError(error)) showAuthRetryNotice(error);
       else window.location.replace(loginUrl);
     });
     return false;
@@ -170,8 +168,7 @@ export function checkRouteAccess(allowedRoles = []) {
       }
       if (liveData.passwordChangeRequired) {
         const updated = { ...cachedUser, ...liveData, passwordChangeRequired: true };
-        localStorage.setItem('dse_user_session', JSON.stringify(updated));
-        sessionStorage.setItem('dse_user_session', JSON.stringify(updated));
+        persistUserSession(updated);
         window.location.replace(`${loginUrl}?forcePasswordChange=1`);
         return;
       }
@@ -190,33 +187,34 @@ export function checkRouteAccess(allowedRoles = []) {
         ...liveData,
         role,
       };
-      localStorage.setItem('dse_user_session', JSON.stringify(updated));
-      sessionStorage.setItem('dse_user_session', JSON.stringify(updated));
+      persistUserSession(updated);
       updateUserInterface(updated);
     } catch (e) {
-      console.warn('Live session validation notice (keeping cached session active):', e);
+      if (isAuthPersistenceError(e)) showAuthRetryNotice(e);
+      else console.warn('Live session validation notice (keeping cached session active):', e);
     }
   }, (error) => {
-    console.warn('Firebase Auth restore notice (keeping cached session active):', error);
-    showAuthRetryNotice(error);
+    if (isAuthPersistenceError(error) || isTemporaryAuthCheckError(error)) {
+      showAuthRetryNotice(error);
+    } else {
+      console.warn('Firebase Auth restore notice (keeping cached session active):', error);
+      showAuthRetryNotice(error);
+    }
   });
 
   return true;
 }
 
 function onAuthReady(callback, onError) {
-  Promise.resolve(authPersistenceReady)
+  Promise.resolve()
+    .then(() => ensureAuthPersistence())
     .then(() => (typeof auth.authStateReady === 'function' ? auth.authStateReady() : undefined))
     .then(() => onAuthStateChanged(auth, callback))
     .catch(onError);
 }
 
 function clearCachedSession() {
-  localStorage.removeItem('dse_user_session');
-  sessionStorage.removeItem('dse_user_session');
-  document.cookie = 'dse_user_session=; path=/; max-age=0; SameSite=Lax';
-  document.cookie = 'dse_role=; path=/; max-age=0; SameSite=Lax';
-  document.cookie = 'dse_user_name=; path=/; max-age=0; SameSite=Lax';
+  clearCachedUserSession();
 }
 
 function isTemporaryAuthCheckError(error) {
@@ -228,6 +226,10 @@ function isTemporaryAuthCheckError(error) {
   ].includes(error?.code);
 }
 
+function isAuthPersistenceError(error) {
+  return error?.code === 'auth/persistence-failed' || error?.authPersistenceError === true;
+}
+
 function showAuthRetryNotice(error) {
   let notice = document.getElementById('auth-verification-retry-notice');
   if (!notice) {
@@ -236,7 +238,9 @@ function showAuthRetryNotice(error) {
     notice.setAttribute('role', 'alert');
     notice.style.cssText = 'position:fixed;inset:12px 12px auto;z-index:20000;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border:1px solid var(--color-warning-border,#d97706);border-radius:8px;background:var(--color-warning-bg,#fffbeb);color:var(--color-warning-text,#92400e);box-shadow:0 8px 24px rgba(0,0,0,.18);';
     const message = document.createElement('span');
-    message.textContent = 'تعذر التحقق من الحساب بسبب الاتصال بالخادم. لم يتم تسجيل خروجك؛ تحقق من الاتصال ثم أعد المحاولة.';
+    message.textContent = isAuthPersistenceError(error)
+      ? 'تعذر تفعيل الحفظ المستمر في هذا المتصفح. لم يتم مسح بيانات الجلسة؛ فعّل تخزين الموقع ثم أعد المحاولة.'
+      : 'تعذر التحقق من الحساب بسبب الاتصال بالخادم. لم يتم تسجيل خروجك؛ تحقق من الاتصال ثم أعد المحاولة.';
     const retry = document.createElement('button');
     retry.type = 'button';
     retry.className = 'btn btn-warning btn-sm';
