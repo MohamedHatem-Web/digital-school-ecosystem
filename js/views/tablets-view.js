@@ -13,6 +13,7 @@ import {
 } from '../services/tablet-service.js';
 import { getStudents } from '../services/student-service.js';
 import { exportDevicesToCsv } from '../utils/export-utils.js';
+import { countPreviousDeliveredTablets } from '../utils/tablet-metrics.js';
 
 let isInitialized = false;
 let allDevices = [];
@@ -244,6 +245,13 @@ function escapeHtml(value) {
 
 function getBatchDevices(batchId) {
   return allDevices.filter((device) => device.batchId === batchId);
+}
+
+function confirmRepeatTabletDelivery(studentName, previousCount) {
+  if (previousCount === 0) return true;
+  return window.confirm(
+    `تنبيه: سبق للطالب ${studentName} استلام ${previousCount} جهاز. هل تريد متابعة تسجيل تسليم إضافي؟ سيتم تمييزه في سجل الجهاز وسجل العمليات.`
+  );
 }
 
 function renderBatchesList() {
@@ -494,6 +502,9 @@ function deliverTabletToStudent() {
     return;
   }
 
+  const previousDeliveryCount = countPreviousDeliveredTablets(allDevices, studentCode, imeiValue);
+  if (!confirmRepeatTabletDelivery(studentName, previousDeliveryCount)) return;
+
   const deliveryEvent = {
     imei: imeiValue,
     studentCode,
@@ -505,6 +516,7 @@ function deliverTabletToStudent() {
     studentCode: deliveryEvent.studentCode,
     studentName: deliveryEvent.studentName,
     operatorName: deliveryEvent.operatorName,
+    allowRepeatDelivery: previousDeliveryCount > 0,
   }).then(() => {
     if (resultBox) {
       resultBox.innerHTML = `<span style="color:#86efac; font-weight:700;">✓ تم تسليم الجهاز بنجاح للطالب ${escapeHtml(studentName)}.</span>`;
@@ -551,7 +563,16 @@ function renderDevicesTable() {
   emptyState.style.display = 'none';
   tbody.innerHTML = filtered.map((d) => {
     const isDelivered = d.status === 'delivered';
-    const statusBadge = isDelivered ? '<span class="badge badge-success">تم التسليم ✓</span>' : '<span class="badge badge-primary">بالمخزن</span>';
+    const previousDeliveryCount = isDelivered
+      ? countPreviousDeliveredTablets(allDevices, d.assignedStudentCode, d.imei)
+      : 0;
+    const totalStudentDeliveries = isDelivered ? previousDeliveryCount + 1 : 0;
+    const repeatBadge = totalStudentDeliveries > 1
+      ? `<span class="badge badge-warning" title="عدد الأجهزة المسجلة لهذا الطالب">${totalStudentDeliveries} أجهزة مسجلة للطالب</span>`
+      : '';
+    const statusBadge = isDelivered
+      ? `<span class="badge badge-success">تم التسليم ✓</span> ${repeatBadge}`
+      : '<span class="badge badge-primary">بالمخزن</span>';
     const assignedStudent = allStudents.find((student) => String(student.code || student.studentCode) === String(d.assignedStudentCode));
     const studentPlacement = [assignedStudent?.gradeName || assignedStudent?.grade || assignedStudent?.stage, assignedStudent?.className || assignedStudent?.classId].filter(Boolean).map(escapeHtml).join(' · ');
     return `
@@ -703,6 +724,8 @@ function bindTabletsEvents(container) {
     const studentName = opt?.dataset?.name || opt?.textContent || '';
     const parentName = document.getElementById('handover-parent-name').value.trim();
     const phone = document.getElementById('handover-parent-phone').value.trim();
+    const previousDeliveryCount = countPreviousDeliveredTablets(allDevices, studentCode, imei);
+    if (!confirmRepeatTabletDelivery(studentName, previousDeliveryCount)) return;
 
     try {
       await deliverTabletDevice(imei, {
@@ -712,6 +735,7 @@ function bindTabletsEvents(container) {
         recipientName: parentName,
         recipientNationalId: document.getElementById('handover-parent-nid').value.trim(),
         recipientPhone: phone,
+        allowRepeatDelivery: previousDeliveryCount > 0,
       });
       handoverForm.reset();
       hideHandover();

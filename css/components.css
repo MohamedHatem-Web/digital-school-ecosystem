@@ -704,6 +704,29 @@
 /* --------------------------------------------------------------------------
    Dark Mode Component Overrides
    -------------------------------------------------------------------------- */
+.profile-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(10, 22, 40, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.profile-modal-card {
+  width: 100%;
+  max-width: 460px;
+  overflow: hidden;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-xl);
+  animation: fadeIn 0.2s ease-out;
+}
+
 [data-theme="dark"] body {
   background-color: var(--bg-page);
   color: var(--text-primary);

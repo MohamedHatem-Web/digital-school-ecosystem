@@ -425,17 +425,13 @@
               <circle cx="11" cy="11" r="7"></circle>
               <path d="m20 20-4-4"></path>
             </svg>
-            <input id="platform-schools-search" type="search" class="form-control" autocomplete="off" placeholder="اسم المدرسة أو الإدارة أو الرابط..." aria-controls="platform-schools-grid platform-favorites-grid">
+            <input id="platform-schools-search" type="search" class="form-control" autocomplete="off" placeholder="اسم المدرسة أو الإدارة أو الرابط..." aria-controls="platform-schools-grid">
           </div>
           <p class="platform-directory-hint">ابحث بالعربية أو الإنجليزية. المفضلة محفوظة على هذا الجهاز وتظهر أولًا.</p>
         </div>
         <p id="platform-directory-feedback" class="platform-directory-feedback" role="status" aria-live="polite"></p>
         <p id="platform-directory-empty" class="platform-directory-empty" role="status" style="display:none;"></p>
-        <section id="platform-favorites-section" class="platform-favorites-section" aria-labelledby="platform-favorites-heading" style="display:none;">
-          <h3 id="platform-favorites-heading" class="platform-favorites-heading">مدارسي المفضلة</h3>
-          <div id="platform-favorites-grid" class="platform-school-grid" aria-busy="true"></div>
-        </section>
-        <div id="platform-schools-grid" aria-busy="true" style="display:grid;gap:var(--space-4);">
+        <div id="platform-schools-grid" class="platform-school-grid" aria-busy="true">
           <article class="platform-skeleton-card" aria-hidden="true">
             <div style="display:flex;align-items:center;gap:14px;margin-bottom:28px;">
               <div class="platform-skeleton" style="width:64px;height:64px;border-radius:12px;"></div>
@@ -758,8 +754,6 @@
     }
 
     function renderPlatformDirectory() {
-      const favoritesSection = document.getElementById('platform-favorites-section');
-      const favoritesGrid = document.getElementById('platform-favorites-grid');
       const schoolsGrid = document.getElementById('platform-schools-grid');
       const emptyState = document.getElementById('platform-directory-empty');
       const searchTerm = normalizeDirectorySearch(document.getElementById('platform-schools-search')?.value);
@@ -769,22 +763,18 @@
           school.administration, school.adminDeptAr, school.directorate, school.slug, school.schoolId,
         ].filter(Boolean).join(' '));
         return !searchTerm || searchableText.includes(searchTerm);
-      });
-      const favoriteSchools = visibleSchools.filter((school) => platformFavoriteIds.has(school.slug || school.schoolId));
-      const otherSchools = visibleSchools
-        .filter((school) => !platformFavoriteIds.has(school.slug || school.schoolId))
-        .sort((a, b) => String(a.nameAr || a.schoolNameAr || a.nameEn || '').localeCompare(
+      }).sort((a, b) => {
+        const aFavorite = platformFavoriteIds.has(a.slug || a.schoolId);
+        const bFavorite = platformFavoriteIds.has(b.slug || b.schoolId);
+        if (aFavorite !== bFavorite) return aFavorite ? -1 : 1;
+        return String(a.nameAr || a.schoolNameAr || a.nameEn || '').localeCompare(
           String(b.nameAr || b.schoolNameAr || b.nameEn || ''),
           'ar',
-        ));
+        );
+      });
 
-      if (favoritesSection) favoritesSection.style.display = favoriteSchools.length ? 'block' : 'none';
-      if (favoritesGrid) {
-        favoritesGrid.innerHTML = favoriteSchools.map(renderPlatformSchoolCard).join('');
-        favoritesGrid.setAttribute('aria-busy', 'false');
-      }
       if (schoolsGrid) {
-        schoolsGrid.innerHTML = otherSchools.map(renderPlatformSchoolCard).join('');
+        schoolsGrid.innerHTML = visibleSchools.map(renderPlatformSchoolCard).join('');
         schoolsGrid.setAttribute('aria-busy', 'false');
       }
       if (emptyState) {
@@ -818,7 +808,6 @@
     }
 
     document.getElementById('platform-schools-search')?.addEventListener('input', renderPlatformDirectory);
-    document.getElementById('platform-favorites-grid')?.addEventListener('click', togglePlatformFavorite);
     document.getElementById('platform-schools-grid')?.addEventListener('click', togglePlatformFavorite);
 
     async function loadHomePage() {

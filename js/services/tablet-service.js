@@ -18,6 +18,7 @@ import {
 import { DEFAULT_SCHOOL_ID } from './school-service.js';
 import { recordAuditEvent } from './audit-service.js';
 import { getCurrentUser } from '../auth.js';
+import { countPreviousDeliveredTablets } from '../utils/tablet-metrics.js';
 
 const CACHE_DEVICES_KEY = 'dse_tablet_devices_v6_';
 const CACHE_BATCHES_KEY = 'dse_tablet_batches_v6_';
@@ -374,7 +375,15 @@ export async function registerTabletDevice({ imei, serialNumber, batchId, model 
   return deviceData;
 }
 
-export async function deliverTabletDevice(imei, { studentCode, studentName, operatorName, recipientName = '', recipientNationalId = '', recipientPhone = '' } = {}, schoolId = getCurrentSchoolId()) {
+export async function deliverTabletDevice(imei, {
+  studentCode,
+  studentName,
+  operatorName,
+  recipientName = '',
+  recipientNationalId = '',
+  recipientPhone = '',
+  allowRepeatDelivery = false,
+} = {}, schoolId = getCurrentSchoolId()) {
   const cleanImei = String(imei).trim();
   if (!cleanImei) {
     throw new Error('يرجى إدخال رقم IMEI للجهاز المراد تسليمه.');
@@ -395,12 +404,20 @@ export async function deliverTabletDevice(imei, { studentCode, studentName, oper
     throw new Error(`الجهاز تم تسليمه رسمياً بالفعل للطالب (${device.assignedStudentName || device.assignedStudentCode}).`);
   }
 
+  const previousDeliveryCount = countPreviousDeliveredTablets(devices, studentCode, cleanImei);
+  if (previousDeliveryCount > 0 && !allowRepeatDelivery) {
+    throw new Error(`الطالب سبق له استلام ${previousDeliveryCount} جهاز. أكّد التحذير قبل تسجيل تسليم إضافي.`);
+  }
+  const isRepeatDelivery = previousDeliveryCount > 0;
+  const deliveryNumber = previousDeliveryCount + 1;
   const updatedHistory = [
     ...(device.history || []),
     {
-      action: 'تسليم رسمي ومحضر استلام',
+      action: isRepeatDelivery ? `تسليم إضافي رقم ${deliveryNumber}` : 'تسليم رسمي ومحضر استلام',
       timestamp: new Date().toISOString(),
-      details: `تم التسليم للطالب: ${studentName} (كود: ${studentCode}) بموجب إقرار الاستلام والتابلت سليم`,
+      details: isRepeatDelivery
+        ? `تم التسليم للطالب: ${studentName} (كود: ${studentCode}) كتسليم إضافي رقم ${deliveryNumber} بعد ${previousDeliveryCount} تسليم سابق.`
+        : `تم التسليم للطالب: ${studentName} (كود: ${studentCode}) بموجب إقرار الاستلام والتابلت سليم`,
     },
   ];
 
@@ -416,6 +433,8 @@ export async function deliverTabletDevice(imei, { studentCode, studentName, oper
       nationalId: String(recipientNationalId).trim(),
       phone: String(recipientPhone).trim(),
     },
+    repeatDelivery: isRepeatDelivery,
+    repeatDeliveryNumber: deliveryNumber,
     history: updatedHistory,
   };
 
@@ -427,6 +446,8 @@ export async function deliverTabletDevice(imei, { studentCode, studentName, oper
     deliveredDate: updatedDevice.deliveredDate,
     deliveredBy: updatedDevice.deliveredBy,
     deliveryRecipient: updatedDevice.deliveryRecipient,
+    repeatDelivery: updatedDevice.repeatDelivery,
+    repeatDeliveryNumber: updatedDevice.repeatDeliveryNumber,
     history: updatedHistory,
     updatedAt: serverTimestamp(),
   });
@@ -437,9 +458,11 @@ export async function deliverTabletDevice(imei, { studentCode, studentName, oper
   if (cacheKey) localStorage.setItem(cacheKey, JSON.stringify(updatedList));
 
   await recordAuditEvent({
-    action: 'تسليم تابلت رسمي لطالب',
+    action: isRepeatDelivery ? 'تسليم تابلت إضافي لطالب سبق له الاستلام' : 'تسليم تابلت رسمي لطالب',
     target: `IMEI: ${cleanImei}`,
-    details: `المستلم: ${studentName} (كود: ${studentCode})`,
+    details: isRepeatDelivery
+      ? `المستلم: ${studentName} (كود: ${studentCode}) | تسليم إضافي رقم ${deliveryNumber} بعد ${previousDeliveryCount} تسليم سابق`
+      : `المستلم: ${studentName} (كود: ${studentCode})`,
     operatorRole: 'tech_specialist',
     schoolId,
   });

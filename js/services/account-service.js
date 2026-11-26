@@ -47,6 +47,20 @@ async function postAuthenticated(path, body, forceTokenRefresh = false) {
   return result;
 }
 
+async function getAuthenticated(path) {
+  const firebaseUser = await waitForFirebaseUser();
+  if (!firebaseUser) throw new Error('يجب تسجيل الدخول بحساب مخول قبل متابعة العملية.');
+  if (!MEDIA_CONFIG.workerGatewayUrl) throw new Error('خدمة إدارة الحسابات غير مفعلة؛ عنوان Worker غير مضبوط.');
+
+  const token = await firebaseUser.getIdToken(true);
+  const response = await fetch(`${MEDIA_CONFIG.workerGatewayUrl.replace(/\/$/, '')}${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || 'تعذر تحميل بيانات الحسابات.');
+  return result;
+}
+
 async function postPublic(path, body) {
   if (!MEDIA_CONFIG.workerGatewayUrl) throw new Error('خدمة تفعيل الحسابات غير مفعلة.');
   const response = await fetch(`${MEDIA_CONFIG.workerGatewayUrl.replace(/\/$/, '')}${path}`, {
@@ -116,7 +130,11 @@ export async function activateParentAccount(firebaseUser = auth.currentUser) {
   const token = await firebaseUser.getIdToken(true);
   const response = await fetch(`${MEDIA_CONFIG.workerGatewayUrl.replace(/\/$/, '')}/api/family/activate-parent`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ schoolId: getTenantSchoolId() }),
   });
   const result = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(result.error || 'تعذر ربط الأبناء بهذا البريد.');
@@ -130,6 +148,11 @@ export async function setParentAccountPassword(password, firebaseUser = auth.cur
   if (!firebaseUser) throw new Error('جلسة ولي الأمر غير متاحة.');
   await updatePassword(firebaseUser, password);
   await postAuthenticated('/api/family/complete-parent-password', {}, true);
+  const profile = readCachedUserSession();
+  if (profile) {
+    profile.passwordSetupRequired = false;
+    persistUserSession(profile);
+  }
 }
 
 export async function requestStudentActivation({ studentCode, nationalId }) {
@@ -162,6 +185,26 @@ export async function changeOwnPassword(currentPassword, newPassword) {
 
 export async function createAccountInvitation(invitation) {
   return postAuthenticated('/api/admin/account-invitations', invitation);
+}
+
+export async function getManagedAccounts() {
+  const result = await getAuthenticated('/api/admin/accounts');
+  return {
+    accounts: Array.isArray(result.accounts) ? result.accounts : [],
+    invitations: Array.isArray(result.invitations) ? result.invitations : [],
+  };
+}
+
+export async function updateManagedAccountStatus(uid, action) {
+  return postAuthenticated('/api/admin/account-status', { uid, action });
+}
+
+export async function deleteManagedAccount(uid, confirmationEmail) {
+  return postAuthenticated('/api/admin/delete-account', { uid, confirmationEmail });
+}
+
+export async function changeManagedAccountPassword(targetEmail, newPassword) {
+  return postAuthenticated('/api/admin/change-password', { targetEmail, newPassword });
 }
 
 export async function migrateSchoolTenant({ sourceSchoolId = 'sch_cairo_sec_01', targetSchoolId = 'zewail-school' } = {}) {

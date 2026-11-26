@@ -20,6 +20,7 @@ import {
   persistUserSession,
   readCachedUserSession,
 } from './session-cache.js';
+import { getTenantSchoolSlug } from './tenant-router.js';
 
 export { ROLE_DASHBOARDS, getRoleDashboardUrl } from './dashboard-routing.js';
 
@@ -150,11 +151,6 @@ export async function loginWithEmailPassword(emailOrCode, password, { expectedSc
   // Always enforce realistic full name for recognized accounts
   if (knownStaffNames[profile.email]) {
     profile.displayName = knownStaffNames[profile.email];
-    try {
-      await setDoc(userDocRef, { displayName: profile.displayName }, { merge: true });
-    } catch (e) {
-      // ignore
-    }
   } else if (!profile.displayName || profile.displayName === 'طالب' || profile.displayName === 'ولي أمر' || profile.displayName.includes('[تجريبي]') || profile.displayName === 'مستخدم المنظومة') {
     const meta = ROLES_METADATA[profile.role];
     if (meta) {
@@ -351,19 +347,24 @@ export function observeAuthState(callback) {
 export async function updateUserProfile(updates = {}) {
   const currentUser = getCurrentUser();
   if (!currentUser) throw new Error('Unauthenticated');
+  if (Object.keys(updates).some((key) => key !== 'phone') || typeof updates.phone !== 'string') {
+    throw new Error('يمكن تعديل رقم الهاتف فقط من الملف الشخصي.');
+  }
+
+  const phone = updates.phone.trim();
+  if (phone.length > 32) throw new Error('رقم الهاتف طويل أكثر من اللازم.');
+  if (phone && !/^\+?[\d\s()-]{6,32}$/.test(phone)) {
+    throw new Error('أدخل رقم هاتف صحيحًا.');
+  }
 
   const userDocRef = doc(db, 'users', currentUser.uid);
   const updated = {
     ...currentUser,
-    ...updates,
+    phone,
     updatedAt: new Date().toISOString()
   };
 
-  try {
-    await setDoc(userDocRef, updates, { merge: true });
-  } catch (err) {
-    console.warn('Could not update Firestore user doc:', err);
-  }
+  await setDoc(userDocRef, { phone, updatedAt: updated.updatedAt }, { merge: true });
 
   persistUserSession(updated);
   return updated;

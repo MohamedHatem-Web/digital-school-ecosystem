@@ -102,19 +102,6 @@ html[data-platform-root="true"] .platform-directory-tools {
   text-align: center;
 }
 
-html[data-platform-root="true"] .platform-favorites-section {
-  max-width: 960px;
-  margin: 10px auto 24px;
-  text-align: right;
-}
-
-.platform-favorites-heading {
-  margin: 0 0 12px;
-  color: var(--text-primary);
-  font-size: 17px;
-  font-weight: 800;
-}
-
 .platform-school-grid {
   display: grid;
   gap: var(--space-4);
@@ -559,15 +546,6 @@ html[data-theme="light"] .platform-tracking-status[data-status="rejected"] {
 
   html[data-platform-root="true"] .platform-directory-tools {
     width: min(100% - 24px, 620px);
-  }
-
-  html[data-platform-root="true"] #platform-favorites-section,
-  html[data-platform-root="true"] #platform-favorites-grid {
-    width: 100%;
-  }
-
-  html[data-platform-root="true"] #platform-favorites-grid {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .platform-public-nav-link {

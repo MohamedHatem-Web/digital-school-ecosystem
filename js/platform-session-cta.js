@@ -15,15 +15,26 @@ export function syncPublicDashboardEntry() {
 
   const destination = getRoleDashboardUrl(activeUser.role, activeUser.schoolId);
   const userName = activeUser.displayName || 'حسابي';
-
-  document.querySelectorAll('.platform-admin-login, .header-cta-group a[href*="login"]').forEach((link) => {
+  const platformEntry = document.querySelector('.platform-admin-login');
+  const headerLoginLinks = [...document.querySelectorAll('.header-cta-group a[href*="login"]')];
+  const updateDashboardLink = (link) => {
     link.href = destination;
     link.classList.remove('btn-outline', 'btn-sm');
     link.classList.add('btn-accent', 'btn-md');
     link.textContent = '👤 لوحة التحكم';
     link.setAttribute('aria-label', 'الانتقال إلى لوحة التحكم');
     link.title = `مرحباً ${userName} — الانتقال إلى لوحة التحكم`;
-  });
+  };
+
+  if (platformEntry) {
+    updateDashboardLink(platformEntry);
+    headerLoginLinks.forEach((link) => {
+      link.hidden = true;
+      link.setAttribute('aria-hidden', 'true');
+    });
+  } else {
+    headerLoginLinks.forEach(updateDashboardLink);
+  }
 
   document.querySelectorAll('.drawer-nav-list + div a[href*="login"]').forEach((link) => {
     link.href = destination;

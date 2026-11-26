@@ -314,7 +314,7 @@ function updateUserInterface(user) {
       avatarEl.textContent = initial;
     }
 
-    // Role-based profile edit permission: ONLY staff / supervisors can edit their name & phone.
+    // Staff and supervisors can edit only their own phone number.
     // Students & Parents are strictly locked (managed exclusively by Student Affairs).
     const STAFF_ROLES_ALLOWED_PROFILE_EDIT = ['super_admin', 'director', 'student_affairs', 'tech_specialist', 'social_affairs', 'teacher'];
     const canEdit = STAFF_ROLES_ALLOWED_PROFILE_EDIT.includes(user.role);
@@ -325,12 +325,12 @@ function updateUserInterface(user) {
         profileWidget.title = 'حساب معتمد رسميًا — للعرض والمتابعة فقط (التعديل متاح فقط لشؤون الطلاب والمشرفين)';
       } else {
         profileWidget.style.cursor = 'pointer';
-        profileWidget.title = 'انقر لتعديل بيانات حسابك الرسمي وحفظها';
+        profileWidget.title = 'انقر لتعديل رقم هاتفك المعتمد';
 
         if (!document.getElementById('user-profile-modal')) {
         const modalHtml = `
-        <div id="user-profile-modal" style="display: none; position: fixed; inset: 0; background: rgba(10, 22, 40, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 1rem;">
-          <div style="background: #ffffff; border-radius: var(--radius-md); max-width: 460px; width: 100%; border: 1px solid var(--border-default); box-shadow: var(--shadow-xl); overflow: hidden; animation: fadeIn 0.2s ease-out;">
+        <div id="user-profile-modal" class="profile-modal-backdrop" style="display: none;">
+          <div class="profile-modal-card">
             <div style="background: var(--color-primary-950); color: #ffffff; padding: var(--space-4) var(--space-5); display: flex; justify-content: space-between; align-items: center;">
               <div style="display: flex; align-items: center; gap: var(--space-2);">
                 <span style="font-size: 1.25rem;">👤</span>
@@ -350,18 +350,18 @@ function updateUserInterface(user) {
 
               <div>
                 <label style="display: block; font-size: var(--text-xs); font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">الاسم الرسمي المعتمد بالمنظومة</label>
-                <input type="text" id="profile-display-name-input" class="form-control" value="${user.displayName || ''}" required placeholder="مثال: د. طارق محمود المنشاوي" style="width: 100%; height: 42px;">
-                <small style="font-size: 11px; color: var(--text-muted); margin-top: 2px; display: block;">يظهر هذا الاسم في توقيعات القرارات ومحاضر الانصراف والتسليم الرسمية.</small>
+                <input type="text" id="profile-display-name-input" class="form-control" readonly aria-readonly="true" style="width: 100%; height: 42px;">
+                <small style="font-size: 11px; color: var(--text-muted); margin-top: 2px; display: block;">الاسم الرسمي ثابت، ويظهر في توقيعات القرارات والمحاضر.</small>
               </div>
 
               <div>
                 <label style="display: block; font-size: var(--text-xs); font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">البريد الإلكتروني المعتمد (للقراءة فقط)</label>
-                <input type="email" class="form-control" value="${user.email || ''}" disabled style="width: 100%; height: 40px; background: #f8fafc; color: #64748b;">
+                <input type="email" id="profile-email-input" class="form-control" disabled style="width: 100%; height: 40px;">
               </div>
 
               <div>
                 <label style="display: block; font-size: var(--text-xs); font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">رقم الهاتف المعتمد</label>
-                <input type="tel" id="profile-phone-input" class="form-control" value="${user.phone || ''}" placeholder="01XXXXXXXXX" style="width: 100%; height: 42px;">
+                <input type="tel" id="profile-phone-input" class="form-control" autocomplete="tel" inputmode="tel" maxlength="32" placeholder="01XXXXXXXXX" style="width: 100%; height: 42px;">
               </div>
 
               <div id="profile-modal-alert" style="display: none; padding: var(--space-2) var(--space-3); font-size: var(--text-xs); border-radius: var(--radius-xs);"></div>
@@ -383,12 +383,14 @@ function updateUserInterface(user) {
       const cancelBtn = document.getElementById('cancel-profile-modal-btn');
       const formEl = document.getElementById('user-profile-edit-form');
       const nameInput = document.getElementById('profile-display-name-input');
+      const emailInput = document.getElementById('profile-email-input');
       const phoneInput = document.getElementById('profile-phone-input');
       const alertEl = document.getElementById('profile-modal-alert');
       const saveBtn = document.getElementById('save-profile-btn');
 
       const openModal = () => {
         nameInput.value = user.displayName || '';
+        emailInput.value = user.email || '';
         phoneInput.value = user.phone || '';
         modalEl.style.display = 'flex';
       };
@@ -412,29 +414,19 @@ function updateUserInterface(user) {
 
       formEl.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const newDisplayName = nameInput.value.trim();
         const newPhone = phoneInput.value.trim();
-
-        if (!newDisplayName) return;
 
         saveBtn.disabled = true;
         saveBtn.textContent = 'جاري الحفظ...';
 
         try {
-          const updatedUser = await updateUserProfile({
-            displayName: newDisplayName,
-            phone: newPhone,
-          });
+          await updateUserProfile({ phone: newPhone });
 
-          user.displayName = newDisplayName;
           user.phone = newPhone;
-
-          if (nameEl) nameEl.textContent = newDisplayName;
-          if (avatarEl) avatarEl.textContent = newDisplayName.charAt(0);
 
           alertEl.className = 'alert alert-success';
           alertEl.style.display = 'block';
-          alertEl.textContent = 'تم حفظ بياناتك وتحديث السجلات بنجاح.';
+          alertEl.textContent = 'تم تحديث رقم الهاتف بنجاح.';
 
           setTimeout(() => {
             closeModal();

@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var t=localStorage.getItem('dse_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <title>Tech — منظومة المدرسة الرقمية</title>
+  <link rel="stylesheet" href="../css/tokens.css?v=11.0">
+  <link rel="stylesheet" href="../css/base.css?v=11.1">
+  <link rel="stylesheet" href="../css/components.css?v=17.2">
+  <link rel="stylesheet" href="../css/dashboard.css?v=11.0">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <meta name="theme-color" content="#0a1628">
+</head>
+<body>
+
+  <div class="dashboard-layout">
+    <div class="dashboard-overlay"></div>
+
+    <!-- Sidebar with organized sections -->
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-header">
+        <a href="tech.html" class="sidebar-brand-box">
+          <div class="sidebar-crest">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+            </svg>
+          </div>
+          <div>
+            <div class="sidebar-title">Tech</div>
+            <div class="sidebar-sub">الدعم الفني والمنظومة الرقمية</div>
+          </div>
+        </a>
+        <button type="button" class="sidebar-close-btn btn btn-sm" style="color: #ffffff;">✕</button>
+      </div>
+
+      <div class="sidebar-role-indicator">
+        <span>المساحة الشاملة:</span>
+        <span class="badge badge-accent">مسؤول التطوير / دعم فني</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="sidebar-menu">
+          <!-- القسم الأول: منظومة التابلت الحصرية -->
+          <div class="sidebar-section-title">📱 تابلت الثانوية والمخزن</div>
+          <a href="#tablets" class="sidebar-link active" id="tech-nav-tablets">
+            <span class="sidebar-icon">📱</span>
+            <span>حصر الأجهزة ومحاضر التسليم</span>
+          </a>
+          <!-- القسم الثاني: الإشراف الإداري والرقابة -->
+          <div class="sidebar-section-title">📊 الإشراف والرقابة المؤسسية</div>
+          <a href="#audit-logs" class="sidebar-link" id="tech-nav-audit">
+            <span class="sidebar-icon">🛡️</span>
+            <span>سجل النشاطات الشامل</span>
+          </a>
+          <a href="#cms-hub" class="sidebar-link" id="tech-nav-cms">
+            <span class="sidebar-icon">🏛️</span>
+            <span>إدارة المحتوى والهيكل</span>
+          </a>
+          <a href="#gallery" class="sidebar-link" id="tech-nav-gallery">
+            <span class="sidebar-icon">📸</span>
+            <span>معرض الصور والوسائط (Cloudinary)</span>
+          </a>
+            <div class="sidebar-section-title">📊 الإشراف والإعدادات</div>
+            <a href="#overview" class="sidebar-link" id="tech-nav-overview">
+              <span class="sidebar-icon">📊</span>
+              <span>نظرة عامة واللوحة الإشرافية</span>
+            </a>
+
+          <!-- القسم الثالث: الشؤون الميدانية والطلاب -->
+          <div class="sidebar-section-title">🎓 الشؤون الطلابية والميدانية</div>
+          <a href="#students" class="sidebar-link" id="tech-nav-students">
+            <span class="sidebar-icon">🎓</span>
+            <span>شؤون الطلاب وسجلات القيد</span>
+          </a>
+          <a href="#student-inquiry" class="sidebar-link" id="tech-nav-student-inquiry">
+            <span class="sidebar-icon">🔎</span>
+            <span>ملف الطالب والاستعلام</span>
+          </a>
+          <a href="#attendance" class="sidebar-link" id="tech-nav-attendance">
+            <span class="sidebar-icon">📋</span>
+            <span>الحضور اليومي (دفتر 5 سلوك)</span>
+          </a>
+          <a href="#social" class="sidebar-link" id="tech-nav-social">
+            <span class="sidebar-icon">🤝</span>
+            <span>الخدمة الاجتماعية والإنذارات</span>
+          </a>
+          <a href="#gate-pass" class="sidebar-link" id="tech-nav-gate">
+            <span class="sidebar-icon">🚪</span>
+            <span>أذونات الخروج المبكر</span>
+          </a>
+          <a href="#dismissals" class="sidebar-link" id="tech-nav-dismissals">
+            <span class="sidebar-icon">🔔</span>
+            <span>خطة الانصراف اليومي</span>
+          </a>
+
+          <!-- القسم الرابع: التواصل الداخلي -->
+          <div class="sidebar-section-title">✉️ التواصل والرسائل</div>
+          <a href="#messages" class="sidebar-link" id="tech-nav-messages">
+            <span class="sidebar-icon">✉️</span>
+            <span>الرسائل والبريد الداخلي</span>
+          </a>
+
+          <div class="sidebar-section-title">🔐 دعم الحسابات</div>
+          <a href="#accounts" class="sidebar-link" id="tech-nav-accounts" style="display: none;">
+            <span class="sidebar-icon">👥</span>
+            <span>إدارة الحسابات</span>
+          </a>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="../index.html" class="sidebar-back-portal">
+          <span>🌐</span>
+          <span>الموقع العام للمدرسة</span>
+        </a>
+      </div>
+    </aside>
+
+    <div class="dashboard-main">
+      <header class="dashboard-topbar">
+        <div class="topbar-start">
+          <button type="button" class="sidebar-toggle-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+          </button>
+          <span class="badge badge-accent">العام الدراسي 2026/2027</span>
+        </div>
+
+        <div class="topbar-end">
+          <div class="user-profile-widget">
+            <div class="user-avatar" id="tech-user-avatar">ح</div>
+            <div class="user-text-info">
+              <span class="user-name" id="tech-user-name">م. حسام الدين عبد العزيز</span>
+              <span class="user-role-title">مسؤول التطوير التكنولوجي</span>
+            </div>
+            <a href="#" class="logout-action-btn logout-btn" title="تسجيل الخروج">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </header>
+
+      <main class="dashboard-workspace" id="tech-workspace" style="padding: var(--space-6);">
+        <!-- Dedicated SPA Container Hooks -->
+        <div id="view-tablets" style="display: block;"></div>
+        <div id="view-audit" style="display: none;"></div>
+        <div id="view-cms" style="display: none;"></div>
+        <div id="view-gallery" style="display: none;"></div>
+        <div id="view-students" style="display: none;"></div>
+        <div id="view-student-inquiry" style="display: none;"></div>
+        <div id="view-attendance" style="display: none;"></div>
+        <div id="view-social" style="display: none;"></div>
+        <div id="view-gate-pass" style="display: none;"></div>
+        <div id="view-dismissals" style="display: none;"></div>
+        <div id="view-messages" style="display: none;"></div>
+        <div id="view-overview" style="display: none;"></div>
+        <div id="view-accounts" style="display: none;"></div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { checkRouteAccess } from '../js/router-guard.js';
+    import { initComponents } from '../js/components.js?v=11.0';
+    import { getCurrentUser } from '../js/auth.js';
+    import { renderTabletsView } from '../js/views/tablets-view.js';
+    import { renderAuditView } from '../js/views/audit-view.js';
+    import { renderCmsView } from '../js/views/cms-view.js';
+    import { renderGalleryView } from '../js/views/gallery-view.js';
+    import { renderStudentsView } from '../js/views/students-view.js';
+    import { renderStudentInquiryView } from '../js/views/student-inquiry-view.js';
+    import { renderAttendanceView } from '../js/views/attendance-view.js';
+    import { renderSocialView } from '../js/views/social-view.js';
+    import { renderGatePassView } from '../js/views/gate-pass-view.js';
+    import { renderMessagesView } from '../js/views/messages-view.js';
+    import { renderAccountManagementView } from '../js/views/account-management-view.js';
+    import { renderDismissalView } from '../js/views/dismissal-view.js';
+    import { renderOverviewView } from '../js/views/overview-view.js';
+
+    // Verify access
+    checkRouteAccess(['tech_specialist', 'director', 'super_admin']);
+    initComponents();
+
+    const currentUser = getCurrentUser();
+    if (currentUser?.displayName) {
+      const nameEl = document.getElementById('tech-user-name');
+      const avatarEl = document.getElementById('tech-user-avatar');
+      if (nameEl) nameEl.textContent = currentUser.displayName;
+      if (avatarEl) avatarEl.textContent = currentUser.displayName.trim().charAt(0);
+    }
+    const accountsNavLink = document.getElementById('tech-nav-accounts');
+    if (accountsNavLink && ['tech_specialist', 'director'].includes(currentUser?.role)) {
+      accountsNavLink.style.display = 'flex';
+    }
+
+    const views = {
+      tablets: document.getElementById('view-tablets'),
+      'audit-logs': document.getElementById('view-audit'),
+      'cms-hub': document.getElementById('view-cms'),
+      gallery: document.getElementById('view-gallery'),
+      students: document.getElementById('view-students'),
+      'student-inquiry': document.getElementById('view-student-inquiry'),
+      attendance: document.getElementById('view-attendance'),
+      social: document.getElementById('view-social'),
+      'gate-pass': document.getElementById('view-gate-pass'),
+      dismissals: document.getElementById('view-dismissals'),
+      messages: document.getElementById('view-messages'),
+      overview: document.getElementById('view-overview'),
+      accounts: document.getElementById('view-accounts'),
+    };
+
+    const navLinks = {
+      tablets: document.getElementById('tech-nav-tablets'),
+      'audit-logs': document.getElementById('tech-nav-audit'),
+      'cms-hub': document.getElementById('tech-nav-cms'),
+      gallery: document.getElementById('tech-nav-gallery'),
+      students: document.getElementById('tech-nav-students'),
+      'student-inquiry': document.getElementById('tech-nav-student-inquiry'),
+      attendance: document.getElementById('tech-nav-attendance'),
+      social: document.getElementById('tech-nav-social'),
+      'gate-pass': document.getElementById('tech-nav-gate'),
+      dismissals: document.getElementById('tech-nav-dismissals'),
+      messages: document.getElementById('tech-nav-messages'),
+      overview: document.getElementById('tech-nav-overview'),
+      accounts: accountsNavLink,
+    };
+    const initializedViews = new Set();
+
+    async function switchTab(tabKey) {
+      window.scrollTo(0, 0);
+      const requestedKey = views[tabKey] ? tabKey : 'tablets';
+      const activeKey = requestedKey === 'accounts' && !['tech_specialist', 'director'].includes(currentUser?.role)
+        ? 'tablets'
+        : requestedKey;
+      // Update sidebar active class
+      Object.keys(navLinks).forEach((k) => {
+        if (navLinks[k]) {
+          navLinks[k].classList.toggle('active', k === activeKey);
+        }
+      });
+
+      // Show active view container, hide others
+      Object.keys(views).forEach((k) => {
+        if (views[k]) {
+          views[k].style.display = k === activeKey ? 'block' : 'none';
+        }
+      });
+
+      if (initializedViews.has(activeKey)) return;
+
+      // Render corresponding modular view
+      if (activeKey === 'tablets') {
+        await renderTabletsView(views.tablets);
+      } else if (activeKey === 'audit-logs') {
+        await renderAuditView(views['audit-logs']);
+      } else if (activeKey === 'cms-hub') {
+        await renderCmsView(views['cms-hub']);
+      } else if (activeKey === 'gallery') {
+        await renderGalleryView(views.gallery);
+      } else if (activeKey === 'students') {
+        await renderStudentsView(views.students);
+      } else if (activeKey === 'student-inquiry') {
+        await renderStudentInquiryView(views['student-inquiry']);
+      } else if (activeKey === 'attendance') {
+        await renderAttendanceView(views.attendance);
+      } else if (activeKey === 'social') {
+        await renderSocialView(views.social);
+      } else if (activeKey === 'gate-pass') {
+        await renderGatePassView(views['gate-pass']);
+      } else if (activeKey === 'dismissals') {
+        await renderDismissalView(views.dismissals);
+      } else if (activeKey === 'messages') {
+        await renderMessagesView(views.messages);
+      } else if (activeKey === 'accounts') {
+        await renderAccountManagementView(views.accounts);
+      } else if (activeKey === 'overview') {
+        await renderOverviewView(views.overview, { currentUser, schoolId: currentUser?.schoolId });
+      }
+      initializedViews.add(activeKey);
+    }
+
+    // Router event
+    window.addEventListener('hashchange', () => {
+      const tab = window.location.hash.replace('#', '') || 'tablets';
+      switchTab(tab);
+    });
+
+    document.querySelector('.sidebar-toggle-btn')?.addEventListener('click', () => {
+      document.querySelector('.dashboard-layout')?.classList.toggle('sidebar-open');
+    });
+    document.querySelector('.sidebar-close-btn')?.addEventListener('click', () => {
+      document.querySelector('.dashboard-layout')?.classList.remove('sidebar-open');
+    });
+
+    const initHash = window.location.hash.replace('#', '') || 'tablets';
+    switchTab(initHash);
+  </script>
+</body>
+</html>

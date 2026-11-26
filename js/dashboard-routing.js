@@ -2,8 +2,8 @@ import { buildTenantUrl, getTenantSchoolSlug, getTenantSlug } from './tenant-rou
 
 export const ROLE_DASHBOARDS = {
   super_admin: '/platform-admin/dashboard.html',
-  director: 'dashboard/admin-overview.html',
-  tech_specialist: 'dashboard/tech-devices.html',
+  director: 'dashboard/manager.html',
+  tech_specialist: 'dashboard/tech.html',
   student_affairs: 'dashboard/student-affairs.html',
   teacher: 'dashboard/teacher-portal.html',
   student: 'dashboard/student-portal.html',
@@ -12,7 +12,7 @@ export const ROLE_DASHBOARDS = {
 };
 
 export function getRoleDashboardUrl(role, schoolId) {
-  const dashboardPath = ROLE_DASHBOARDS[role] || 'dashboard/admin-overview.html';
+  const dashboardPath = ROLE_DASHBOARDS[role] || 'dashboard/manager.html';
   if (role === 'super_admin') return ROLE_DASHBOARDS.super_admin;
 
   const schoolSlug = getTenantSlug() || (schoolId ? getTenantSchoolSlug(schoolId) : null);

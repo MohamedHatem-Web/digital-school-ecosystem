@@ -109,7 +109,7 @@ export async function notifyGatePassStatus(pass) {
     title: `بوابة المدرسة — ${statusLabel}`,
     body: `الطالب: ${pass.studentName} | السبب: ${pass.reason || 'إذن رسمي'}`,
     tag: `gate-pass-${pass.id}`,
-    onClickUrl: '/dashboard/admin-overview.html#gate-pass',
+    onClickUrl: '/dashboard/manager.html#gate-pass',
   });
 }
 

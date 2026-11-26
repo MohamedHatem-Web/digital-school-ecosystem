@@ -46,6 +46,18 @@ export default {
       return handleChangePassword(request, requestEnv);
     }
 
+    if (url.pathname === '/api/admin/accounts' && request.method === 'GET') {
+      return handleListManagedAccounts(request, requestEnv);
+    }
+
+    if (url.pathname === '/api/admin/account-status' && request.method === 'POST') {
+      return handleUpdateManagedAccountStatus(request, requestEnv);
+    }
+
+    if (url.pathname === '/api/admin/delete-account' && request.method === 'POST') {
+      return handleDeleteManagedAccount(request, requestEnv);
+    }
+
     if (url.pathname === '/api/admin/account-invitations' && request.method === 'POST') {
       return handleCreateAccountInvitation(request, requestEnv);
     }
@@ -224,14 +236,19 @@ async function verifyAuth(request, env, allowUnprovisioned = false) {
 
 async function handleParentActivation(request, env) {
   try {
+    if (Number(request.headers.get('Content-Length') || 0) > 8192) {
+      return jsonResponse({ error: 'بيانات طلب التفعيل أكبر من المسموح.' }, 413, env);
+    }
+    const body = await request.json();
+    const schoolId = resolveFamilySchoolId(body.schoolId, env);
     const identity = await verifyAuth(request, env, true);
     if (!identity.email || !identity.emailVerified) {
       return jsonResponse({ error: 'افتح رابط التفعيل من البريد الإلكتروني لولي الأمر أولاً.' }, 403, env);
     }
 
     const projectId = env.FIREBASE_PROJECT_ID;
-    const schoolId = String(body.schoolId || '').trim() || env.DEFAULT_SCHOOL_ID || 'zewail-school';
     const adminToken = await getFirebaseAdminAccessToken(env);
+    await requireActiveFamilySchool(projectId, adminToken, schoolId);
     const profileUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${encodeURIComponent(identity.uid)}`;
     const existingProfileResponse = await fetch(profileUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
     let existingProfile = null;
@@ -240,6 +257,14 @@ async function handleParentActivation(request, env) {
       const existingRole = firestoreString(existingProfile.fields || {}, 'role');
       if (existingRole && existingRole !== 'parent') {
         return jsonResponse({ error: 'هذا البريد مرتبط بحساب مدرسي آخر؛ استخدم بريد ولي الأمر المسجل.' }, 409, env);
+      }
+      const existingSchoolId = firestoreString(existingProfile.fields || {}, 'schoolId');
+      if (existingSchoolId && existingSchoolId !== schoolId) {
+        return jsonResponse({ error: 'حساب ولي الأمر مرتبط بمدرسة أخرى؛ استخدم رابط المدرسة المرتبط بالحساب.' }, 409, env);
+      }
+      const existingStatus = firestoreString(existingProfile.fields || {}, 'status');
+      if (existingStatus && existingStatus !== 'active') {
+        return jsonResponse({ error: 'حساب ولي الأمر غير نشط. راجع إدارة المدرسة.' }, 403, env);
       }
     } else if (existingProfileResponse.status !== 404) {
       return jsonResponse({ error: 'تعذر التحقق من ملف حساب ولي الأمر.' }, 502, env);
@@ -313,7 +338,6 @@ async function handleParentActivation(request, env) {
           parentInfo,
         }) }),
       });
-      if (!applicationUpdateResponse.ok) throw new Error('تعذر تسجيل اعتماد المدرسة في الطلب.');
       if (!updateResponse.ok) throw new Error('تعذر ربط جميع أبناء الأسرة؛ أعد المحاولة.');
     }
 
@@ -390,6 +414,7 @@ async function handleStudentActivationRequest(request, env) {
     const body = await request.json();
     const studentCode = String(body.studentCode || '').trim();
     const nationalId = String(body.nationalId || '').trim();
+    const schoolId = resolveFamilySchoolId(body.schoolId, env);
     if (!/^\d{6,12}$/.test(studentCode) || !/^\d{14}$/.test(nationalId)) {
       return jsonResponse({ error: 'تعذر التحقق من البيانات. راجع شؤون الطلاب.' }, 400, env);
     }
@@ -399,15 +424,15 @@ async function handleStudentActivationRequest(request, env) {
     if (!rateLimiter) return jsonResponse({ error: 'خدمة التفعيل غير مكتملة الإعداد.' }, 503, env);
     const [ipLimit, studentLimit] = await Promise.all([
       rateLimiter.limit({ key: `ip:${clientIp}` }),
-      rateLimiter.limit({ key: `student:${studentCode}` }),
+      rateLimiter.limit({ key: `student:${schoolId}:${studentCode}` }),
     ]);
     if (!ipLimit.success || !studentLimit.success) {
       return jsonResponse({ error: 'محاولات كثيرة. انتظر دقيقة ثم حاول مرة أخرى.' }, 429, env);
     }
 
-    const schoolId = env.DEFAULT_SCHOOL_ID || 'zewail-school';
     const projectId = env.FIREBASE_PROJECT_ID;
     const adminToken = await getFirebaseAdminAccessToken(env);
+    await requireActiveFamilySchool(projectId, adminToken, schoolId);
     const studentUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(schoolId)}/students/${encodeURIComponent(`stu_${studentCode}`)}`;
     const studentResponse = await fetch(studentUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
     if (!studentResponse.ok) return jsonResponse({ error: 'تعذر التحقق من البيانات. راجع شؤون الطلاب.' }, 400, env);
@@ -445,7 +470,7 @@ async function handleStudentActivationRequest(request, env) {
     });
     if (!createRequest.ok) throw new Error('تعذر إنشاء طلب التفعيل.');
 
-    const emailResult = await sendParentActivationEmail(parentEmail, env);
+    const emailResult = await sendParentActivationEmail(parentEmail, env, schoolId);
     if (!emailResult.ok) {
       await fetch(activationUrl.replace(`?documentId=${encodeURIComponent(requestId)}`, `/${encodeURIComponent(requestId)}`), {
         method: 'DELETE', headers: { Authorization: `Bearer ${adminToken}` },
@@ -455,6 +480,8 @@ async function handleStudentActivationRequest(request, env) {
         ? 'تسجيل الدخول برابط البريد غير مفعّل في Firebase Authentication.'
         : ['UNAUTHORIZED_DOMAIN', 'INVALID_CONTINUE_URI'].includes(emailResult.code)
           ? 'عنوان صفحة التفعيل غير مسموح به في نطاقات Firebase Authentication المعتمدة.'
+          : ['MISSING_EMAIL_LINK_CONFIGURATION', 'INVALID_CONTINUE_URL_CONFIGURATION'].includes(emailResult.code)
+            ? 'إعدادات رابط تفعيل الأسرة غير مكتملة في Worker.'
           : emailResult.code
             ? `تعذر إرسال طلب الموافقة إلى ولي الأمر (Firebase: ${emailResult.code}).`
             : 'تعذر إرسال طلب الموافقة إلى ولي الأمر. أعد المحاولة لاحقًا.';
@@ -540,8 +567,39 @@ async function handlePublicContactInquiry(request, env) {
   }
 }
 
-async function sendParentActivationEmail(email, env) {
-  if (!env.FIREBASE_WEB_API_KEY || !env.FAMILY_ACTIVATION_CONTINUE_URL) {
+function resolveFamilySchoolId(requestedSchoolId, env) {
+  const schoolId = String(requestedSchoolId || '').trim() || String(env.DEFAULT_SCHOOL_ID || 'zewail-school').trim();
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(schoolId)) {
+    throw Object.assign(new Error('رابط المدرسة غير صالح.'), { status: 400 });
+  }
+  return schoolId;
+}
+
+async function requireActiveFamilySchool(projectId, adminToken, schoolId) {
+  const schoolUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(schoolId)}`;
+  const response = await fetch(schoolUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+  if (!response.ok) throw Object.assign(new Error('المدرسة غير متاحة لتفعيل الحساب.'), { status: 404 });
+  const school = await response.json();
+  if (firestoreString(school.fields || {}, 'status') !== 'active') {
+    throw Object.assign(new Error('المدرسة غير متاحة لتفعيل الحساب.'), { status: 403 });
+  }
+}
+
+async function sendParentActivationEmail(email, env, schoolId) {
+  let continueUrl;
+  try {
+    if (env.PLATFORM_CONTINUE_BASE) {
+      const url = new URL(`/${encodeURIComponent(schoolId)}/login.html`, env.PLATFORM_CONTINUE_BASE);
+      url.searchParams.set('flow', 'parent-activation');
+      continueUrl = url.href;
+    } else if (schoolId === (env.DEFAULT_SCHOOL_ID || 'zewail-school')) {
+      continueUrl = env.FAMILY_ACTIVATION_CONTINUE_URL || '';
+    }
+  } catch {
+    return { ok: false, status: 0, code: 'INVALID_CONTINUE_URL_CONFIGURATION' };
+  }
+
+  if (!env.FIREBASE_WEB_API_KEY || !continueUrl) {
     return { ok: false, status: 0, code: 'MISSING_EMAIL_LINK_CONFIGURATION' };
   }
   const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${encodeURIComponent(env.FIREBASE_WEB_API_KEY)}`, {
@@ -550,7 +608,7 @@ async function sendParentActivationEmail(email, env) {
     body: JSON.stringify({
       requestType: 'EMAIL_SIGNIN',
       email,
-      continueUrl: env.FAMILY_ACTIVATION_CONTINUE_URL,
+      continueUrl,
       canHandleCodeInApp: true,
     }),
   });
@@ -888,9 +946,10 @@ async function handleStudentActivationStatus(request, env) {
     const body = await request.json();
     const requestId = String(body.requestId || '').trim();
     const secret = String(body.activationSecret || '').trim();
+    const schoolId = resolveFamilySchoolId(body.schoolId, env);
     if (!/^[0-9a-f-]{36}$/i.test(requestId)) return jsonResponse({ error: 'طلب التفعيل غير صالح.' }, 400, env);
     const adminToken = await getFirebaseAdminAccessToken(env);
-    const activation = await loadActivationRequest(requestId, env.FIREBASE_PROJECT_ID, adminToken, String(body.schoolId || '').trim() || 'zewail-school');
+    const activation = await loadActivationRequest(requestId, env.FIREBASE_PROJECT_ID, adminToken, schoolId);
     if (!await verifyActivationSecret(activation, secret)) return jsonResponse({ error: 'طلب التفعيل غير صالح أو انتهت صلاحيته.' }, 404, env);
     if (activationRequestExpired(activation)) return jsonResponse({ status: 'expired' }, 200, env);
     return jsonResponse({ status: activation.data.status }, 200, env);
@@ -990,6 +1049,7 @@ async function handleCompleteStudentActivation(request, env) {
     const requestId = String(body.requestId || '').trim();
     const secret = String(body.activationSecret || '').trim();
     const password = String(body.password || '');
+    const requestedSchoolId = resolveFamilySchoolId(body.schoolId, env);
     if (!/^[0-9a-f-]{36}$/i.test(requestId) || password.length < 12 || !/[a-z]/.test(password) ||
       !/[A-Z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
       return jsonResponse({ error: 'استخدم كلمة مرور من 12 حرفًا على الأقل تشمل حرفًا كبيرًا وصغيرًا ورقمًا ورمزًا.' }, 400, env);
@@ -1001,7 +1061,7 @@ async function handleCompleteStudentActivation(request, env) {
 
     const projectId = env.FIREBASE_PROJECT_ID;
     const adminToken = await getFirebaseAdminAccessToken(env);
-    const activation = await loadActivationRequest(requestId, projectId, adminToken, String(body.schoolId || '').trim() || 'zewail-school');
+    const activation = await loadActivationRequest(requestId, projectId, adminToken, requestedSchoolId);
     if (!await verifyActivationSecret(activation, secret) || activationRequestExpired(activation)) {
       return jsonResponse({ error: 'انتهت صلاحية طلب التفعيل أو بياناته غير صحيحة.' }, 403, env);
     }
@@ -1009,6 +1069,8 @@ async function handleCompleteStudentActivation(request, env) {
     if (activation.data.status !== 'approved') return jsonResponse({ error: 'بانتظار موافقة ولي الأمر.' }, 409, env);
 
     const schoolId = activation.data.schoolId || env.DEFAULT_SCHOOL_ID || 'zewail-school';
+    if (schoolId !== requestedSchoolId) return jsonResponse({ error: 'طلب التفعيل تابع لمدرسة أخرى.' }, 403, env);
+    await requireActiveFamilySchool(projectId, adminToken, schoolId);
     const studentCode = String(activation.data.studentCode || '');
     const studentUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(schoolId)}/students/${encodeURIComponent(`stu_${studentCode}`)}`;
     studentUrlForRollback = studentUrl;
@@ -1336,14 +1398,392 @@ function decodeBase64Bytes(value) {
   return Uint8Array.from(binary, char => char.charCodeAt(0));
 }
 
+function canManageAccounts(operator) {
+  return ['director', 'tech_specialist'].includes(operator.role) &&
+    typeof operator.schoolId === 'string' && operator.schoolId.length > 0;
+}
+
+function canManageAccountRole(operator, targetRole) {
+  const schoolAccounts = ['student', 'parent', 'teacher', 'student_affairs', 'social_affairs'];
+  const schoolLeaders = ['director', 'tech_specialist'];
+  return schoolAccounts.includes(targetRole) ||
+    (schoolLeaders.includes(operator.role) &&
+      schoolLeaders.includes(targetRole) &&
+      operator.role !== targetRole);
+}
+
+async function querySchoolCollection(projectId, accessToken, collectionId, schoolId) {
+  const endpoint = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`;
+  const documents = [];
+  let cursor = '';
+  while (true) {
+    const structuredQuery = {
+      from: [{ collectionId }],
+      where: {
+        fieldFilter: {
+          field: { fieldPath: 'schoolId' },
+          op: 'EQUAL',
+          value: { stringValue: schoolId },
+        },
+      },
+      orderBy: [{ field: { fieldPath: '__name__' }, direction: 'ASCENDING' }],
+      limit: 500,
+    };
+    if (cursor) structuredQuery.startAt = { values: [{ referenceValue: cursor }], before: false };
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ structuredQuery }),
+    });
+    const result = await response.json().catch(() => []);
+    if (!response.ok || !Array.isArray(result)) {
+      throw Object.assign(new Error(`تعذر تحميل بيانات ${collectionId} للمدرسة.`), { status: 502 });
+    }
+
+    const page = result.map((item) => item.document).filter((document) =>
+      document && (!cursor || document.name > cursor)
+    );
+    if (!page.length) break;
+    documents.push(...page);
+    const nextCursor = page[page.length - 1].name;
+    if (nextCursor === cursor || result.length < 500) break;
+    cursor = nextCursor;
+  }
+  return documents;
+}
+
+async function lookupManagedAuthAccounts(projectId, accessToken, uids) {
+  const accountsByUid = new Map();
+  for (let offset = 0; offset < uids.length; offset += 100) {
+    const response = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:lookup`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ localId: uids.slice(offset, offset + 100) }),
+      }
+    );
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw Object.assign(new Error('تعذر التحقق من حالة حسابات Firebase.'), { status: 502 });
+    for (const account of result.users || []) accountsByUid.set(account.localId, account);
+  }
+  return accountsByUid;
+}
+
+async function handleListManagedAccounts(request, env) {
+  try {
+    const operator = await verifyAuth(request, env);
+    if (!canManageAccounts(operator)) {
+      return jsonResponse({ error: 'إدارة الحسابات متاحة لمدير المدرسة وأخصائي التطوير التكنولوجي فقط.' }, 403, env);
+    }
+
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const [userDocuments, invitationDocuments] = await Promise.all([
+      querySchoolCollection(projectId, adminToken, 'users', operator.schoolId),
+      querySchoolCollection(projectId, adminToken, 'accountInvitations', operator.schoolId),
+    ]);
+    const profiles = userDocuments.map((document) => ({
+      uid: document.name.split('/').pop(),
+      ...decodeFirestoreMap(document.fields || {}),
+    })).filter((profile) => profile.schoolId === operator.schoolId);
+    const authAccounts = await lookupManagedAuthAccounts(projectId, adminToken, profiles.map((profile) => profile.uid));
+
+    const accounts = profiles.map((profile) => {
+      const authAccount = authAccounts.get(profile.uid);
+      let status = 'active';
+      if (!authAccount) status = 'orphaned';
+      else if (profile.status === 'archived') status = 'archived';
+      else if ((profile.status && profile.status !== 'active') || authAccount.disabled) status = 'blocked';
+      return {
+        uid: profile.uid,
+        email: profile.email || authAccount?.email || '',
+        displayName: profile.displayName || '',
+        role: profile.role || 'unknown',
+        studentCode: profile.studentCode || '',
+        status,
+        createdAt: profile.createdAt || '',
+        canManage: profile.uid !== operator.uid && canManageAccountRole(operator, profile.role),
+      };
+    }).sort((left, right) => left.displayName.localeCompare(right.displayName, 'ar'));
+
+    const now = Date.now();
+    const invitations = invitationDocuments.map((document) => ({
+      invitationId: document.name.split('/').pop(),
+      ...decodeFirestoreMap(document.fields || {}),
+    })).filter((invitation) =>
+      invitation.schoolId === operator.schoolId && invitation.status === 'pending'
+    ).map((invitation) => ({
+      invitationId: invitation.invitationId,
+      email: invitation.email || '',
+      displayName: invitation.displayName || '',
+      role: invitation.role || 'unknown',
+      status: invitation.expiresAt && Date.parse(invitation.expiresAt) <= now ? 'expired' : 'pending',
+      createdAt: invitation.createdAt || '',
+      expiresAt: invitation.expiresAt || '',
+    }));
+
+    return jsonResponse({ accounts, invitations }, 200, env);
+  } catch (error) {
+    return jsonResponse({ error: error.message || 'تعذر تحميل حسابات المدرسة.' }, error.status || 401, env);
+  }
+}
+
+async function getManagedAccountTarget(operator, uid, projectId, adminToken) {
+  if (!uid || uid === operator.uid) {
+    throw Object.assign(new Error('لا يمكن إدارة الحساب الحالي أو معرّف حساب غير صالح.'), { status: 400 });
+  }
+  const profileUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${encodeURIComponent(uid)}`;
+  const profileResponse = await fetch(profileUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+  const profileData = await profileResponse.json().catch(() => ({}));
+  if (!profileResponse.ok) {
+    throw Object.assign(new Error('لم يتم العثور على حساب المدرسة المطلوب.'), { status: profileResponse.status === 404 ? 404 : 502 });
+  }
+  const profile = decodeFirestoreMap(profileData.fields || {});
+  if (profile.schoolId !== operator.schoolId || !canManageAccountRole(operator, profile.role)) {
+    throw Object.assign(new Error('لا تملك صلاحية إدارة هذا الحساب أو أنه تابع لمدرسة أخرى.'), { status: 403 });
+  }
+  return { uid, profile, profileUrl };
+}
+
+async function updateManagedAccountProfile(profileUrl, accessToken, updates) {
+  const url = new URL(profileUrl);
+  Object.keys(updates).forEach((field) => url.searchParams.append('updateMask.fieldPaths', field));
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields: encodeFirestoreMap(updates) }),
+  });
+  if (!response.ok) {
+    throw Object.assign(new Error('تعذر حفظ حالة الحساب في سجل المدرسة.'), { status: 502 });
+  }
+}
+
+async function updateManagedAuthAccount(projectId, accessToken, uid, updates) {
+  const response = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:update`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ localId: uid, returnSecureToken: false, ...updates }),
+    }
+  );
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw Object.assign(new Error('تعذر تحديث حالة تسجيل الدخول في Firebase.'), { status: 502 });
+  return result;
+}
+
+async function getManagedAuthAccount(projectId, accessToken, uid) {
+  const response = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:lookup`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ localId: [uid] }),
+    }
+  );
+  const result = await response.json().catch(() => ({}));
+  const account = result.users?.find((item) => item.localId === uid);
+  if (!response.ok || !account) throw Object.assign(new Error('حساب Firebase المطلوب غير موجود.'), { status: 404 });
+  return account;
+}
+
+async function recordManagedAccountAudit(env, accessToken, operator, target, action, details) {
+  const documentId = `account_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+  const endpoint = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/schools/${encodeURIComponent(operator.schoolId)}/auditLogs?documentId=${documentId}`;
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields: encodeFirestoreMap({
+      action,
+      target: `${target.displayName || target.email || target.uid} (${target.email || target.uid})`,
+      details,
+      category: 'security',
+      operatorUid: operator.uid,
+      operatorRole: operator.role,
+      schoolId: operator.schoolId,
+      createdAt: new Date().toISOString(),
+    }) }),
+  });
+  if (!response.ok) {
+    throw Object.assign(new Error('تم تنفيذ تغيير الحساب، لكن تعذر تسجيله في سجل التدقيق. راجع سجل المدرسة فورًا.'), { status: 502 });
+  }
+}
+
+async function handleUpdateManagedAccountStatus(request, env) {
+  try {
+    const operator = await verifyAuth(request, env);
+    if (!canManageAccounts(operator)) return jsonResponse({ error: 'غير مصرح بإدارة حسابات المدرسة.' }, 403, env);
+    if (Number(request.headers.get('Content-Length') || 0) > 4096) {
+      return jsonResponse({ error: 'الطلب أكبر من المسموح.' }, 413, env);
+    }
+    const body = await request.json();
+    const action = String(body.action || '');
+    if (!['block', 'archive', 'restore'].includes(action)) {
+      return jsonResponse({ error: 'إجراء حالة الحساب غير صالح.' }, 400, env);
+    }
+
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const target = await getManagedAccountTarget(operator, String(body.uid || ''), projectId, adminToken);
+    const authAccount = await getManagedAuthAccount(projectId, adminToken, target.uid);
+    const newStatus = action === 'archive' ? 'archived' : (action === 'restore' ? 'active' : 'blocked');
+    const disabled = action !== 'restore';
+    const timestamp = new Date().toISOString();
+    if (disabled) {
+      await updateManagedAccountProfile(target.profileUrl, adminToken, { status: newStatus, updatedAt: timestamp });
+      try {
+        await updateManagedAuthAccount(projectId, adminToken, target.uid, {
+          disabled: true,
+          validSince: String(Math.floor(Date.now() / 1000)),
+        });
+      } catch (error) {
+        await updateManagedAccountProfile(target.profileUrl, adminToken, {
+          status: target.profile.status || 'active',
+          updatedAt: new Date().toISOString(),
+        });
+        throw error;
+      }
+    } else {
+      await updateManagedAuthAccount(projectId, adminToken, target.uid, { disabled: false });
+      try {
+        await updateManagedAccountProfile(target.profileUrl, adminToken, { status: 'active', updatedAt: timestamp });
+      } catch (error) {
+        await updateManagedAuthAccount(projectId, adminToken, target.uid, {
+          disabled: true,
+          validSince: String(Math.floor(Date.now() / 1000)),
+        });
+        throw error;
+      }
+    }
+
+    const labels = {
+      block: 'حظر حساب',
+      archive: 'أرشفة حساب',
+      restore: 'استعادة حساب',
+    };
+    await recordManagedAccountAudit(
+      env,
+      adminToken,
+      operator,
+      { ...target.profile, uid: target.uid, email: authAccount.email || target.profile.email },
+      labels[action],
+      `تم ${labels[action]} ${target.profile.role} في المدرسة.`
+    );
+    return jsonResponse({ success: true, status: newStatus }, 200, env);
+  } catch (error) {
+    return jsonResponse({ error: error.message || 'تعذر تحديث حالة الحساب.' }, error.status || 401, env);
+  }
+}
+
+async function clearStudentAccountLink(projectId, accessToken, schoolId, studentCode, uid, isParent) {
+  if (!studentCode) return;
+  const studentUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(schoolId)}/students/${encodeURIComponent(`stu_${studentCode}`)}`;
+  const response = await fetch(studentUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (response.status === 404) return;
+  if (!response.ok) throw Object.assign(new Error('تعذر التحقق من ارتباط الحساب بسجل الطالب.'), { status: 502 });
+  const document = await response.json();
+  const fields = document.fields || {};
+  const parentInfo = decodeFirestoreValue(fields.parentInfo || { mapValue: { fields: {} } });
+  const updates = {};
+  if (isParent) {
+    if (firestoreString(fields, 'linkedParentUid') !== uid && parentInfo.parentUid !== uid) return;
+    if (parentInfo.parentUid === uid) parentInfo.parentUid = '';
+    updates.linkedParentUid = '';
+    updates.parentInfo = parentInfo;
+  } else {
+    if (firestoreString(fields, 'authUid') !== uid) return;
+    updates.authUid = '';
+    updates.accountStatus = 'pending_activation';
+  }
+  const updateUrl = new URL(studentUrl);
+  Object.keys(updates).forEach((field) => updateUrl.searchParams.append('updateMask.fieldPaths', field));
+  const updateResponse = await fetch(updateUrl, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields: encodeFirestoreMap(updates) }),
+  });
+  if (!updateResponse.ok) throw Object.assign(new Error('تعذر فك ارتباط حساب الدخول من سجل الطالب.'), { status: 502 });
+}
+
+async function handleDeleteManagedAccount(request, env) {
+  try {
+    const operator = await verifyAuth(request, env);
+    if (!canManageAccounts(operator)) return jsonResponse({ error: 'غير مصرح بإدارة حسابات المدرسة.' }, 403, env);
+    if (Number(request.headers.get('Content-Length') || 0) > 4096) {
+      return jsonResponse({ error: 'الطلب أكبر من المسموح.' }, 413, env);
+    }
+    const body = await request.json();
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const target = await getManagedAccountTarget(operator, String(body.uid || ''), projectId, adminToken);
+    const authAccount = await getManagedAuthAccount(projectId, adminToken, target.uid);
+    const targetEmail = String(authAccount.email || target.profile.email || '').trim().toLowerCase();
+    if (!targetEmail || String(body.confirmationEmail || '').trim().toLowerCase() !== targetEmail) {
+      return jsonResponse({ error: 'اكتب البريد الإلكتروني للحساب نفسه لتأكيد الحذف النهائي.' }, 400, env);
+    }
+
+    if (target.profile.role === 'student') {
+      await clearStudentAccountLink(projectId, adminToken, operator.schoolId, target.profile.studentCode, target.uid, false);
+    } else if (target.profile.role === 'parent') {
+      const linkedStudentCodes = Array.isArray(target.profile.linkedStudentCodes) ? target.profile.linkedStudentCodes : [];
+      for (const studentCode of linkedStudentCodes) {
+        await clearStudentAccountLink(projectId, adminToken, operator.schoolId, studentCode, target.uid, true);
+      }
+    }
+
+    await updateManagedAccountProfile(target.profileUrl, adminToken, {
+      status: 'archived',
+      updatedAt: new Date().toISOString(),
+    });
+    await updateManagedAuthAccount(projectId, adminToken, target.uid, {
+      disabled: true,
+      validSince: String(Math.floor(Date.now() / 1000)),
+    });
+
+    const deleteAuthResponse = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:delete`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ localId: target.uid }),
+      }
+    );
+    if (!deleteAuthResponse.ok) {
+      throw Object.assign(new Error('تعذر حذف هوية Firebase؛ تم تعطيل الحساب وحفظه مؤرشفًا.'), { status: 502 });
+    }
+
+    const deleteProfileResponse = await fetch(target.profileUrl, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    if (!deleteProfileResponse.ok) {
+      throw Object.assign(new Error('حُذفت هوية الدخول، لكن تعذر حذف ملف الحساب؛ بقي الملف مؤرشفًا دون إمكانية دخول.'), { status: 502 });
+    }
+
+    await recordManagedAccountAudit(
+      env,
+      adminToken,
+      operator,
+      { ...target.profile, uid: target.uid, email: targetEmail },
+      'حذف نهائي لحساب الدخول',
+      `حُذفت هوية الدخول وملف المستخدم ${target.uid}، مع الاحتفاظ بسجلات المدرسة وسجل التدقيق.`
+    );
+    return jsonResponse({ success: true }, 200, env);
+  } catch (error) {
+    return jsonResponse({ error: error.message || 'تعذر حذف حساب الدخول.' }, error.status || 401, env);
+  }
+}
+
 async function handleChangePassword(request, env) {
   try {
     const operator = await verifyAuth(request, env);
-    if (operator.role !== 'tech_specialist') {
-      return jsonResponse({ error: 'Forbidden: only Technology Support can change user passwords' }, 403, env);
+    if (!canManageAccounts(operator)) {
+      return jsonResponse({ error: 'Forbidden: only school directors and Technology Support can manage school account passwords' }, 403, env);
     }
     if (typeof operator.schoolId !== 'string' || !operator.schoolId) {
-      return jsonResponse({ error: 'Technology Support account has no school assignment' }, 403, env);
+      return jsonResponse({ error: 'Account manager has no school assignment' }, 403, env);
     }
 
     const contentLength = Number(request.headers.get('Content-Length') || 0);
@@ -1393,11 +1833,10 @@ async function handleChangePassword(request, env) {
     const targetRole = profileFields.role?.stringValue;
     const targetSchoolId = profileFields.schoolId?.stringValue;
     const targetStatus = profileFields.status?.stringValue;
-    const allowedTargetRoles = ['student', 'parent', 'teacher', 'student_affairs', 'social_affairs'];
-    if (targetStatus === 'inactive' || !allowedTargetRoles.includes(targetRole) ||
+    if ((targetStatus && targetStatus !== 'active') || !canManageAccountRole(operator, targetRole) ||
       typeof targetSchoolId !== 'string' || !targetSchoolId ||
       targetSchoolId !== operator.schoolId || targetAccount.localId === operator.uid) {
-      return jsonResponse({ error: 'This account is not eligible for a technology-support password change' }, 403, env);
+      return jsonResponse({ error: 'This account is not eligible for school account management' }, 403, env);
     }
 
     const updateResponse = await fetch(`${apiBase}/accounts:update`, {
@@ -1429,29 +1868,25 @@ async function recordPasswordChangeAudit(env, accessToken, operator, targetAccou
   const projectId = env.FIREBASE_PROJECT_ID;
   const documentId = `password_change_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
   const endpoint = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schools/${encodeURIComponent(schoolId)}/auditLogs?documentId=${documentId}`;
-  const fields = {
-    action: { stringValue: 'تغيير كلمة مرور بواسطة مسؤول التطوير التكنولوجي' },
-    target: { stringValue: targetAccount.email },
-    details: { stringValue: `تم تغيير كلمة مرور الحساب ${targetAccount.localId}، ولم يتم تسجيل كلمة المرور.` },
-    category: { stringValue: 'security' },
-    operatorUid: { stringValue: operator.uid },
-    operatorRole: { stringValue: operator.role },
-    schoolId: { stringValue: schoolId },
-    createdAt: { timestampValue: new Date().toISOString() },
-  };
-
-  try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ fields }),
-    });
-    if (!response.ok) console.warn('Password-change audit write failed');
-  } catch {
-    console.warn('Password-change audit write failed');
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ fields: encodeFirestoreMap({
+      action: 'تغيير كلمة مرور حساب بواسطة مسؤول المدرسة',
+      target: targetAccount.email,
+      details: `تم تغيير كلمة مرور الحساب ${targetAccount.localId}، ولم يتم تسجيل كلمة المرور.`,
+      category: 'security',
+      operatorUid: operator.uid,
+      operatorRole: operator.role,
+      schoolId,
+      createdAt: new Date().toISOString(),
+    }) }),
+  });
+  if (!response.ok) {
+    throw Object.assign(new Error('تم تغيير كلمة المرور، لكن تعذر توثيق الإجراء في سجل التدقيق.'), { status: 502 });
   }
 }
 

@@ -29,7 +29,8 @@ service cloud.firestore {
     function isSuperAdmin() {
       return isAuthenticated() &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        getUserDoc().role == 'super_admin';
+        getUserDoc().role == 'super_admin' &&
+        (!getUserDoc().keys().hasAny(['status']) || getUserDoc().status == 'active');
     }
 
     function isActiveSchool(schoolId) {
@@ -41,6 +42,7 @@ service cloud.firestore {
       return isAuthenticated() &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         getUserDoc().role != 'super_admin' &&
+        (!getUserDoc().keys().hasAny(['status']) || getUserDoc().status == 'active') &&
         getUserDoc().schoolId == schoolId &&
         isActiveSchool(schoolId);
     }
@@ -108,7 +110,7 @@ service cloud.firestore {
       allow create: if false;
       allow update: if isSuperAdmin() || (
         isAuthenticated() && request.auth.uid == userId &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'updatedAt'])
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['phone', 'updatedAt'])
       );
       allow delete: if isSuperAdmin();
     }
