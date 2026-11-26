@@ -27,6 +27,11 @@ export default {
       return handlePublicSchoolApplication(request, requestEnv);
     }
 
+    const publicApplicationStatusMatch = url.pathname.match(/^\/api\/public\/school-applications\/([^/]+)$/);
+    if (publicApplicationStatusMatch && request.method === 'GET') {
+      return handlePublicSchoolApplicationStatus(request, requestEnv, publicApplicationStatusMatch[1]);
+    }
+
     // 3. Media Upload Signature Endpoint
     if (url.pathname === '/api/media/sign-upload' && request.method === 'POST') {
       return handleSignUpload(request, requestEnv);
@@ -2017,6 +2022,47 @@ async function handlePublicSchoolApplication(request, env) {
   }
 }
 
+async function handlePublicSchoolApplicationStatus(request, env, applicationId) {
+  const id = String(applicationId || '').trim();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+    return noStoreJsonResponse({ error: 'رقم طلب المدرسة غير صالح.' }, 400, env);
+  }
+
+  try {
+    const limiter = env.SCHOOL_APPLICATION_LIMITER;
+    if (!limiter) return noStoreJsonResponse({ error: 'خدمة متابعة الطلبات غير مكتملة الإعداد.' }, 503, env);
+    const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const ipLimit = await limiter.limit({ key: `school-application-status-ip:${clientIp}` });
+    if (!ipLimit.success) {
+      return noStoreJsonResponse({ error: 'تم إجراء استعلامات كثيرة. انتظر دقيقة ثم حاول.' }, 429, env);
+    }
+
+    const projectId = env.FIREBASE_PROJECT_ID;
+    const adminToken = await getFirebaseAdminAccessToken(env);
+    const applicationUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schoolApplications/${encodeURIComponent(id)}`;
+    const response = await fetch(applicationUrl, { headers: { Authorization: `Bearer ${adminToken}` } });
+    if (response.status === 404) {
+      return noStoreJsonResponse({ error: 'لم يُعثر على طلب بهذا الرقم.' }, 404, env);
+    }
+    if (!response.ok) throw new Error('تعذر قراءة حالة الطلب من قاعدة البيانات.');
+
+    const application = decodeFirestoreMap((await response.json()).fields || {});
+    if (!['pending', 'approved', 'rejected'].includes(application.status)) {
+      throw new Error('حالة طلب المدرسة غير صالحة.');
+    }
+
+    const result = { id, status: application.status };
+    if (typeof application.reviewedAt === 'string') result.reviewedAt = application.reviewedAt;
+    if (application.status === 'rejected' && typeof application.rejectionReason === 'string') {
+      result.rejectionReason = application.rejectionReason.slice(0, 500);
+    }
+    return noStoreJsonResponse(result, 200, env);
+  } catch (error) {
+    console.error('Public school application status lookup failed:', error.message);
+    return noStoreJsonResponse({ error: 'تعذر التحقق من حالة الطلب حاليًا. حاول مرة أخرى لاحقًا.' }, 502, env);
+  }
+}
+
 async function handlePlatformListApplications(request, env) {
   try {
     const user = await verifyAuth(request, env);
@@ -2628,6 +2674,12 @@ function jsonResponse(data, status = 200, env = null) {
       'Access-Control-Allow-Headers': 'Content-Type, Authorization'
     }
   });
+}
+
+function noStoreJsonResponse(data, status = 200, env = null) {
+  const response = jsonResponse(data, status, env);
+  response.headers.set('Cache-Control', 'no-store');
+  return response;
 }
 
 function getCorsOrigin(env) {

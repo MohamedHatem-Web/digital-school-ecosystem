@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('dse_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (error) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    }());
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="إرشادات الاستخدام المسؤول والشروط العامة لاستخدام منظومة المدرسة الرقمية.">
+  <title>الشروط وسياسة الاستخدام — منظومة المدرسة الرقمية</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/tokens.css?v=11.0">
+  <link rel="stylesheet" href="/css/base.css?v=11.1">
+  <link rel="stylesheet" href="/css/components.css?v=17.2">
+  <link rel="stylesheet" href="/css/public-site.css?v=17.2">
+  <link rel="stylesheet" href="/css/platform-public.css?v=1">
+</head>
+<body class="platform-public-page">
+  <header class="site-header">
+    <div class="container site-nav-container">
+      <a href="/" class="site-brand">
+        <div class="brand-crest" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+            <path d="M6 6h10M6 10h10"></path>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="school-name-title">منصة المنظومة الرقمية</span>
+          <span class="school-dept-sub">دليل المدارس والبوابة العامة</span>
+        </div>
+      </a>
+      <nav class="platform-public-nav" aria-label="معلومات المنظومة">
+        <a href="/" class="platform-public-nav-link">دليل المدارس</a>
+        <a href="/platform-about.html" class="platform-public-nav-link">عن المنظومة</a>
+        <a href="/platform-guide.html" class="platform-public-nav-link">دليل الاستخدام</a>
+        <a href="/platform-terms.html" class="platform-public-nav-link" aria-current="page">الشروط والسياسات</a>
+        <a href="/platform-start.html" class="platform-public-nav-link">طلب تفعيل مدرسة</a>
+      </nav>
+      <div class="header-cta-group">
+        <button type="button" class="theme-toggle-btn" data-platform-theme-toggle aria-label="تغيير المظهر"></button>
+        <a href="/platform-admin/" class="btn btn-outline btn-sm platform-admin-login">إدارة المنصة</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="platform-info-banner">
+      <div class="container">
+        <span class="platform-info-kicker">الاستخدام المسؤول</span>
+        <h1 class="platform-info-title">الشروط وسياسة الاستخدام</h1>
+        <p class="platform-info-lead">توضح هذه الإرشادات السلوك المتوقع من مستخدمي البوابة العامة وحسابات المدارس عند استخدام خدمات المنظومة.</p>
+      </div>
+    </section>
+
+    <div class="platform-info-content">
+      <section class="platform-info-section" aria-labelledby="acceptable-use">
+        <h2 class="platform-info-section-title" id="acceptable-use">قواعد الاستخدام</h2>
+        <article class="platform-info-card">
+          <ul class="platform-info-list">
+            <li>استخدم المنظومة للأغراض التعليمية والإدارية المصرح بها، وبما يتوافق مع تعليمات المدرسة والجهة المشغّلة.</li>
+            <li>لا تستخدم حسابًا أو صلاحية تخص شخصًا آخر، ولا تحاول الوصول إلى بيانات أو صفحات خارج الصلاحيات الممنوحة لك.</li>
+            <li>حافظ على سرية كلمة المرور ورابط الدعوة، وسجّل الخروج عند استخدام جهاز مشترك، وأبلغ مسؤول المدرسة إذا اشتبهت في دخول غير مصرح به.</li>
+            <li>أدخل معلومات صحيحة ومناسبة للخدمة، ولا تضف أو تنشر بيانات الطلاب أو العاملين في صفحات عامة أو خارج الغرض المدرسي المصرح به.</li>
+            <li>لا ترفع ملفات أو صورًا لا تملك حق استخدامها أو لا تملك الإذن المناسب لمعالجتها ضمن النظام.</li>
+            <li>لا تحاول تعطيل الخدمة أو اختبارها بطرق مؤذية أو تجاوز ضوابط الدخول والصلاحيات.</li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="platform-info-section" aria-labelledby="school-responsibilities">
+        <h2 class="platform-info-section-title" id="school-responsibilities">مسؤوليات المدرسة والمستخدم</h2>
+        <div class="platform-info-grid">
+          <article class="platform-info-card">
+            <h3>إدارة الحسابات والصلاحيات</h3>
+            <p>تتولى المدرسة التحقق من هوية مستخدميها، وتحديد الأدوار المناسبة، ومراجعة الحسابات عند انتقال الموظف أو تغير مسؤولياته.</p>
+          </article>
+          <article class="platform-info-card">
+            <h3>التعامل مع السجلات</h3>
+            <p>يجب أن يقتصر الاطلاع على السجلات المدرسية على الأشخاص المخولين، وأن تتبع المدرسة إجراءاتها المعتمدة لإدارة البيانات وحمايتها.</p>
+          </article>
+          <article class="platform-info-card">
+            <h3>استمرارية الخدمة</h3>
+            <p>قد تتأثر بعض الخدمات بالاتصال بالإنترنت أو بأعمال الصيانة أو بمزودي الخدمة. لا تستخدم البوابة بديلًا عن إجراءات المدرسة الرسمية عند تعطلها.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="platform-info-section" aria-labelledby="updates">
+        <h2 class="platform-info-section-title" id="updates">التحديثات والملاحظات</h2>
+        <article class="platform-info-card">
+          <p>قد تتغير الخدمات أو هذه الإرشادات عند تطوير المنظومة. راجع هذه الصفحة دوريًا، واتبع أي توجيهات تصدرها إدارة مدرستك أو الجهة المشغّلة.</p>
+          <div class="platform-info-notice">هذه صياغة تشغيلية أولية للتعريف بالاستخدام المسؤول، وليست استشارة قانونية أو سياسة خصوصية معتمدة. ينبغي على الجهة المشغّلة مراجعتها واعتمادها رسميًا، واستكمال سياسة خصوصية مستقلة توضح جمع البيانات واستخدامها والاحتفاظ بها ووسائل التواصل قبل اعتبارها شروطًا نهائية.</div>
+        </article>
+      </section>
+    </div>
+  </main>
+
+  <footer class="platform-public-footer">
+    <nav aria-label="روابط المنصة">
+      <a href="/">دليل المدارس</a>
+      <a href="/platform-about.html">عن المنظومة</a>
+      <a href="/platform-guide.html">دليل الاستخدام</a>
+      <a href="/platform-terms.html">الشروط والسياسات</a>
+      <a href="/platform-start.html">طلب تفعيل مدرسة</a>
+    </nav>
+    منظومة المدرسة الرقمية — البوابة العامة
+  </footer>
+  <script src="/js/platform-public.js" defer></script>
+  <script type="module">
+    import { syncPublicDashboardEntry } from '/js/platform-session-cta.js';
+    syncPublicDashboardEntry();
+  </script>
+</body>
+</html>

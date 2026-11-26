@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('dse_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (error) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    }());
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="خطوات استخدام دليل المدارس وطلب تفعيل مدرسة والدخول إلى بوابتها.">
+  <title>دليل الاستخدام — منظومة المدرسة الرقمية</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/tokens.css?v=11.0">
+  <link rel="stylesheet" href="/css/base.css?v=11.1">
+  <link rel="stylesheet" href="/css/components.css?v=17.2">
+  <link rel="stylesheet" href="/css/public-site.css?v=17.2">
+  <link rel="stylesheet" href="/css/platform-public.css?v=1">
+</head>
+<body class="platform-public-page">
+  <header class="site-header">
+    <div class="container site-nav-container">
+      <a href="/" class="site-brand">
+        <div class="brand-crest" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+            <path d="M6 6h10M6 10h10"></path>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="school-name-title">منصة المنظومة الرقمية</span>
+          <span class="school-dept-sub">دليل المدارس والبوابة العامة</span>
+        </div>
+      </a>
+      <nav class="platform-public-nav" aria-label="معلومات المنظومة">
+        <a href="/" class="platform-public-nav-link">دليل المدارس</a>
+        <a href="/platform-about.html" class="platform-public-nav-link">عن المنظومة</a>
+        <a href="/platform-guide.html" class="platform-public-nav-link" aria-current="page">دليل الاستخدام</a>
+        <a href="/platform-terms.html" class="platform-public-nav-link">الشروط والسياسات</a>
+        <a href="/platform-start.html" class="platform-public-nav-link">طلب تفعيل مدرسة</a>
+      </nav>
+      <div class="header-cta-group">
+        <button type="button" class="theme-toggle-btn" data-platform-theme-toggle aria-label="تغيير المظهر"></button>
+        <a href="/platform-admin/" class="btn btn-outline btn-sm platform-admin-login">إدارة المنصة</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="platform-info-banner">
+      <div class="container">
+        <span class="platform-info-kicker">دليل الاستخدام</span>
+        <h1 class="platform-info-title">خطوات بسيطة للوصول إلى الخدمات</h1>
+        <p class="platform-info-lead">ابدأ من البوابة العامة، ثم اتبع المسار المناسب لك: زيارة مدرسة مشاركة، أو تقديم طلب تفعيل مدرسة، أو الدخول بحسابك.</p>
+      </div>
+    </section>
+
+    <div class="platform-info-content">
+      <section class="platform-info-section" aria-labelledby="visitor-steps">
+        <h2 class="platform-info-section-title" id="visitor-steps">للزائر أو ولي الأمر</h2>
+        <div class="platform-info-grid">
+          <article class="platform-info-card">
+            <div class="platform-info-step">
+              <span class="platform-info-step-number">١</span>
+              <div>
+                <h3>اختر المدرسة</h3>
+                <p>من الصفحة الرئيسية، ابحث عن المدرسة المطلوبة واضغط «دخول بوابة المدرسة» للانتقال إلى رابطها المستقل.</p>
+              </div>
+            </div>
+          </article>
+          <article class="platform-info-card">
+            <div class="platform-info-step">
+              <span class="platform-info-step-number">٢</span>
+              <div>
+                <h3>افتح الخدمة المطلوبة</h3>
+                <p>تصفح المعلومات العامة المتاحة، أو استخدم صفحة تسجيل الدخول إذا كان لديك حساب صادر عن المدرسة.</p>
+              </div>
+            </div>
+          </article>
+          <article class="platform-info-card">
+            <div class="platform-info-step">
+              <span class="platform-info-step-number">٣</span>
+              <div>
+                <h3>استخدم حسابك المدرسي</h3>
+                <p>بعد تسجيل الدخول، ستظهر لك الخدمات المسموح بها لحسابك. تواصل مع إدارة مدرستك عند الحاجة إلى مساعدة أو تحديث للصلاحيات.</p>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="platform-info-section" aria-labelledby="school-steps">
+        <h2 class="platform-info-section-title" id="school-steps">للمدرسة التي تريد الانضمام</h2>
+        <div class="platform-info-grid">
+          <article class="platform-info-card">
+            <h3>طلب التفعيل</h3>
+            <p>ارجع إلى الصفحة الرئيسية واضغط «طلب تفعيل مدرسة»، ثم اختر صفتك وأدخل بيانات المدير وأخصائي التطوير التكنولوجي كما تطلب الاستمارة.</p>
+          </article>
+          <article class="platform-info-card">
+            <h3>انتظار المراجعة</h3>
+            <p>إرسال الطلب لا ينشئ حسابات دخول فورية؛ تتم مراجعته أولًا، ثم تُستكمل خطوات التفعيل عند الموافقة.</p>
+          </article>
+          <article class="platform-info-card">
+            <h3>دعوات الموظفين</h3>
+            <p>بعد تفعيل المدرسة، ينشئ المسؤول المعتمد الدعوات من داخل بوابة المدرسة، ويتبع الموظف رابط التفعيل الذي يصله من المدرسة.</p>
+          </article>
+        </div>
+      </section>
+
+      <div class="platform-info-notice">لا تشارك كلمة المرور أو رابط التفعيل مع أشخاص غير مخولين. إذا انتهت صلاحية الدعوة أو تعذر الدخول، اطلب من مسؤول المدرسة التحقق من الحساب وإصدار دعوة جديدة.</div>
+    </div>
+  </main>
+
+  <footer class="platform-public-footer">
+    <nav aria-label="روابط المنصة">
+      <a href="/">دليل المدارس</a>
+      <a href="/platform-about.html">عن المنظومة</a>
+      <a href="/platform-guide.html">دليل الاستخدام</a>
+      <a href="/platform-terms.html">الشروط والسياسات</a>
+      <a href="/platform-start.html">طلب تفعيل مدرسة</a>
+    </nav>
+    منظومة المدرسة الرقمية — البوابة العامة
+  </footer>
+  <script src="/js/platform-public.js" defer></script>
+  <script type="module">
+    import { syncPublicDashboardEntry } from '/js/platform-session-cta.js';
+    syncPublicDashboardEntry();
+  </script>
+</body>
+</html>

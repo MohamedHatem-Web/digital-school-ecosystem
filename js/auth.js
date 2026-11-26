@@ -15,23 +15,13 @@ import {
   setDoc,
 } from './firebase.js';
 import { recordAuditEvent } from './services/audit-service.js';
-import { buildTenantUrl, getTenantSchoolSlug, getTenantSlug } from './tenant-router.js';
 import {
   clearCachedUserSession as clearStoredUserSession,
   persistUserSession,
   readCachedUserSession,
 } from './session-cache.js';
 
-export const ROLE_DASHBOARDS = {
-  super_admin: '/platform-admin/dashboard.html',
-  director: 'dashboard/admin-overview.html',
-  tech_specialist: 'dashboard/tech-devices.html',
-  student_affairs: 'dashboard/student-affairs.html',
-  teacher: 'dashboard/teacher-portal.html',
-  student: 'dashboard/student-portal.html',
-  parent: 'dashboard/parent-portal.html',
-  social_affairs: 'dashboard/social-affairs.html',
-};
+export { ROLE_DASHBOARDS, getRoleDashboardUrl } from './dashboard-routing.js';
 
 export const ROLES_METADATA = {
   super_admin: { titleAr: 'مدير النظام العام', titleEn: 'Super Admin', badgeClass: 'badge-accent' },
@@ -295,15 +285,6 @@ export async function logout() {
   } else {
     window.location.replace(isInsideDashboard ? '../login.html' : 'login.html');
   }
-}
-
-/**
- * Determine redirect destination after successful login
- */
-export function getRoleDashboardUrl(role) {
-  const dashboardPath = ROLE_DASHBOARDS[role] || 'dashboard/admin-overview.html';
-  if (role === 'super_admin') return '/platform-admin/dashboard.html';
-  return getTenantSlug() ? buildTenantUrl(dashboardPath) : dashboardPath;
 }
 
 /**

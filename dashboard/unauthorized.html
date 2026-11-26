@@ -60,10 +60,11 @@
   </div>
 
   <script type="module">
-    import { getCurrentRole, getRoleDashboardUrl } from '../js/auth.js';
-    const role = getCurrentRole();
-    if (role) {
-      const target = getRoleDashboardUrl(role).replace('dashboard/', '');
+    import { getCurrentUser, getRoleDashboardUrl } from '../js/auth.js';
+    const user = getCurrentUser();
+    if (user?.role) {
+      const dashboardUrl = getRoleDashboardUrl(user.role, user.schoolId);
+      const target = dashboardUrl.startsWith('/') ? dashboardUrl : dashboardUrl.replace(/^dashboard\//, '');
       document.getElementById('back-my-dashboard-btn').href = target;
     }
   </script>

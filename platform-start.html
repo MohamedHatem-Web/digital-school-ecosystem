@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('dse_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (error) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    }());
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="قدّم طلب تفعيل مدرسة وتابع حالته من البوابة العامة لمنظومة المدرسة الرقمية.">
+  <title>طلب تفعيل مدرسة — منظومة المدرسة الرقمية</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/tokens.css?v=11.0">
+  <link rel="stylesheet" href="/css/base.css?v=11.1">
+  <link rel="stylesheet" href="/css/components.css?v=17.2">
+  <link rel="stylesheet" href="/css/public-site.css?v=17.2">
+  <link rel="stylesheet" href="/css/platform-public.css?v=1">
+</head>
+<body class="platform-public-page">
+  <header class="site-header">
+    <div class="container site-nav-container">
+      <a href="/" class="site-brand">
+        <div class="brand-crest" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+            <path d="M6 6h10M6 10h10"></path>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="school-name-title">منصة المنظومة الرقمية</span>
+          <span class="school-dept-sub">دليل المدارس والبوابة العامة</span>
+        </div>
+      </a>
+      <nav class="platform-public-nav" aria-label="معلومات المنظومة">
+        <a href="/" class="platform-public-nav-link">دليل المدارس</a>
+        <a href="/platform-about.html" class="platform-public-nav-link">عن المنظومة</a>
+        <a href="/platform-guide.html" class="platform-public-nav-link">دليل الاستخدام</a>
+        <a href="/platform-terms.html" class="platform-public-nav-link">الشروط والسياسات</a>
+        <a href="/platform-start.html" class="platform-public-nav-link" aria-current="page">طلب تفعيل مدرسة</a>
+      </nav>
+      <div class="header-cta-group">
+        <button type="button" class="theme-toggle-btn" data-platform-theme-toggle aria-label="تغيير المظهر"></button>
+        <a href="/platform-admin/" class="btn btn-outline btn-sm platform-admin-login">إدارة المنصة</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="platform-info-banner">
+      <div class="container">
+        <span class="platform-info-kicker">ابدأ مع منظومتك</span>
+        <h1 class="platform-info-title">طلب تفعيل مدرسة</h1>
+        <p class="platform-info-lead">قدّم بيانات مسؤولي المدرسة للمراجعة، ثم ارجع إلى هذه الصفحة لمتابعة القرار. إرسال الطلب لا يعني اعتماد المدرسة تلقائيًا.</p>
+      </div>
+    </section>
+
+    <div class="platform-info-content">
+      <section class="platform-info-section" aria-labelledby="application-tracking-heading">
+        <h2 class="platform-info-section-title" id="application-tracking-heading">متابعة طلبات هذا المتصفح</h2>
+        <div class="platform-info-card">
+          <p>نحفظ أرقام الطلبات على هذا الجهاز فقط، ونجلب حالة كل طلب من الخادم عند التحديث. إذا مسحت بيانات المتصفح، ستحتاج إلى الاحتفاظ برقم الطلب لاستعادته.</p>
+          <div id="school-application-trackers" class="platform-tracking-list" aria-live="polite" style="margin-top:16px;">
+            <p class="platform-info-card">جارٍ تحميل الطلبات المحفوظة...</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="platform-info-section" aria-labelledby="school-application-heading">
+        <h2 class="platform-info-section-title" id="school-application-heading">بيانات المدرسة والمسؤولين</h2>
+        <form id="school-application-form" class="platform-info-card platform-application-form">
+          <p>اختر دورك وأدخل بياناتك وبيانات شريكك في إدارة المدرسة. بعد الموافقة، ينشئ مدير المنصة رابط تفعيل خاصًا لكل حساب ويرسله يدويًا؛ لا يُرسل بريد تلقائي عند تقديم الطلب.</p>
+
+          <div class="platform-info-notice" style="margin-top:0;">
+            يجب أن يكون مقدّم الطلب والطرف الثاني مدير المدرسة وأخصائي التطوير التكنولوجي. أدخل بيانات صحيحة وتأكد من موافقة الطرفين على تقديمها.
+          </div>
+
+          <fieldset>
+            <legend>من أنت؟</legend>
+            <div class="platform-application-role-grid">
+              <label class="platform-application-role">
+                <input type="radio" name="applicantRole" value="director" required checked>
+                <span><strong>مدير المدرسة</strong><small>ستُطلب بيانات أخصائي التطوير التكنولوجي للطرف الثاني.</small></span>
+              </label>
+              <label class="platform-application-role">
+                <input type="radio" name="applicantRole" value="tech_specialist" required>
+                <span><strong>أخصائي التطوير التكنولوجي</strong><small>ستُطلب بيانات مدير المدرسة للطرف الثاني.</small></span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="platform-application-fields">
+            <div>
+              <label class="form-label" for="school-name-ar">اسم المدرسة بالعربية</label>
+              <input id="school-name-ar" class="form-control" name="schoolNameAr" maxlength="160" autocomplete="organization" required>
+            </div>
+            <div>
+              <label class="form-label" for="school-name-en">اسم المدرسة بالإنجليزية (اختياري)</label>
+              <input id="school-name-en" class="form-control" name="schoolNameEn" maxlength="160" autocomplete="organization">
+            </div>
+            <div>
+              <label class="form-label" for="school-slug">الرابط المقترح للمدرسة</label>
+              <input id="school-slug" class="form-control" name="schoolSlug" placeholder="مثال: alnokhba-school" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" maxlength="63" autocapitalize="off" spellcheck="false" required>
+              <small class="platform-directory-hint">استخدم حروفًا إنجليزية صغيرة وأرقامًا وشرطات فقط.</small>
+            </div>
+            <div>
+              <label class="form-label" for="school-phone">رقم التواصل (اختياري)</label>
+              <input id="school-phone" class="form-control" name="phone" type="tel" maxlength="32" autocomplete="tel">
+            </div>
+            <div>
+              <label class="form-label" id="applicant-name-label" for="school-applicant-name">اسمك — مدير المدرسة</label>
+              <input id="school-applicant-name" class="form-control" name="applicantName" maxlength="120" autocomplete="name" required>
+            </div>
+            <div>
+              <label class="form-label" id="applicant-email-label" for="school-applicant-email">بريدك الإلكتروني — مدير المدرسة</label>
+              <input id="school-applicant-email" class="form-control" name="applicantEmail" type="email" maxlength="254" autocomplete="email" required>
+            </div>
+            <div>
+              <label class="form-label" id="counterpart-name-label" for="school-counterpart-name">اسم أخصائي التطوير التكنولوجي</label>
+              <input id="school-counterpart-name" class="form-control" name="counterpartName" maxlength="120" autocomplete="name" required>
+            </div>
+            <div>
+              <label class="form-label" id="counterpart-email-label" for="school-counterpart-email">بريد أخصائي التطوير التكنولوجي</label>
+              <input id="school-counterpart-email" class="form-control" name="counterpartEmail" type="email" maxlength="254" autocomplete="off" required>
+            </div>
+          </div>
+
+          <input type="text" name="faxNumber" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden;">
+
+          <label class="platform-application-terms">
+            <input type="checkbox" name="acceptedTerms" value="true" required>
+            <span>أقر بأنني مخول بتقديم الطلب وأن بيانات المدرسة والطرفين صحيحة، واطلعت على <a href="/platform-terms.html" target="_blank" rel="noopener">الشروط وسياسة الاستخدام</a>.</span>
+          </label>
+
+          <button class="btn btn-primary btn-md" type="submit" style="min-height:46px;">إرسال طلب التفعيل ←</button>
+          <p id="school-application-feedback" class="platform-application-status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <div class="platform-info-notice">رقم المتابعة وحده لا يعرض بيانات الاتصال أو أسماء مقدمي الطلب؛ تظهر فقط حالة المراجعة وسبب الرفض إن وُجد.</div>
+    </div>
+  </main>
+
+  <footer class="platform-public-footer">
+    <nav aria-label="روابط المنصة">
+      <a href="/">دليل المدارس</a>
+      <a href="/platform-about.html">عن المنظومة</a>
+      <a href="/platform-guide.html">دليل الاستخدام</a>
+      <a href="/platform-terms.html">الشروط والسياسات</a>
+      <a href="/platform-start.html">طلب تفعيل مدرسة</a>
+    </nav>
+    منظومة المدرسة الرقمية — البوابة العامة
+  </footer>
+  <script src="/js/platform-public.js" defer></script>
+  <script type="module" src="/js/platform-onboarding.js"></script>
+  <script type="module">
+    import { syncPublicDashboardEntry } from '/js/platform-session-cta.js';
+    syncPublicDashboardEntry();
+  </script>
+</body>
+</html>

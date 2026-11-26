@@ -8,7 +8,7 @@ export function getTenantSlug(pathname = window.location.pathname) {
   const reserved = new Set([
     'index.html', 'login.html', 'about.html', 'activities.html', 'calendar.html',
     'contact.html', 'gallery.html', 'leadership.html', 'news.html', 'offline.html',
-    'verify.html', 'dashboard', 'js', 'css', 'images', 'evidence', 'api',
+    'verify.html', 'dashboard', 'js', 'css', 'images', 'evidence', 'api', 'platform',
     'platform-admin',
   ]);
   if (reserved.has(segments[0])) return null;

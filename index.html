@@ -27,6 +27,7 @@
   <link rel="stylesheet" href="css/base.css?v=11.1">
   <link rel="stylesheet" href="css/components.css?v=17.2">
   <link rel="stylesheet" href="css/public-site.css?v=17.2">
+  <link rel="stylesheet" href="css/platform-public.css?v=1">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#0a1628">
   <meta name="mobile-web-app-capable" content="yes">
@@ -37,7 +38,7 @@
     .platform-directory-footer {
       display: none;
     }
-    html[data-platform-root="true"] main > section:not(#platform-schools-section):not(#platform-onboarding-section) {
+    html[data-platform-root="true"] main > section:not(#platform-schools-section) {
       display: none !important;
     }
     html[data-platform-root="true"] .top-gov-bar,
@@ -86,70 +87,8 @@
     html[data-platform-root="true"] .platform-directory-footer {
       display: block;
     }
-    html[data-platform-root="true"] #platform-schools-section,
-    html[data-platform-root="true"] #platform-onboarding-section {
+    html[data-platform-root="true"] #platform-schools-section {
       text-align: center;
-    }
-    html[data-platform-root="true"] #platform-onboarding-section {
-      width: 100%;
-      max-width: 1080px;
-      margin: 0 auto;
-      padding: 34px 24px 20px !important;
-      border: 0 !important;
-      background: transparent !important;
-    }
-    html[data-platform-root="true"] .platform-onboarding-card {
-      position: relative;
-      overflow: hidden;
-      grid-template-columns: auto minmax(0, 1fr) auto;
-      align-items: center;
-      gap: 20px;
-      padding: 24px 28px;
-      border: 1px solid rgba(96,165,250,.24);
-      border-color: rgba(96,165,250,.24);
-      border-radius: 22px;
-      box-shadow: 0 18px 42px rgba(2,6,23,.18);
-      background:
-        radial-gradient(ellipse at 0% 50%, rgba(37,99,235,.2), transparent 58%),
-        linear-gradient(135deg, rgba(30,41,59,.96), rgba(15,23,42,.96));
-      text-align: right;
-    }
-    html[data-theme="light"][data-platform-root="true"] .platform-onboarding-card {
-      border-color: rgba(37,99,235,.16);
-      background:
-        radial-gradient(ellipse at 0% 50%, rgba(37,99,235,.09), transparent 58%),
-        linear-gradient(135deg, #fff, #f3f7ff);
-    }
-    .platform-onboarding-mark {
-      width: 58px;
-      height: 58px;
-      display: grid;
-      place-items: center;
-      border: 1px solid rgba(96,165,250,.3);
-      border-radius: 18px;
-      background: rgba(37,99,235,.14);
-      color: #93c5fd;
-      font-size: 27px;
-    }
-    html[data-theme="light"][data-platform-root="true"] .platform-onboarding-mark {
-      color: #1d4ed8;
-      background: rgba(37,99,235,.08);
-    }
-    html[data-platform-root="true"] .platform-onboarding-card .badge {
-      margin-bottom: 5px;
-    }
-    html[data-platform-root="true"] .platform-onboarding-card h2 {
-      font-size: clamp(20px, 2.4vw, 26px) !important;
-      letter-spacing: -.025em;
-    }
-    html[data-platform-root="true"] .platform-onboarding-card p {
-      max-width: 620px;
-      font-size: 14px;
-    }
-    html[data-platform-root="true"] .platform-onboarding-card > button {
-      min-width: 188px;
-      min-height: 48px;
-      box-shadow: 0 10px 24px rgba(37,99,235,.24);
     }
     html[data-platform-root="true"] #platform-schools-grid {
       max-width: 960px;
@@ -316,22 +255,6 @@
       100% { transform: translateX(100%); }
     }
     @media (max-width: 860px) {
-      html[data-platform-root="true"] #platform-onboarding-section {
-        padding-inline: 18px !important;
-      }
-      html[data-platform-root="true"] .platform-onboarding-card {
-        grid-template-columns: 1fr;
-        justify-items: center;
-        gap: 14px;
-        padding: 22px;
-        text-align: center;
-      }
-      html[data-platform-root="true"] .platform-onboarding-card > div:nth-child(2) {
-        text-align: center;
-      }
-      html[data-platform-root="true"] .platform-onboarding-card > button {
-        width: 100%;
-      }
       html[data-platform-root="true"] #platform-schools-grid {
         max-width: 560px;
         grid-template-columns: minmax(0, 1fr);
@@ -356,18 +279,6 @@
       html[data-platform-root="true"] #platform-schools-grid .platform-school-card {
         min-height: 205px;
         padding: 19px;
-      }
-      html[data-platform-root="true"] .platform-onboarding-card {
-        grid-template-columns: 1fr;
-        gap: 13px;
-        padding: 20px;
-        text-align: center;
-      }
-      html[data-platform-root="true"] .platform-onboarding-mark {
-        margin: 0 auto;
-      }
-      html[data-platform-root="true"] .platform-onboarding-card > button {
-        width: 100%;
       }
       html[data-platform-root="true"] .platform-school-status {
         padding: 4px 7px;
@@ -419,6 +330,14 @@
           <span class="school-dept-sub" id="brand-admin-name">بوابة الإدارة المدرسية الموحدة</span>
         </div>
       </a>
+
+      <nav class="platform-public-nav" aria-label="معلومات المنظومة">
+        <a href="/" class="platform-public-nav-link" aria-current="page">دليل المدارس</a>
+        <a href="/platform-about.html" class="platform-public-nav-link">عن المنظومة</a>
+        <a href="/platform-guide.html" class="platform-public-nav-link">دليل الاستخدام</a>
+        <a href="/platform-terms.html" class="platform-public-nav-link">الشروط والسياسات</a>
+        <a href="/platform-start.html" class="platform-public-nav-link">طلب تفعيل مدرسة</a>
+      </nav>
 
       <!-- Desktop Nav (Hidden on Mobile) -->
       <nav class="desktop-menu" aria-label="القائمة الرئيسية">
@@ -491,20 +410,6 @@
       </div>
     </section>
 
-    <section id="platform-onboarding-section" style="display:none;padding:var(--space-8) 0;background:var(--bg-page);">
-      <div class="container">
-        <div class="platform-onboarding-card">
-          <div class="platform-onboarding-mark" aria-hidden="true">＋</div>
-          <div>
-            <span class="badge badge-primary">انضم إلى المنظومة</span>
-            <h2 style="font-size:var(--text-xl);margin:var(--space-2) 0;">مدرستك غير مسجلة بعد؟</h2>
-            <p style="color:var(--text-muted);margin:0;line-height:var(--leading-relaxed);">اختر دورك وسجّل بيانات المدير وأخصائي التطوير للمراجعة؛ وبعد الموافقة ينشئ مدير المنصة رابط تفعيل آمنًا لكلٍ منهما.</p>
-          </div>
-          <button type="button" id="open-school-registration-btn" class="btn btn-primary btn-md">طلب تفعيل مدرسة ←</button>
-        </div>
-      </div>
-    </section>
-
     <!-- Platform Schools Directory (shown on the platform root only) -->
     <section id="platform-schools-section" style="display:none;padding:var(--space-10) 0;background:var(--bg-surface);border-block-end:1px solid var(--border-subtle);">
       <div class="container">
@@ -513,6 +418,23 @@
           <h2 style="font-size:var(--text-2xl);font-weight:850;margin:var(--space-2) 0;">اختر المدرسة التي تريد دخولها</h2>
           <p style="color:var(--text-muted);margin:0;">تنتقل إلى بوابة المدرسة المنفصلة ومحتوياتها الخاصة بكل مدرسة.</p>
         </div>
+        <div class="platform-directory-tools">
+          <label class="platform-directory-search-label" for="platform-schools-search">ابحث عن مدرسة</label>
+          <div class="platform-directory-search">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="m20 20-4-4"></path>
+            </svg>
+            <input id="platform-schools-search" type="search" class="form-control" autocomplete="off" placeholder="اسم المدرسة أو الإدارة أو الرابط..." aria-controls="platform-schools-grid platform-favorites-grid">
+          </div>
+          <p class="platform-directory-hint">ابحث بالعربية أو الإنجليزية. المفضلة محفوظة على هذا الجهاز وتظهر أولًا.</p>
+        </div>
+        <p id="platform-directory-feedback" class="platform-directory-feedback" role="status" aria-live="polite"></p>
+        <p id="platform-directory-empty" class="platform-directory-empty" role="status" style="display:none;"></p>
+        <section id="platform-favorites-section" class="platform-favorites-section" aria-labelledby="platform-favorites-heading" style="display:none;">
+          <h3 id="platform-favorites-heading" class="platform-favorites-heading">مدارسي المفضلة</h3>
+          <div id="platform-favorites-grid" class="platform-school-grid" aria-busy="true"></div>
+        </section>
         <div id="platform-schools-grid" aria-busy="true" style="display:grid;gap:var(--space-4);">
           <article class="platform-skeleton-card" aria-hidden="true">
             <div style="display:flex;align-items:center;gap:14px;margin-bottom:28px;">
@@ -669,72 +591,6 @@
     </section>
   </main>
 
-  <div id="school-registration-modal" role="dialog" aria-modal="true" aria-labelledby="school-registration-modal-title" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(2,6,23,.72);padding:var(--space-4);overflow:auto;">
-    <div style="width:min(760px,100%);margin:5vh auto;background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);box-shadow:var(--shadow-xl);">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:var(--space-4);padding:var(--space-5);border-block-end:1px solid var(--border-subtle);">
-        <div>
-          <span class="badge badge-primary">طلب تفعيل مدرسة</span>
-          <h2 id="school-registration-modal-title" style="margin:var(--space-2) 0 0;">شروط التفعيل وبيانات الطلب</h2>
-        </div>
-        <button type="button" id="close-school-registration-btn" class="btn btn-outline btn-sm" aria-label="إغلاق">✕</button>
-      </div>
-      <form id="school-registration-form" style="padding:var(--space-5);">
-        <p style="line-height:1.8;margin-top:0;">اختر دورك وأدخل بياناتك وبيانات شريكك في إدارة المدرسة. لن يُرسل بريد عند تقديم الطلب؛ بعد مراجعته واعتماده، ينشئ مدير المنصة رابط تفعيل منفصلًا لكل حساب ويرسله لكما يدويًا.</p>
-        <div style="padding:var(--space-4);border:1px solid var(--border-subtle);border-radius:var(--radius-md);background:var(--bg-surface-subtle);margin-bottom:var(--space-4);line-height:1.9;font-size:var(--text-sm);">
-          <strong>شروط الاستخدام والتنبيهات:</strong>
-          <ul style="margin:var(--space-2) 0 0;padding-inline-start:var(--space-5);">
-            <li>يجب أن يكون مقدم الطلب أو الطرف الثاني مدير المدرسة أو أخصائي التطوير التكنولوجي.</li>
-            <li>يجب تقديم اسم المدرسة والرابط المقترح ومعلومات التواصل الحقيقية.</li>
-            <li>تظل البيانات المعروضة للمنصة مسؤولية المدرسة ولا يعتمد الحساب أو الرابط إلا بعد الموافقة الرسمية.</li>
-            <li>بعد موافقة مدير المنصة، يتحقق كل شخص من بريده عبر رابط تفعيل خاص يُرسل إليه يدويًا من جهة المدرسة.</li>
-          </ul>
-        </div>
-        <fieldset style="border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:var(--space-4);margin:0 0 var(--space-4);">
-          <legend style="padding-inline:var(--space-2);font-weight:700;">من أنت؟</legend>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--space-3);">
-            <label style="display:flex;align-items:flex-start;gap:var(--space-2);padding:var(--space-3);border:1px solid var(--border-subtle);border-radius:var(--radius-md);cursor:pointer;">
-              <input type="radio" name="applicantRole" value="director" required checked>
-              <span><strong>مدير المدرسة</strong><small style="display:block;color:var(--text-muted);">بيانات الطرف الثاني ستكون لأخصائي التطوير التكنولوجي.</small></span>
-            </label>
-            <label style="display:flex;align-items:flex-start;gap:var(--space-2);padding:var(--space-3);border:1px solid var(--border-subtle);border-radius:var(--radius-md);cursor:pointer;">
-              <input type="radio" name="applicantRole" value="tech_specialist" required>
-              <span><strong>أخصائي التطوير التكنولوجي</strong><small style="display:block;color:var(--text-muted);">بيانات الطرف الثاني ستكون لمدير المدرسة.</small></span>
-            </label>
-          </div>
-        </fieldset>
-        <label style="display:flex;align-items:flex-start;gap:var(--space-2);margin-bottom:var(--space-4);font-size:var(--text-sm);">
-          <input type="checkbox" name="acceptedTerms" value="true" required>
-          <span>أقر بأنني مخول بتقديم طلب المدرسة، وأن بيانات الطرفين والمدرسة صحيحة.</span>
-        </label>
-        <input type="text" name="faxNumber" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden;">
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:var(--space-3);">
-          <input class="form-control" name="schoolNameAr" placeholder="اسم المدرسة بالعربية" maxlength="160" required>
-          <input class="form-control" name="schoolNameEn" placeholder="اسم المدرسة بالإنجليزية (اختياري)" maxlength="160">
-          <input class="form-control" name="schoolSlug" placeholder="اسم الرابط مثل: alnokhba-school" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required>
-          <input class="form-control" name="phone" placeholder="رقم التواصل" maxlength="32">
-          <div>
-            <label class="form-label" id="applicant-name-label" for="school-applicant-name">اسمك — مدير المدرسة</label>
-            <input id="school-applicant-name" class="form-control" name="applicantName" placeholder="اسم مقدم الطلب" maxlength="120" autocomplete="name" required>
-          </div>
-          <div>
-            <label class="form-label" id="applicant-email-label" for="school-applicant-email">بريدك الإلكتروني — مدير المدرسة</label>
-            <input id="school-applicant-email" type="email" name="applicantEmail" class="form-control" placeholder="name@example.com" autocomplete="email" maxlength="254" required>
-          </div>
-          <div>
-            <label class="form-label" id="counterpart-name-label" for="school-counterpart-name">اسم أخصائي التطوير التكنولوجي</label>
-            <input id="school-counterpart-name" class="form-control" name="counterpartName" placeholder="اسم الطرف الثاني" maxlength="120" required>
-          </div>
-          <div>
-            <label class="form-label" id="counterpart-email-label" for="school-counterpart-email">بريد أخصائي التطوير التكنولوجي</label>
-            <input id="school-counterpart-email" type="email" name="counterpartEmail" class="form-control" placeholder="name@example.com" autocomplete="off" maxlength="254" required>
-          </div>
-          <button class="btn btn-primary btn-md" type="submit" style="min-height:44px;">إرسال طلب التفعيل ←</button>
-        </div>
-        <p id="school-registration-status" role="status" style="margin:var(--space-3) 0 0;"></p>
-      </form>
-    </div>
-  </div>
-
   <!-- Site Footer -->
   <footer class="site-footer">
     <div class="container footer-main-grid">
@@ -782,17 +638,11 @@
     import { isPlatformRoot } from './js/tenant-router.js';
     import { getCmsItems } from './js/services/cms-service.js';
     import { getFamilyStudentRecords } from './js/services/account-service.js';
-    import { submitSchoolApplication } from './js/services/school-service.js';
     import { getStudents } from './js/services/student-service.js';
     import { getTabletDevicesForStudent } from './js/services/tablet-service.js';
     import { printHtmlAsPdf } from './js/utils/pdf-export.js';
 
     initComponents();
-
-    const schoolRegistrationForm = document.getElementById('school-registration-form');
-    const schoolRegistrationModal = document.getElementById('school-registration-modal');
-    const openSchoolRegistrationBtn = document.getElementById('open-school-registration-btn');
-    const closeSchoolRegistrationBtn = document.getElementById('close-school-registration-btn');
 
     const publicDocumentTemplates = {
       'download-tablet-receipt-template': {
@@ -845,41 +695,145 @@
       });
     });
 
+    const platformFavoritesStorageKey = 'dse_platform_school_favorites_v1';
+    let platformDirectorySchools = [];
+    let platformFavoriteIds = readPlatformFavorites();
+
+    function readPlatformFavorites() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(platformFavoritesStorageKey) || '[]');
+        if (!Array.isArray(saved)) throw new Error('Saved school favorites are not an array.');
+        return new Set(saved.filter((schoolId) => typeof schoolId === 'string' && schoolId.length > 0 && schoolId.length <= 120));
+      } catch (error) {
+        console.warn('Could not read saved school favorites:', error);
+        return new Set();
+      }
+    }
+
+    function savePlatformFavorites(favoriteIds) {
+      try {
+        localStorage.setItem(platformFavoritesStorageKey, JSON.stringify([...favoriteIds]));
+        return true;
+      } catch (error) {
+        console.warn('Could not save school favorites:', error);
+        const feedback = document.getElementById('platform-directory-feedback');
+        if (feedback) feedback.textContent = 'تعذر حفظ المفضلة في هذا المتصفح. تحقق من إعدادات التخزين وحاول مجددًا.';
+        return false;
+      }
+    }
+
+    function normalizeDirectorySearch(value) {
+      return String(value || '')
+        .toLocaleLowerCase('ar')
+        .replace(/[ًٌٍَُِّْـ]/g, '')
+        .replace(/[أإآ]/g, 'ا')
+        .replace(/ى/g, 'ي')
+        .trim();
+    }
+
+    function renderPlatformSchoolCard(school) {
+      const name = school.nameAr || school.schoolNameAr || school.slug || school.schoolId;
+      const administration = school.administration || school.adminDeptAr || school.directorate || 'بوابة مدرسية معتمدة ضمن المنظومة';
+      const logo = school.branding?.logoUrl || '';
+      const schoolId = school.slug || school.schoolId;
+      const isFavorite = platformFavoriteIds.has(schoolId);
+      return `
+        <article class="platform-school-card">
+          <div class="platform-school-card-header">
+            <div class="platform-school-card-identity">
+              ${logo ? `<img class="platform-school-logo" src="${escapeInquiryHtml(logo)}" alt="">` : `<div class="platform-school-logo" aria-hidden="true" style="font-size:26px;">🏫</div>`}
+              <h3 class="platform-school-card-title">${escapeInquiryHtml(name)}</h3>
+            </div>
+            <div class="platform-school-card-actions">
+              <button type="button" class="platform-school-favorite${isFavorite ? ' is-favorite' : ''}" data-favorite-school="${escapeInquiryHtml(schoolId)}" aria-pressed="${isFavorite}" aria-label="${isFavorite ? 'إزالة' : 'إضافة'} ${escapeInquiryHtml(name)} ${isFavorite ? 'من' : 'إلى'} المفضلة" title="${isFavorite ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة'}">
+                <span aria-hidden="true">${isFavorite ? '★' : '☆'}</span>
+              </button>
+              <span class="platform-school-status">معتمدة</span>
+            </div>
+          </div>
+          <p class="platform-school-card-description">${escapeInquiryHtml(administration)}</p>
+          <a href="/${encodeURIComponent(schoolId)}/" class="btn btn-primary btn-md platform-school-card-link"><span>دخول بوابة المدرسة</span><span aria-hidden="true">←</span></a>
+        </article>
+      `;
+    }
+
+    function renderPlatformDirectory() {
+      const favoritesSection = document.getElementById('platform-favorites-section');
+      const favoritesGrid = document.getElementById('platform-favorites-grid');
+      const schoolsGrid = document.getElementById('platform-schools-grid');
+      const emptyState = document.getElementById('platform-directory-empty');
+      const searchTerm = normalizeDirectorySearch(document.getElementById('platform-schools-search')?.value);
+      const visibleSchools = platformDirectorySchools.filter((school) => {
+        const searchableText = normalizeDirectorySearch([
+          school.nameAr, school.schoolNameAr, school.nameEn, school.schoolNameEn,
+          school.administration, school.adminDeptAr, school.directorate, school.slug, school.schoolId,
+        ].filter(Boolean).join(' '));
+        return !searchTerm || searchableText.includes(searchTerm);
+      });
+      const favoriteSchools = visibleSchools.filter((school) => platformFavoriteIds.has(school.slug || school.schoolId));
+      const otherSchools = visibleSchools
+        .filter((school) => !platformFavoriteIds.has(school.slug || school.schoolId))
+        .sort((a, b) => String(a.nameAr || a.schoolNameAr || a.nameEn || '').localeCompare(
+          String(b.nameAr || b.schoolNameAr || b.nameEn || ''),
+          'ar',
+        ));
+
+      if (favoritesSection) favoritesSection.style.display = favoriteSchools.length ? 'block' : 'none';
+      if (favoritesGrid) {
+        favoritesGrid.innerHTML = favoriteSchools.map(renderPlatformSchoolCard).join('');
+        favoritesGrid.setAttribute('aria-busy', 'false');
+      }
+      if (schoolsGrid) {
+        schoolsGrid.innerHTML = otherSchools.map(renderPlatformSchoolCard).join('');
+        schoolsGrid.setAttribute('aria-busy', 'false');
+      }
+      if (emptyState) {
+        emptyState.textContent = platformDirectorySchools.length
+          ? 'لا توجد مدرسة تطابق بحثك.'
+          : 'لا توجد مدارس معتمدة ومنشورة حاليًا.';
+        emptyState.style.display = visibleSchools.length ? 'none' : 'block';
+      }
+    }
+
+    function togglePlatformFavorite(event) {
+      const button = event.target.closest('button[data-favorite-school]');
+      if (!button) return;
+      const schoolId = button.getAttribute('data-favorite-school');
+      if (!schoolId) return;
+
+      const nextFavorites = new Set(platformFavoriteIds);
+      const wasFavorite = nextFavorites.has(schoolId);
+      if (wasFavorite) nextFavorites.delete(schoolId);
+      else nextFavorites.add(schoolId);
+      if (!savePlatformFavorites(nextFavorites)) return;
+
+      platformFavoriteIds = nextFavorites;
+      renderPlatformDirectory();
+      const school = platformDirectorySchools.find((item) => (item.slug || item.schoolId) === schoolId);
+      const schoolName = school?.nameAr || school?.schoolNameAr || schoolId;
+      const feedback = document.getElementById('platform-directory-feedback');
+      if (feedback) feedback.textContent = wasFavorite
+        ? `تمت إزالة ${schoolName} من المفضلة.`
+        : `تمت إضافة ${schoolName} إلى المفضلة وستظهر في بداية الدليل.`;
+    }
+
+    document.getElementById('platform-schools-search')?.addEventListener('input', renderPlatformDirectory);
+    document.getElementById('platform-favorites-grid')?.addEventListener('click', togglePlatformFavorite);
+    document.getElementById('platform-schools-grid')?.addEventListener('click', togglePlatformFavorite);
+
     async function loadHomePage() {
       if (isPlatformRoot()) {
         const section = document.getElementById('platform-schools-section');
-        const onboardingSection = document.getElementById('platform-onboarding-section');
         const grid = document.getElementById('platform-schools-grid');
         if (section) section.style.display = 'block';
-        if (onboardingSection) onboardingSection.style.display = 'block';
         document.getElementById('brand-school-name')?.replaceChildren(document.createTextNode('منصة المنظومة الرقمية'));
         document.getElementById('brand-admin-name')?.replaceChildren(document.createTextNode('دليل المدارس والبوابة العامة'));
         try {
-          const schools = await listApprovedSchools();
-          schools.forEach((school) => {
+          platformDirectorySchools = await listApprovedSchools();
+          platformDirectorySchools.forEach((school) => {
             rememberApprovedTenantAccess(school.slug || school.schoolId);
           });
-          if (grid) grid.setAttribute('aria-busy', 'false');
-          if (grid) {
-            grid.innerHTML = schools.length ? schools.map((school) => {
-              const name = school.nameAr || school.schoolNameAr || school.slug || school.schoolId;
-              const administration = school.administration || school.adminDeptAr || 'بوابة مدرسية معتمدة ضمن المنظومة';
-              const logo = school.branding?.logoUrl ? school.branding.logoUrl : '';
-              const slug = school.slug || school.schoolId;
-              return `
-              <article class="platform-school-card">
-                <div class="platform-school-card-header">
-                  <div class="platform-school-card-identity">
-                    ${logo ? `<img class="platform-school-logo" src="${escapeInquiryHtml(logo)}" alt="">` : `<div class="platform-school-logo" aria-hidden="true" style="font-size:26px;">🏫</div>`}
-                    <h3 class="platform-school-card-title">${escapeInquiryHtml(name)}</h3>
-                  </div>
-                  <span class="platform-school-status">معتمدة</span>
-                </div>
-                <p class="platform-school-card-description">${escapeInquiryHtml(administration)}</p>
-                <a href="/${encodeURIComponent(slug)}/" class="btn btn-primary btn-md platform-school-card-link"><span>دخول بوابة المدرسة</span><span aria-hidden="true">←</span></a>
-              </article>
-            `}).join('') : '<p>لا توجد مدارس منشورة حاليًا.</p>';
-          }
+          renderPlatformDirectory();
         } catch (error) {
           if (grid) grid.setAttribute('aria-busy', 'false');
           if (grid) grid.innerHTML = '<p>تعذر تحميل دليل المدارس حاليًا.</p>';
@@ -1043,55 +997,6 @@
 
     loadHomePage();
 
-    openSchoolRegistrationBtn?.addEventListener('click', () => {
-      if (schoolRegistrationModal) {
-        schoolRegistrationModal.style.display = 'block';
-        document.body.style.overflow = 'hidden';
-      }
-    });
-    closeSchoolRegistrationBtn?.addEventListener('click', () => {
-      if (schoolRegistrationModal) {
-        schoolRegistrationModal.style.display = 'none';
-        document.body.style.overflow = '';
-      }
-    });
-    schoolRegistrationModal?.addEventListener('click', (event) => {
-      if (event.target === schoolRegistrationModal) {
-        schoolRegistrationModal.style.display = 'none';
-        document.body.style.overflow = '';
-      }
-    });
-
-    const applicantRoleInputs = schoolRegistrationForm?.querySelectorAll('input[name="applicantRole"]') || [];
-    const updateSchoolApplicationRoleLabels = () => {
-      const role = schoolRegistrationForm?.querySelector('input[name="applicantRole"]:checked')?.value || 'director';
-      const applicantTitle = role === 'director' ? 'مدير المدرسة' : 'أخصائي التطوير التكنولوجي';
-      const counterpartTitle = role === 'director' ? 'أخصائي التطوير التكنولوجي' : 'مدير المدرسة';
-      document.getElementById('applicant-name-label').textContent = `اسمك — ${applicantTitle}`;
-      document.getElementById('applicant-email-label').textContent = `بريدك الإلكتروني — ${applicantTitle}`;
-      document.getElementById('counterpart-name-label').textContent = `اسم ${counterpartTitle}`;
-      document.getElementById('counterpart-email-label').textContent = `بريد ${counterpartTitle}`;
-    };
-    applicantRoleInputs.forEach((input) => input.addEventListener('change', updateSchoolApplicationRoleLabels));
-    updateSchoolApplicationRoleLabels();
-
-    schoolRegistrationForm?.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const status = document.getElementById('school-registration-status');
-      const submitButton = schoolRegistrationForm.querySelector('button[type="submit"]');
-      try {
-        if (submitButton) submitButton.disabled = true;
-        const formData = new FormData(schoolRegistrationForm);
-        const result = await submitSchoolApplication(Object.fromEntries(formData.entries()));
-        if (status) status.textContent = `تم إرسال الطلب رقم ${result.id}. سيُراجعه مدير المنصة؛ بعد الموافقة سينشئ رابط تفعيل خاصًا للمدير وآخر لأخصائي التطوير، ويُرسلهما يدويًا.`;
-        schoolRegistrationForm.reset();
-        updateSchoolApplicationRoleLabels();
-      } catch (error) {
-        if (status) status.textContent = error.message || 'تعذر إرسال طلب المدرسة.';
-      } finally {
-        if (submitButton) submitButton.disabled = false;
-      }
-    });
   </script>
 </body>
 </html>

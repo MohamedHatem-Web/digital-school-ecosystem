@@ -98,6 +98,38 @@ export async function submitSchoolApplication(application) {
   return { id: result.id, schoolSlug: result.schoolSlug };
 }
 
+export async function getSchoolApplicationStatus(applicationId) {
+  const id = String(applicationId || '').trim();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+    throw new Error('رقم طلب المدرسة غير صالح.');
+  }
+  if (!MEDIA_CONFIG.workerGatewayUrl) {
+    throw new Error('خدمة متابعة طلبات المدارس غير مفعلة في هذه البيئة.');
+  }
+
+  const response = await fetch(
+    `${MEDIA_CONFIG.workerGatewayUrl.replace(/\/$/, '')}/api/public/school-applications/${encodeURIComponent(id)}`,
+  );
+  const result = await response.json().catch(() => ({}));
+  if (response.status === 404) {
+    if (typeof result.error === 'string' && result.error) throw new Error(result.error);
+    throw new Error('مسار متابعة طلبات المدارس غير موجود في Worker المنشور. انشر النسخة المحدّثة من مجلد cloudflare-worker ثم أعد المحاولة.');
+  }
+  if (!response.ok) throw new Error(result.error || 'تعذر التحقق من حالة الطلب.');
+  if (!['pending', 'approved', 'rejected'].includes(result.status)) {
+    throw new Error('أعاد الخادم حالة غير معروفة للطلب.');
+  }
+
+  return {
+    id,
+    status: result.status,
+    reviewedAt: typeof result.reviewedAt === 'string' ? result.reviewedAt : '',
+    rejectionReason: result.status === 'rejected' && typeof result.rejectionReason === 'string'
+      ? result.rejectionReason
+      : '',
+  };
+}
+
 // Initial state - strictly empty per Real-Data policy
 const INITIAL_SCHOOL_STATE = {
   schoolId: DEFAULT_SCHOOL_ID,

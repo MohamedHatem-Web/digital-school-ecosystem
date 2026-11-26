@@ -3,7 +3,7 @@
 // Shared UI Interactive Components (Drawers, Modals, Menus, Active Session Sync)
 // ==========================================================================
 
-import { getCurrentUser, getRoleDashboardUrl } from './auth.js';
+import { syncPublicDashboardEntry } from './platform-session-cta.js';
 import { getSchoolProfile, applySchoolBranding } from './services/school-service.js';
 import { applyTenantNavigation, getTenantSlug } from './tenant-router.js';
 import { guardTenantRoute } from './tenant-access.js';
@@ -285,48 +285,9 @@ function initializeComponents() {
       initializePublicFooter();
     }
 
-    // 0. Active Session Sync on Public Pages (Remembering logged in state)
+    // 0. Show a direct dashboard link when a valid cached session exists.
     try {
-      const activeUser = getCurrentUser();
-
-      if (activeUser && isPublicPage) {
-        const tenantSlug = getTenantSlug();
-        if (tenantSlug && activeUser.schoolId !== tenantSlug) {
-          // Sessions are shown only inside their own tenant route.
-        } else if (!tenantSlug && activeUser.role !== 'super_admin') {
-          // The platform root is a directory; ordinary users keep their dashboard button on the school route.
-        } else {
-        const dest = getRoleDashboardUrl(activeUser.role);
-        const userName = activeUser.displayName || 'حسابي';
-
-        // Update header CTA button (compact & clean so it doesn't break header)
-        document.querySelectorAll('.header-cta-group a[href*="login"]').forEach((btn) => {
-          btn.href = dest;
-          btn.className = 'btn btn-accent btn-md';
-          btn.innerHTML = `<span style="display: flex; align-items: center; gap: 6px;">👤 <span>لوحة التحكم</span></span>`;
-          btn.title = `مرحباً ${userName} (${activeUser.role}) — انقر للدخول إلى لوحة التحكم المعتمدة`;
-        });
-
-        // Update mobile drawer button
-        document.querySelectorAll('.drawer-nav-list + div a[href*="login"]').forEach((btn) => {
-          btn.href = dest;
-          btn.className = 'btn btn-accent btn-full';
-          btn.innerHTML = `👤 الانتقال إلى لوحة التحكم`;
-        });
-
-        // Update hero CTA button if exists on homepage
-        document.querySelectorAll('.hero-actions-bar a[href*="login"]').forEach((btn) => {
-          btn.href = dest;
-          btn.innerHTML = '<span aria-hidden="true">🚀</span> الدخول إلى لوحة التحكم';
-          btn.title = `لوحة تحكم ${userName}`;
-        });
-
-        // Update footer portal links
-        document.querySelectorAll('.site-footer a[href*="login"]').forEach((link) => {
-          link.href = dest;
-        });
-        }
-      }
+      if (isPublicPage) syncPublicDashboardEntry();
     } catch (e) {
       console.warn('Components session sync notice:', e);
     }

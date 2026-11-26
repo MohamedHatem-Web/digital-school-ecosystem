@@ -22,8 +22,16 @@ const MIME_TYPES = {
   '.ico': 'image/x-icon',
 };
 
+const PLATFORM_PAGE_ROUTES = new Map([
+  ['/platform/about', '/platform-about.html'],
+  ['/platform/guide', '/platform-guide.html'],
+  ['/platform/terms', '/platform-terms.html'],
+  ['/platform/start', '/platform-start.html'],
+]);
+
 const server = http.createServer((req, res) => {
   let reqPath = decodeURI(req.url.split('?')[0]);
+  if (PLATFORM_PAGE_ROUTES.has(reqPath)) reqPath = PLATFORM_PAGE_ROUTES.get(reqPath);
   const tenantActualRequest = req.headers['x-dse-tenant-actual'];
   const reservedPublicPaths = new Set(['/login.html', '/about.html', '/activities.html', '/calendar.html', '/contact.html', '/gallery.html', '/leadership.html', '/news.html', '/offline.html', '/verify.html']);
   if (!tenantActualRequest && (reservedPublicPaths.has(reqPath) || reqPath === '/dashboard' || reqPath.startsWith('/dashboard/'))) {
@@ -35,7 +43,7 @@ const server = http.createServer((req, res) => {
   else if (reqPath === '/' || reqPath === '/index.html') reqPath = '/index.html';
   else {
     const segments = reqPath.split('/').filter(Boolean);
-    const reserved = new Set(['index.html', 'login.html', 'about.html', 'activities.html', 'calendar.html', 'contact.html', 'gallery.html', 'leadership.html', 'news.html', 'offline.html', 'verify.html', 'dashboard', 'js', 'css', 'images', 'evidence', 'api', 'platform-admin']);
+    const reserved = new Set(['index.html', 'login.html', 'about.html', 'activities.html', 'calendar.html', 'contact.html', 'gallery.html', 'leadership.html', 'news.html', 'offline.html', 'verify.html', 'dashboard', 'js', 'css', 'images', 'evidence', 'api', 'platform', 'platform-admin']);
     if (!reserved.has(segments[0]) && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(segments[0] || '')) {
       if (segments.length === 1) reqPath = '/index.html';
       else reqPath = `/${segments.slice(1).join('/')}`;

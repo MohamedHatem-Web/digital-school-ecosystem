@@ -471,7 +471,7 @@
           if (parentBtn) parentBtn.href = 'dashboard/parent-portal.html';
           if (goBtn) goBtn.style.display = 'none';
         } else if (goBtn) {
-          goBtn.href = getRoleDashboardUrl(activeSession.role);
+          goBtn.href = getRoleDashboardUrl(activeSession.role, activeSession.schoolId);
           goBtn.style.display = 'inline-flex';
         }
         if (!activeSession.passwordChangeRequired) banner.style.display = 'flex';
@@ -752,7 +752,7 @@
           if (!invitationUser) throw new Error('رابط البريد غير صالح أو انتهت صلاحيته.');
           if (invitationUser.email?.toLowerCase() !== email) throw new Error('البريد لا يطابق عنوان الدعوة.');
           const profile = await finishAccountInvitation({ invitationId, password });
-          window.location.replace(getRoleDashboardUrl(profile.role));
+          window.location.replace(getRoleDashboardUrl(profile.role, profile.schoolId));
         } catch (error) {
           showError(error.message || 'تعذر إكمال دعوة الحساب.');
         } finally {
@@ -835,7 +835,7 @@
         } else if (profile.role === 'parent') {
           window.location.href = 'dashboard/parent-portal.html';
         } else {
-          window.location.href = getRoleDashboardUrl(profile.role);
+          window.location.href = getRoleDashboardUrl(profile.role, profile.schoolId);
         }
       } catch (err) {
         console.error('Login error:', err);

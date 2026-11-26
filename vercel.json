@@ -1,5 +1,9 @@
 {
   "redirects": [
+    { "source": "/platform-about.html", "destination": "/platform/about", "permanent": true },
+    { "source": "/platform-guide.html", "destination": "/platform/guide", "permanent": true },
+    { "source": "/platform-terms.html", "destination": "/platform/terms", "permanent": true },
+    { "source": "/platform-start.html", "destination": "/platform/start", "permanent": true },
     { "source": "/login.html", "destination": "/", "permanent": false },
     { "source": "/about.html", "destination": "/", "permanent": false },
     { "source": "/activities.html", "destination": "/", "permanent": false },
@@ -14,11 +18,17 @@
     { "source": "/dashboard/:path*", "destination": "/", "permanent": false }
   ],
   "rewrites": [
+    { "source": "/platform/about", "destination": "/platform-about.html" },
+    { "source": "/platform/guide", "destination": "/platform-guide.html" },
+    { "source": "/platform/terms", "destination": "/platform-terms.html" },
+    { "source": "/platform/start", "destination": "/platform-start.html" },
     { "source": "/platform-admin", "destination": "/platform-admin/login.html" },
     { "source": "/platform-admin/", "destination": "/platform-admin/login.html" },
     { "source": "/platform-admin/dashboard.html", "destination": "/platform-admin/dashboard.html" },
     { "source": "/zewail-school", "destination": "/index.html" },
     { "source": "/zewail-school/", "destination": "/index.html" },
+    { "source": "/:schoolId", "destination": "/index.html" },
+    { "source": "/:schoolId/", "destination": "/index.html" },
     { "source": "/zewail-school/:path*", "destination": "/:path*" },
     { "source": "/:schoolId/manifest.webmanifest", "destination": "/manifest.webmanifest" },
     { "source": "/:schoolId/css/:path*", "destination": "/css/:path*" },

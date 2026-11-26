@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('dse_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (error) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    }());
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="تعرف على منظومة المدرسة الرقمية وأهدافها وخدماتها التعليمية.">
+  <title>عن المنظومة — منظومة المدرسة الرقمية</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/tokens.css?v=11.0">
+  <link rel="stylesheet" href="/css/base.css?v=11.1">
+  <link rel="stylesheet" href="/css/components.css?v=17.2">
+  <link rel="stylesheet" href="/css/public-site.css?v=17.2">
+  <link rel="stylesheet" href="/css/platform-public.css?v=1">
+</head>
+<body class="platform-public-page">
+  <header class="site-header">
+    <div class="container site-nav-container">
+      <a href="/" class="site-brand">
+        <div class="brand-crest" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+            <path d="M6 6h10M6 10h10"></path>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="school-name-title">منصة المنظومة الرقمية</span>
+          <span class="school-dept-sub">دليل المدارس والبوابة العامة</span>
+        </div>
+      </a>
+      <nav class="platform-public-nav" aria-label="معلومات المنظومة">
+        <a href="/" class="platform-public-nav-link">دليل المدارس</a>
+        <a href="/platform-about.html" class="platform-public-nav-link" aria-current="page">عن المنظومة</a>
+        <a href="/platform-guide.html" class="platform-public-nav-link">دليل الاستخدام</a>
+        <a href="/platform-terms.html" class="platform-public-nav-link">الشروط والسياسات</a>
+        <a href="/platform-start.html" class="platform-public-nav-link">طلب تفعيل مدرسة</a>
+      </nav>
+      <div class="header-cta-group">
+        <button type="button" class="theme-toggle-btn" data-platform-theme-toggle aria-label="تغيير المظهر"></button>
+        <a href="/platform-admin/" class="btn btn-outline btn-sm platform-admin-login">إدارة المنصة</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="platform-info-banner">
+      <div class="container">
+        <span class="platform-info-kicker">عن المنظومة</span>
+        <h1 class="platform-info-title">إدارة مدرسية أوضح، من بوابة رقمية واحدة</h1>
+        <p class="platform-info-lead">منظومة المدرسة الرقمية مشروع لإتاحة أدوات تنظيم العمل المدرسي ومتابعة الخدمات التعليمية، مع بوابة مستقلة لكل مدرسة مشاركة.</p>
+      </div>
+    </section>
+
+    <div class="platform-info-content">
+      <section class="platform-info-section" aria-labelledby="platform-purpose">
+        <h2 class="platform-info-section-title" id="platform-purpose">ما الذي تقدمه المنظومة؟</h2>
+        <div class="platform-info-grid">
+          <article class="platform-info-card">
+            <h3>مساحة مستقلة لكل مدرسة</h3>
+            <p>يصل المستخدم إلى المدرسة من رابطها الخاص، وتُدار السجلات والحسابات داخل مساحة المدرسة وبحسب الدور والصلاحية المعتمدة.</p>
+          </article>
+          <article class="platform-info-card">
+            <h3>تنظيم أعمال المدرسة</h3>
+            <p>تجمع الأدوات الرقمية خدمات مثل بيانات الطلاب والفصول، الحضور، التقييمات والدرجات، شؤون الطلاب، ومتابعة الأجهزة.</p>
+          </article>
+          <article class="platform-info-card">
+            <h3>واجهات بحسب الدور</h3>
+            <p>تختلف الصفحات المتاحة حسب نوع الحساب، مثل الإدارة والمعلم وشؤون الطلاب والطالب وولي الأمر، ولا تظهر لكل مستخدم الأدوات نفسها.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="platform-info-section" aria-labelledby="platform-start">
+        <h2 class="platform-info-section-title" id="platform-start">كيف تبدأ المدرسة؟</h2>
+        <div class="platform-info-grid">
+          <article class="platform-info-card">
+            <div class="platform-info-step">
+              <span class="platform-info-step-number">١</span>
+              <div>
+                <h3>تقديم طلب التفعيل</h3>
+                <p>تبدأ المدرسة من الصفحة الرئيسية وتقدم بيانات المدير وأخصائي التطوير التكنولوجي للمراجعة.</p>
+              </div>
+            </div>
+          </article>
+          <article class="platform-info-card">
+            <div class="platform-info-step">
+              <span class="platform-info-step-number">٢</span>
+              <div>
+                <h3>مراجعة الطلب</h3>
+                <p>تراجع إدارة المنصة الطلب قبل اعتماد المدرسة وإنشاء رابطها وحسابات مسؤوليها.</p>
+              </div>
+            </div>
+          </article>
+          <article class="platform-info-card">
+            <div class="platform-info-step">
+              <span class="platform-info-step-number">٣</span>
+              <div>
+                <h3>إعداد حسابات المدرسة</h3>
+                <p>بعد التفعيل، يدير المسؤولون المعتمدون حسابات العاملين ويضبطون بيانات المدرسة وصلاحيات المستخدمين.</p>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <div class="platform-info-notice">هذه الصفحة تعريفية بالخصائص المتاحة في المنظومة، وقد تختلف الخدمات بحسب تفعيلها وإعدادات المدرسة.</div>
+    </div>
+  </main>
+
+  <footer class="platform-public-footer">
+    <nav aria-label="روابط المنصة">
+      <a href="/">دليل المدارس</a>
+      <a href="/platform-about.html">عن المنظومة</a>
+      <a href="/platform-guide.html">دليل الاستخدام</a>
+      <a href="/platform-terms.html">الشروط والسياسات</a>
+      <a href="/platform-start.html">طلب تفعيل مدرسة</a>
+    </nav>
+    منظومة المدرسة الرقمية — البوابة العامة
+  </footer>
+  <script src="/js/platform-public.js" defer></script>
+  <script type="module">
+    import { syncPublicDashboardEntry } from '/js/platform-session-cta.js';
+    syncPublicDashboardEntry();
+  </script>
+</body>
+</html>
